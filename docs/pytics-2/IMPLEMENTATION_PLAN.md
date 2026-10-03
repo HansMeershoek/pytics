@@ -893,4 +893,60 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 15 p
 
 ## After TSK-013
 
-TSK-013 adds string-content observations composed with string-structure evidence. It does not select a semantic reading and does not enter the precedence chain. [DEC-084](DECISIONS.md#dec-084) records the contract, including the alphanumeric token definition, case-sensitive aggregate vocabulary counts, the separation from whole-value frequency, and the decision that those facts do not support Text or ordinary-string Categorical. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-013 adds string-content observations composed with string-structure evidence. It does not select a semantic reading and does not enter the precedence chain. [DEC-084](DECISIONS.md#dec-084) records the contract, including the alphanumeric token definition, case-sensitive aggregate vocabulary counts, the separation from whole-value frequency, and the decision that those facts do not support Text or ordinary-string Categorical. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-014 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-014
+
+Slice 014, semantic resolution foundation. Approved 2026-10-03 after TSK-013. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-04 and REQ-S-05, for resolution kept distinct from observation and from candidate assessment. REQ-S-01 is not completed: a structural reading is preserved, and exactly one supported candidate selects a semantic type without a confidence-bearing interpretation. REQ-S-02 is not completed because a candidate-derived selection does not receive High, Medium, or Low. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Add `ResolutionStatus` with `RESOLVED`, `INSUFFICIENT_EVIDENCE`, and `AMBIGUOUS`. Do not add those words to `SemanticType`.
+- Add one frozen `SemanticResolution`: status, diagnostic reason, candidate assessments, selected semantic type when resolved, and the structural interpretation when that reading won.
+- `resolve_semantics` consumes an optional structural interpretation and candidate assessments already produced. It does not collect observations, call assessors, or read a Series.
+- Empty, Constant, Boolean, Datetime, and Timedelta resolve to that interpretation. Candidate assessments do not replace it. Any other semantic type supplied as a structural reading is rejected.
+- Exactly one `SUPPORTED` candidate resolves to that semantic type and does not construct a `SemanticInterpretation` or a confidence.
+- No `SUPPORTED` candidate, including an empty candidate collection, is `INSUFFICIENT_EVIDENCE`. There is no fallback type.
+- More than one `SUPPORTED` candidate is `AMBIGUOUS`. No selected type. No Identifier-over-Numeric rule.
+- A `CONTRADICTED` candidate is not selected and does not veto a different supported candidate.
+- Two assessments for the same semantic type are rejected. Input order does not change the result. An ambiguous reason lists types in semantic-type name order.
+- A structural interpretation keeps the confidence it already carries. Candidate-derived confidence is not invented. Material alternatives are not constructed.
+- `interpret_series_precedence` does not call the resolver. No override, eligibility rule, public result, configuration, or threshold is added.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The resolution contract is [DEC-085](DECISIONS.md#dec-085). It narrows [OPEN-047](DECISIONS.md#open-047) to the remaining inferred-interpretation representation. It does not close [OPEN-044](DECISIONS.md#open-questions).
+
+### Exclusions
+
+Do not add `SemanticType.UNKNOWN`, `SemanticType.AMBIGUOUS`, or `SemanticType.UNRESOLVED`. Do not assign High, Medium, or Low from candidate counts. Do not build a `SemanticInterpretation` for a candidate-derived selection. Do not invent a priority between supported candidates. Do not merge duplicate candidate types. Do not treat a contradiction as a veto or as a confidence measure. Do not construct material alternatives. Do not call collectors or assessors from the resolver. Do not call the resolver from `interpret_series_precedence`. Do not add a user override, effective interpretation, downstream eligibility, or a public `profile()` result.
+
+Do not add a rule registry, a strategy framework, or a numeric total. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049). [OPEN-047](DECISIONS.md#open-047) records the resolution statuses and leaves their inferred-interpretation representation open.
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the resolver from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `SemanticResolution` is a frozen dataclass. `ResolutionStatus` is `RESOLVED`, `INSUFFICIENT_EVIDENCE`, or `AMBIGUOUS`. Those words are not `SemanticType` members.
+2. `RESOLVED` has a selected semantic type. `INSUFFICIENT_EVIDENCE` and `AMBIGUOUS` do not. Impossible combinations are rejected. An invalid status is rejected.
+3. Candidate assessments are stored as a tuple in semantic-type name order. Duplicate semantic types are rejected, including two identical assessments.
+4. Empty, Constant, Boolean, Datetime, timezone-aware Datetime, and Timedelta structural readings resolve to that interpretation. A constant UUID and a constant integer stay Constant when Identifier or Numeric is supported. Candidates do not replace a structural reading. A Numeric, Identifier, Categorical, or Text object supplied as a structural reading is rejected.
+5. Exactly one supported candidate resolves to that type for Numeric, Identifier, Categorical, and a directly constructed Text assessment. Current assessors produce that Numeric, Identifier, and Categorical result. No `SemanticInterpretation` and no confidence are created for that selection.
+6. All unsupported candidates, a mixture of unsupported and contradicted candidates, an empty candidate collection, city-name strings, and prose-like strings are `INSUFFICIENT_EVIDENCE`. There is no fallback type.
+7. Numeric with Identifier, Categorical with Text, and Identifier with Text stay `AMBIGUOUS` when both are supported. No semantic type is selected. Input order does not change the result or the reason.
+8. A supported candidate remains resolved when a different candidate is contradicted. A contradicted candidate beside only unsupported candidates is insufficient evidence. The number of supporting statements does not select a candidate.
+9. The resolver does not collect observations or call assessors. Its module does not import pandas or the collectors. `interpret_series_precedence` does not call it, and existing precedence results stay as they were.
+10. A structural interpretation keeps its existing confidence. Candidate resolution does not assign High, Medium, or Low. Material alternatives are not constructed.
+11. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added.
+12. Focused TSK-014 tests pass. TSK-013, TSK-012, TSK-011 foundation, TSK-011 Identifier, TSK-010, TSK-009, TSK-008, TSK-007, and TSK-006 tests pass.
+13. Semantic tests for TSK-001 through TSK-014 pass. The legacy profiler stays at 19 passed and the known PDF failure. The full suite adds only the new tests, with the same known PDF failure.
+14. [OPEN-047](DECISIONS.md#open-047) records resolution abstention and ambiguity and leaves the inferred-interpretation representation open. [OPEN-044](DECISIONS.md#open-questions) stays open for thresholds, final candidate-derived confidence, and any future rule between supported candidates. [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) stay open.
+15. This section does not approve or implement a later slice.
+16. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 16 passed for TSK-014.
+
+## After TSK-014
+
+TSK-014 resolves structural readings and already produced candidate assessments. It does not assign confidence to a candidate-derived selection, does not build that selection's `SemanticInterpretation`, and does not enter the precedence chain. [DEC-085](DECISIONS.md#dec-085) records the contract, including structural precedence, exactly-one-supported resolution, abstention when nothing is supported, ambiguity when several candidates are supported, and the rejection of duplicate candidate types. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

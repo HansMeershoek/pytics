@@ -84,7 +84,7 @@ The architecture should avoid unnecessary decisions that make future expansion i
 
 Physical pandas dtype is not sufficient. Pytics must infer semantic meaning.
 
-The semantic rules, including confidence, overrides, and the prohibition on silent coercion, are specified in [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) (`REQ-S-01` through `REQ-S-09`). The conceptual pipeline, from observations through an optional override to the effective interpretation, is [DEC-064](DECISIONS.md#dec-064) through [DEC-076](DECISIONS.md#dec-076). Candidate Resolution v0.1 does not use a numeric total-score ([DEC-066](DECISIONS.md#dec-066)). That limit does not withdraw the separate prohibition on a composite data-quality score.
+The semantic rules, including confidence, overrides, and the prohibition on silent coercion, are specified in [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) (`REQ-S-01` through `REQ-S-09`). The conceptual pipeline, from observations through an optional override to the effective interpretation, is [DEC-064](DECISIONS.md#dec-064) through [DEC-076](DECISIONS.md#dec-076). Candidate Resolution v0.1 does not use a numeric total-score ([DEC-066](DECISIONS.md#dec-066)). The resolution foundation selects a structural reading or exactly one supported candidate, and otherwise abstains or stays ambiguous, without assigning confidence from candidate counts ([DEC-085](DECISIONS.md#dec-085)). That limit does not withdraw the separate prohibition on a composite data-quality score.
 
 ## No arbitrary quality score
 
