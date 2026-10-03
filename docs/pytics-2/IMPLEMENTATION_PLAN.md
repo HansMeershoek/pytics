@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, and TSK-009 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, and TSK-010 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, and Slice 009. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, and Slice 010. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, and TSK-009 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, and TSK-010 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, and TSK-009 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, or REQ-H-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, and TSK-010 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, or REQ-H-04.
 
 ## Reuse of 1.1.5
 
@@ -363,7 +363,7 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-009](#after-tsk-009).
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-010](#after-tsk-010).
 
 ## After TSK-005
 
@@ -648,4 +648,74 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 34 p
 
 ## After TSK-009
 
-TSK-009 adds exact string-structure observations for physical string columns and for object columns whose non-missing values are Python strings. It does not add a semantic reading. [DEC-080](DECISIONS.md#dec-080) records the contract, including conditional object applicability, categorical exclusion, Python Unicode character classes, length bounds, ratio denominators, and on-demand collection. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-009 adds exact string-structure observations for physical string columns and for object columns whose non-missing values are Python strings. It does not add a semantic reading. [DEC-080](DECISIONS.md#dec-080) records the contract, including conditional object applicability, categorical exclusion, Python Unicode character classes, length bounds, ratio denominators, and on-demand collection. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-010 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-010
+
+Slice 010, pattern evidence foundation. Approved 2026-10-03 after TSK-009. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-03 and REQ-S-05, for exact observed characteristics and the prohibition on coercion. REQ-S-01 and REQ-S-04 are respected because no new semantic reading was added. Those requirement rows stay Not started. UUID and hexadecimal counts recorded here do not complete REQ-F-02, REQ-G-01, or REQ-G-02. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- A typed `PatternEvidence` value composed with `StringStructureEvidence`. It is not a subclass of that family or of `BasicColumnEvidence`, and it is not a property bag.
+- The collector consumes the Series, the already collected string-structure evidence, and the already classified physical dtype. It does not recollect string structure and does not redefine string eligibility. It rejects inconsistent length, non-missing count, physical dtype name, non-string values, and populations outside the string-structure contract, including an all-missing object column.
+- The population is non-missing strings. Empty strings, whitespace-only strings, and missing-like literals stay ordinary non-matches. Nothing is stripped, case-folded, Unicode-normalized, stringified, or decoded.
+- Every pattern is a full-value match. The catalog is UUID, IPv4, IPv6, and ASCII hexadecimal tokens of widths 32, 40, 64, and 128.
+- UUID accepts only the 36-character hyphenated form and the 32-character compact form. `uuid.UUID` must not widen that shape. No version is required.
+- IPv4 and IPv6 use `ipaddress.IPv4Address` and `ipaddress.IPv6Address` on the original string. CIDR syntax does not match. Address properties are not classified.
+- Hexadecimal tokens use `0123456789abcdefABCDEF`. They are not named as hash algorithms. Counts may overlap. A compact UUID increments both `uuid_count` and `hex_32_count`.
+- Derived read-only ratios with denominator `n_non_missing`, as in [DEC-081](DECISIONS.md#dec-081). Undefined ratios are `None`.
+- Universal counts stay on basic evidence, reached through the composed string-structure evidence.
+- Exact, full-column, and unsampled collection, from one pass over non-missing strings.
+- The collector is separate. The Empty, Constant, and physical-type chain does not call it. String-structure collection does not call it.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The pattern contract is [DEC-081](DECISIONS.md#dec-081). This slice does not resolve [OPEN-014](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), or [OPEN-044](DECISIONS.md#open-questions).
+
+### Exclusions
+
+Do not implement Identifier, Text, Categorical, Boolean, Binary, Datetime, or Numeric inference from these facts. Do not recognize email, URL, URI, path, phone, postal code, credit-card-like text, date-like text, datetime-like text, time-like text, numeric-like text, JSON, XML, HTML, MAC address, hostname, base64, or a generic identifier pattern. Do not name hexadecimal widths as hash algorithms. Do not add a pattern registry, a winner, a threshold, or a confidence. Do not coerce with `astype(str)` or an equivalent. Do not strip or Unicode-normalize before matching. Do not sample. Do not add candidate assessments, candidate resolution, material alternatives, evidence roles, scoring, abstention, user overrides, or effective interpretation.
+
+Do not add a provenance object. Do not add an evidence-family inheritance hierarchy. Do not add a generic observation property bag. Do not collect this evidence from the existing precedence chain or from string-structure collection. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049).
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the evidence type from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `PatternEvidence` is a frozen dataclass composed with `StringStructureEvidence`, not a subclass and not a property bag.
+2. No generic pattern registry or observation bag was added.
+3. The stored fields are `string_structure` and the seven counts. The ratios are properties. `n_total`, `n_missing`, `n_non_missing`, and `n_unique_non_missing` are not copied.
+4. No semantic-conclusion field, confidence, evidence role, score, threshold, winner, or matched-value collection was added.
+5. The collector reuses the supplied string-structure evidence and physical dtype. It does not recollect string structure, basic counts, or frequency evidence, and it does not reclassify the physical dtype.
+6. It rejects inconsistent length, non-missing count, physical dtype name, non-string values, and populations outside the string-structure contract, including an all-missing object column and `bytes`.
+7. The population is non-missing strings. `""`, whitespace, and missing-like literals remain ordinary non-matches. Nothing is stripped, case-folded, Unicode-normalized, stringified, or decoded.
+8. Every pattern is a full-value match. Embedded syntax and surrounding whitespace do not match.
+9. UUID accepts only the canonical 36-character form and the compact 32-character form, in either case. Braces, URN prefixes, misplaced hyphens, and non-hex characters do not match. No UUID version is required. `uuid.UUID` does not widen the shape.
+10. IPv4 uses `ipaddress.IPv4Address` on the original string. IPv6 uses `ipaddress.IPv6Address`. CIDR, malformed, and embedded forms do not match. Address properties are not classified.
+11. Fixed-width hexadecimal tokens use the ASCII alphabet at widths 32, 40, 64, and 128. Prefixes, separators, whitespace, and Unicode digits do not match. The widths are not hash-algorithm names.
+12. Counts may overlap. A compact UUID increments `uuid_count` and `hex_32_count`. There is no mutual-exclusion validation and no precedence.
+13. Each ratio divides by `n_non_missing` and is `None` when that count is 0. A zero numerator with a positive denominator is `0.0`.
+14. An all-missing physical string column yields zero counts and undefined ratios. A constant pattern column keeps Constant precedence and still records the pattern count.
+15. The facts do not select Identifier, Text, Categorical, Datetime, or Numeric. Date-like strings are not parsed. Email, URL, path, and MAC text are not recognized.
+16. Collection is exact, full-column, and unsampled. No provenance object was added.
+17. The precedence chain does not collect pattern evidence. String-structure collection does not collect it either.
+18. The input Series is not mutated.
+19. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added.
+20. Focused tests pass.
+21. TSK-009 tests pass.
+22. TSK-008 tests pass.
+23. TSK-007 tests pass.
+24. TSK-006 tests pass.
+25. Semantic tests for TSK-001 through TSK-010 pass.
+26. The legacy profiler stays at 19 passed and the known PDF failure.
+27. The full suite adds only the new tests, with the same known PDF failure.
+28. [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) through [OPEN-049](DECISIONS.md#open-049) stay open. Pattern ratios and syntax counts do not close [OPEN-014](DECISIONS.md#open-questions) or [OPEN-044](DECISIONS.md#open-questions). The absence of word counts does not close [OPEN-019](DECISIONS.md#open-questions).
+29. This section does not approve or implement a later slice.
+30. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 30 passed for TSK-010.
+
+## After TSK-010
+
+TSK-010 adds exact full-value pattern observations for populations that already have string-structure evidence. It does not add a semantic reading. [DEC-081](DECISIONS.md#dec-081) records the contract, including composition with string-structure evidence, the initial syntax catalog, ASCII hexadecimal tokens, allowed overlap, the non-missing denominator, and on-demand collection. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

@@ -4,7 +4,7 @@ Status: rules and directions below that are marked Accepted are binding. The met
 
 Do not implement a catalog, a method registry, or a Bayesian stack from this file. `REQ-K-03` remains in force. [DEC-055](DECISIONS.md#dec-055) does not retire it.
 
-Numeric summaries in this file are downstream analysis. They are not semantic-inference detectors ([DEC-069](DECISIONS.md#dec-069)). Numeric-structure evidence counts finite values, signs, infinities, and integer-like values for later candidate assessment ([DEC-079](DECISIONS.md#dec-079)). It is not these summaries. String-structure evidence counts empty strings, whitespace, character classes, and length bounds for later candidate assessment ([DEC-080](DECISIONS.md#dec-080)). It is not text profiling and not a semantic reading.
+Numeric summaries in this file are downstream analysis. They are not semantic-inference detectors ([DEC-069](DECISIONS.md#dec-069)). Numeric-structure evidence counts finite values, signs, infinities, and integer-like values for later candidate assessment ([DEC-079](DECISIONS.md#dec-079)). It is not these summaries. String-structure evidence counts empty strings, whitespace, character classes, and length bounds for later candidate assessment ([DEC-080](DECISIONS.md#dec-080)). It is not text profiling and not a semantic reading. Pattern evidence counts full-value UUID, IPv4, IPv6, and fixed-width hexadecimal syntax for later candidate assessment ([DEC-081](DECISIONS.md#dec-081)). It is not an Identifier reading and not a semantic type.
 
 ## Accepted inferential rules
 
