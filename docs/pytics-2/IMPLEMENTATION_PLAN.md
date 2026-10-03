@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, and TSK-003 are complete. No later slice is approved.**
+Status: **TSK-001, TSK-002, TSK-003, and TSK-004 are complete. No later slice is approved.**
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, and Slice 003. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions).
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, and Slice 004. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions).
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, and TSK-003 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, and TSK-004 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -48,7 +48,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, and TSK-003 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, REQ-D-01, REQ-D-02, or REQ-D-03.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, and TSK-004 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
 
 ## Reuse of 1.1.5
 
@@ -211,3 +211,77 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 30. No rule framework was added.
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 30 passed for TSK-003.
+
+## TSK-004
+
+Slice 004, physical Datetime inference and scalable semantic composition. Approved 2026-10-03 after the committed Slice 001, Slice 002, and Slice 003 baseline. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-01, REQ-S-02, REQ-S-04, and REQ-S-05, only for composing Empty, Constant, physical Boolean, and physical Datetime. REQ-E-03 and REQ-E-04 are respected on this path because a Datetime reading is not a time series and no deeper temporal diagnostic is run. REQ-S-03 is respected on this path and is not completed. Those requirement rows stay Not started. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Reuse `classify_physical_dtype` and `BasicColumnEvidence`. Classify the physical dtype once. Collect the four basic counts once.
+- Reuse `interpret_empty_constant_or_physical_boolean_from_evidence`. Do not recompute `isna` or `nunique`, and do not copy the Empty, Constant, or physical Boolean rules.
+- Precedence: Empty, then Constant, then physical Boolean, then physical Datetime, then no interpretation. `None` means no interpretation. No unknown semantic type.
+- Semantic Datetime only when the column is not Empty, not Constant, not physical Boolean, and `PhysicalDtypeFamily` is `DATETIME` or `DATETIME_TZ_AWARE`. Both families use `SemanticType.DATETIME`. Confidence is High. Source is directly supported by the physical dtype. Evidence is `physical dtype is datetime` or `physical dtype is timezone-aware datetime`. The physical dtype value is retained, including the timezone-aware family. Subtype is unset. Alternatives are empty. `PhysicalDtype` is not extended with timezone metadata.
+- A successor function, `interpret_series_precedence`, calls the Slice 003 chain and then the datetime rule. The Slice 003 function is unchanged. The new name does not list every rule. No rule engine, registry, or priority framework.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). Precedence over later readings follows [DEC-046](DECISIONS.md#dec-046). Native and timezone-aware datetime as strong Datetime evidence follows [DEC-050](DECISIONS.md#dec-050). Confidence stays on the three-level scale in [DEC-042](DECISIONS.md#dec-042). This slice does not resolve [OPEN-044](DECISIONS.md#open-questions) or [OPEN-045](DECISIONS.md#open-questions). It does not set a subtype ([OPEN-014](DECISIONS.md#open-questions)).
+
+### Exclusions
+
+Do not infer Datetime from date-like strings, object values that happen to be Python datetimes or timestamps, integer or floating Unix-like values, categorical timestamps, period dtypes, or timedelta dtypes. Do not call `pd.to_datetime` on source data. Do not parse strings. Do not normalize timezones, convert timezone-aware values to naive values, or convert values to UTC for inference.
+
+Do not implement `SemanticType.TIMEDELTA` inference. Do not treat period as Datetime. Do not infer a time series, frequency, regularity, monotonicity, gaps, calendar patterns, trend, seasonality, or autocorrelation from a Datetime column.
+
+Do not implement Numeric, Continuous/Discrete, Identifier, Categorical, Text, ordinal storage, Boolean from `{0, 1}` or Boolean-like strings, thresholds, sampling, missing-like detection, relationships, statistics, target analysis, anomalies, compare/drift, HTML, PDF, a configuration API, or a public semantic API.
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the new function from top-level `pytics`. Do not add a dependency. Do not rewrite Slice 001, Slice 002, or Slice 003. Do not add `SemanticType` members.
+
+### Acceptance criteria
+
+1. The accepted checkpoint was clean before this slice, and Slice 001 tests still pass.
+2. Slice 002 tests still pass.
+3. Slice 003 tests still pass.
+4. Empty remains the highest precedence, including an all-missing or zero-length datetime Series.
+5. Constant remains above the physical semantic rules, including a repeated timestamp and one timestamp plus missing values.
+6. Physical Boolean still works, and it still precedes physical Datetime.
+7. A non-empty, non-constant native datetime column is semantic Datetime.
+8. A non-empty, non-constant timezone-aware datetime column is semantic Datetime.
+9. Datetime with `NaT` is Datetime when the column is not empty and not constant.
+10. That Datetime result uses High confidence.
+11. That Datetime result uses the physical-dtype inference source.
+12. That Datetime result retains the physical dtype.
+13. The timezone-aware physical family remains distinguishable from native datetime.
+14. That Datetime result has concise factual evidence and no numeric score.
+15. Datetime-like strings are not inferred as Datetime.
+16. Object dtype holding Python datetime or timestamp values is not inferred as Datetime.
+17. Integer and floating Unix-like values are not inferred as Datetime.
+18. Timedelta is not inferred as Datetime, and timedelta semantic inference is not implemented.
+19. Period is not inferred as Datetime.
+20. Categorical timestamps are not inferred as Datetime.
+21. A Datetime reading is not treated as a time-series structure.
+22. The input Series is not coerced or mutated. Index, name, timezone, and category metadata stay in place.
+23. Basic evidence is collected once and reused.
+24. Physical classification is performed once on the series path and reused.
+25. No semantic threshold was introduced.
+26. No numeric confidence score was introduced.
+27. No broad inference framework was introduced.
+28. Composition stays a direct call from one successor function to the existing Boolean chain, plus one datetime rule.
+29. No new dependency was added.
+30. `profile()` and `compare()` are unchanged, and the new names are not on the public API.
+31. Slice 001, Slice 002, and Slice 003 tests were not edited.
+32. Focused tests pass.
+33. Existing regression tests remain at their documented baseline, apart from the known PDF failure.
+34. Project memory records physical Datetime only, and does not mark datetime analysis or time-series analysis complete.
+35. [OPEN-044](DECISIONS.md#open-questions) stays open.
+36. [OPEN-045](DECISIONS.md#open-questions) stays open.
+37. No unknown, other, or unclassified semantic type was added.
+38. No second semantic type was added for timezone-aware datetime.
+39. Empty and Constant keep their existing inferred source.
+40. No unrelated production changes were made.
+41. `PhysicalDtype` was not redesigned.
+42. No commit or push was made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 42 passed for TSK-004.

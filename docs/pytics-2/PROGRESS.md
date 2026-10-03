@@ -1,6 +1,6 @@
 # Progress
 
-The project owner accepted the Slice 001 codebase on 2026-10-03 as the approved baseline for continued development. TSK-001, TSK-002, and TSK-003 are complete. They are foundation slices. No requirement below is completed.
+The project owner accepted the Slice 001 codebase on 2026-10-03 as the approved baseline for continued development. TSK-001, TSK-002, TSK-003, and TSK-004 are complete. They are foundation slices. No requirement below is completed.
 
 This register is the trace from requirement to proof:
 
@@ -24,7 +24,7 @@ Update implementation status only as part of an approved slice under [DEVELOPMEN
 
 `In force` is reserved for exclusions and holds: REQ-P-03, REQ-F-03, REQ-I-05, REQ-I-06, REQ-K-03, REQ-L-06, REQ-N-04, REQ-T-03, REQ-T-04. Every other requirement row is Not started.
 
-A completed task may name a requirement it only prepares or only partly covers. That requirement stays Not started until the requirement as written is implemented. TSK-001 is that case for REQ-S-01, REQ-S-02, and REQ-S-05. TSK-002 infers Empty and Constant only and collects four basic counts. TSK-003 infers Boolean only from a physical Boolean dtype, and only after Empty and Constant. Do not read these task links as completion of semantic inference, or of Boolean/Binary analysis.
+A completed task may name a requirement it only prepares or only partly covers. That requirement stays Not started until the requirement as written is implemented. TSK-001 is that case for REQ-S-01, REQ-S-02, and REQ-S-05. TSK-002 infers Empty and Constant only and collects four basic counts. TSK-003 infers Boolean only from a physical Boolean dtype, and only after Empty and Constant. TSK-004 infers Datetime only from a native or timezone-aware datetime dtype, and only after those three rules. Do not read these task links as completion of semantic inference, Boolean/Binary analysis, datetime analysis, or time-series analysis.
 
 ## Task log
 
@@ -33,6 +33,7 @@ A completed task may name a requirement it only prepares or only partly covers. 
 | TSK-001 | REQ-S-01, REQ-S-02, REQ-S-05, foundation only | Slice 001. Physical dtype classification and typed semantic value models. No inference. | The 16 checks in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md#tsk-001). | Completed |
 | TSK-002 | REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, Empty and Constant only. REQ-S-03 respected on this path. | Slice 002. Exact basic column evidence and Empty/Constant inference. No other semantic type. | The 24 checks in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md#tsk-002). | Completed |
 | TSK-003 | REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, physical Boolean only. REQ-D-01 and REQ-D-03 only for a physical Boolean dtype. REQ-S-03 and REQ-D-02 respected on this path. | Slice 003. Empty, then Constant, then physical Boolean. No other Boolean representation. | The 30 checks in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md#tsk-003). | Completed |
+| TSK-004 | REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, physical Datetime only. REQ-E-03 and REQ-E-04 respected on this path. REQ-S-03 respected on this path. | Slice 004. Empty, then Constant, then physical Boolean, then physical Datetime. No string parsing and no time-series analysis. | The 42 checks in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md#tsk-004). | Completed |
 
 ### TSK-001 — Slice 001, core semantic foundation
 
@@ -175,6 +176,57 @@ Verification, 2026-10-03, local `.venv`, Python 3.14.8, pandas 3.0.6, numpy 2.5.
 
 All 30 acceptance criteria in the implementation plan passed. Dependency files were not changed.
 
+### TSK-004 — Slice 004, physical Datetime inference and scalable semantic composition
+
+The committed Slice 001, Slice 002, and Slice 003 code was the development baseline. `git status` was clean, and `main` matched `origin/main`, before this slice. Slice 001, Slice 002, and Slice 003 files were not rewritten.
+
+Approved in the Slice 004 session on 2026-10-03. This record was written after verification in that same session.
+
+No new `DEC-###`. [OPEN-044](DECISIONS.md#open-questions) stays open. [OPEN-045](DECISIONS.md#open-questions) stays open. This slice introduces no inference threshold and no numeric confidence score. Internal names below are not a public schema. They do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), or [OPEN-037](DECISIONS.md#open-questions). `SemanticType.DATETIME` is the only datetime semantic type. Timezone-aware storage is not a second semantic type.
+
+Production files:
+
+| Path | Purpose |
+| --- | --- |
+| `src/pytics/semantics/physical_datetime.py` | Empty, then Constant, then physical Boolean, then physical Datetime, or no interpretation. |
+
+Not modified: `src/pytics/semantics/physical.py`, `src/pytics/semantics/interpretation.py`, `src/pytics/semantics/column_evidence.py`, `src/pytics/semantics/empty_constant.py`, `src/pytics/semantics/physical_boolean.py`, `src/pytics/semantics/__init__.py`, `src/pytics/__init__.py`, `src/pytics/profiler.py`, `src/pytics/visualizations.py`, `pyproject.toml`. Slice 001, Slice 002, and Slice 003 tests were not modified.
+
+Tests: `tests/test_physical_datetime.py`.
+
+`interpret_series_precedence` classifies the physical dtype once and collects `BasicColumnEvidence` once. `interpret_precedence_from_evidence` calls `interpret_empty_constant_or_physical_boolean_from_evidence`. Only when that returns no reading does it apply the datetime rule. It does not call `isna` or `nunique` again, and it does not classify again. There is no rule class, registry, or priority manager.
+
+The Slice 003 function is unchanged. A non-empty, non-constant datetime Series is still `None` from `interpret_empty_constant_or_physical_boolean`. The new entry point is not named by listing every rule. Extending the Boolean function's name would have produced a longer chain name, and putting Datetime inside that function would have made its name false. One successor function is the smaller composition. It is not a framework, and the file location does not resolve [OPEN-045](DECISIONS.md#open-questions).
+
+Precedence is Empty, then Constant, then physical Boolean, then physical Datetime, then no interpretation. `None` means this chain produced no interpretation. `SemanticType` has no unknown member, and this slice did not add one.
+
+A Datetime result requires all of: not Empty, not Constant, not the physical Boolean rule, and `PhysicalDtypeFamily.DATETIME` or `PhysicalDtypeFamily.DATETIME_TZ_AWARE`. Both families use `SemanticType.DATETIME`. Confidence is `Confidence.HIGH`, because the physical dtype is direct evidence ([DEC-050](DECISIONS.md#dec-050)), not because a score was introduced. Source is `InferenceSource.PHYSICAL_DTYPE`. Empty and Constant stay `InferenceSource.INFERRED`, including when the physical family is datetime. Evidence is one statement: `physical dtype is datetime`, or `physical dtype is timezone-aware datetime`. Subtype is unset. Alternatives are empty. The Slice 001 physical dtype is retained, including `dtype_name` and the timezone-aware family. `PhysicalDtype` was not given timezone metadata. Inference does not remove timezone information, convert timezone-aware values to naive values, normalize timezones, or convert values to UTC. It does not call `pd.to_datetime` on source data. It does not depend on a particular resolution such as nanoseconds.
+
+An all-`NaT` datetime Series and a zero-length datetime Series stay Empty. A repeated timestamp, including one distinct timestamp plus `NaT`, stays Constant. The physical family remains datetime on those readings.
+
+Date-like strings stay strings and get no Datetime reading. A one-value datetime-like string stays Constant. An object Series of Python `datetime` or `Timestamp` values stays object and gets no interpretation. Integer and floating Unix-like values get no interpretation. A categorical of timestamps stays categorical and gets no interpretation. `PhysicalDtypeFamily.TIMEDELTA` gets no interpretation, and `SemanticType.TIMEDELTA` is not inferred. `PhysicalDtypeFamily.PERIOD` gets no interpretation. A column name is not used. A Datetime reading does not record frequency, regularity, monotonicity, gaps, calendar pattern, trend, seasonality, or autocorrelation, and it is not a time-series structure.
+
+The Series is not copied, coerced, or otherwise modified.
+
+Datetime is not yet emitted as a dataset-level fact. REQ-A-06 stays Not started. REQ-E-01 and REQ-E-02 stay Not started. REQ-S-07 stays Not started. String-to-datetime recognition stays Not started.
+
+Left open, and not decided in this slice: inference thresholds ([OPEN-044](DECISIONS.md#open-questions)); the subtype taxonomy ([OPEN-014](DECISIONS.md#open-questions)); ordinal storage ([OPEN-016](DECISIONS.md#open-questions)); module layout ([OPEN-045](DECISIONS.md#open-questions)); the order of later slices ([OPEN-037](DECISIONS.md#open-questions)); string-to-datetime inference; object-datetime heuristics; Unix-timestamp detection; period semantics; timedelta semantic inference; and time-series analysis ([OPEN-020](DECISIONS.md#open-questions)).
+
+What was not implemented: Timedelta semantic inference; period semantic inference; datetime string parsing; object datetime heuristics; Unix timestamp detection; date-format detection; timezone normalization; datetime resolution analysis; time-series inference; frequency detection; temporal gaps; calendar patterns; trend; seasonality; autocorrelation; Numeric; Continuous/Discrete; Identifier; Categorical; Text; ordinal semantics; `{0, 1}` Boolean; Boolean-like strings; binary categorical semantics; thresholds; sampling; findings; relationships; target; anomalies; compare/drift; HTML; PDF; and a public result API.
+
+Verification, 2026-10-03, local `.venv`, Python 3.14.8, pandas 3.0.6, numpy 2.5.3. Before this slice the working tree was clean and `main` matched `origin/main`. `pytest tests/test_semantic_foundation.py -q` was 43 passed, `pytest tests/test_empty_constant.py -q` was 29 passed, `pytest tests/test_physical_boolean.py -q` was 22 passed, and `pytest tests/test_profiler.py -q` was 19 passed, 1 failed.
+
+| Command | Result |
+| --- | --- |
+| `pytest tests/test_physical_datetime.py -q` | 24 passed |
+| `pytest tests/test_semantic_foundation.py tests/test_empty_constant.py tests/test_physical_boolean.py tests/test_physical_datetime.py -q` | 118 passed |
+| `pytest tests/test_profiler.py -q` | 19 passed, 1 failed |
+| `pytest tests -q` | 137 passed, 1 failed |
+
+`tests/test_semantic_foundation.py` is the unchanged 43 Slice 001 tests. `tests/test_empty_constant.py` is the unchanged 29 Slice 002 tests. `tests/test_physical_boolean.py` is the unchanged 22 Slice 003 tests. `tests/test_physical_datetime.py` is 24 Slice 004 tests. The only failure is `tests/test_profiler.py::test_pdf_export`: `TypeError: '<' not supported between instances of 'float' and 'str'` in `xhtml2pdf`. That is the documented baseline PDF failure. No previously passing test failed. Semantic modules were fully covered on the full run. Total coverage on that run was 97%.
+
+All 42 acceptance criteria in the implementation plan passed. Dependency files were not changed.
+
 ## Requirement register
 
 Source files and tests stay empty on a requirement row until that requirement is implemented. A preparatory note may appear in Verification. Do not point these columns at `src/pytics/` merely because 1.1.5 happens to touch a similar topic.
@@ -197,11 +249,11 @@ Source files and tests stay empty on a requirement row until that requirement is
 | REQ-P-14 | Expose structured results programmatically, and render HTML and PDF through explicit presentation entry points. | Not started | — | — | — | — | [PRODUCT_CONTRACT.md](PRODUCT_CONTRACT.md) |
 | REQ-P-15 | Default to zero configuration, and avoid a large public keyword-argument surface. | Not started | — | — | — | — | [PRODUCT_CONTRACT.md](PRODUCT_CONTRACT.md) |
 | REQ-P-16 | Provide quick, standard, and deep analysis modes. Standard is the intended default. Exact contents and thresholds are not frozen. | Not started | — | — | — | — | [PRODUCT_CONTRACT.md](PRODUCT_CONTRACT.md) |
-| REQ-S-01 | Infer a semantic type. The minimum concepts are Numeric, Categorical, Boolean/Binary, Text/String, Datetime, Timedelta, Identifier, Constant, and Empty. Empty and Constant are also dataset facts. | Not started | TSK-001, TSK-002, TSK-003 | — | — | Not completed. TSK-001 can represent the minimum types. TSK-002 infers Empty and Constant only. TSK-003 also infers Boolean from a physical Boolean dtype after those two rules. It does not infer the other minimum types, other Boolean representations, or dataset facts. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
-| REQ-S-02 | Retain semantic type, subtype where relevant, confidence, supporting evidence, alternative interpretations where relevant, and source of interpretation. User-facing confidence is High, Medium, or Low, with concrete evidence. Do not present pseudo-precise confidence. | Not started | TSK-001, TSK-002, TSK-003 | — | — | Not completed. TSK-001 can store a reading. TSK-002 stores type, High confidence, one evidence statement, inferred source, and physical dtype for Empty and Constant only. TSK-003 does the same for physical Boolean, with source physical dtype. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
-| REQ-S-03 | Do not silently clean, repair, coerce, or mutate the original DataFrame. Preserve the distinction between source representation and analytical interpretation. Pattern detection must not rewrite the source Series. | Not started | TSK-002, TSK-003 | — | — | Not completed. TSK-002 and TSK-003 do not mutate the Series they read. TSK-002 does not treat missing-like strings as missing. The requirement covers the product, not only these paths. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
-| REQ-S-04 | Make inference evidence-driven and transparent, and expose uncertainty. A column name may support an inference and must not determine semantic type by itself. | Not started | TSK-002, TSK-003 | — | — | Not completed. TSK-002 decides Empty and Constant from basic counts and does not use the column name. TSK-003 decides physical Boolean from the dtype family after those counts, and does not use the column name or cardinality. It does not implement the rest of evidence-driven inference. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
-| REQ-S-05 | Distinguish physical dtype, observed characteristics, and semantic interpretation. Keep the original physical dtype inspectable. | Not started | TSK-001, TSK-002, TSK-003 | — | — | Not completed. TSK-001 classifies physical dtype. TSK-002 collects four exact basic counts and keeps that physical dtype on Empty and Constant interpretations. TSK-003 keeps it on physical Boolean interpretations. It does not collect the rest of the observed characteristics. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
+| REQ-S-01 | Infer a semantic type. The minimum concepts are Numeric, Categorical, Boolean/Binary, Text/String, Datetime, Timedelta, Identifier, Constant, and Empty. Empty and Constant are also dataset facts. | Not started | TSK-001, TSK-002, TSK-003, TSK-004 | — | — | Not completed. TSK-001 can represent the minimum types. TSK-002 infers Empty and Constant only. TSK-003 also infers Boolean from a physical Boolean dtype after those two rules. TSK-004 also infers Datetime from a native or timezone-aware datetime dtype after those three rules. It does not infer Datetime from strings or other storage, Timedelta, the other minimum types, other Boolean representations, or dataset facts. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
+| REQ-S-02 | Retain semantic type, subtype where relevant, confidence, supporting evidence, alternative interpretations where relevant, and source of interpretation. User-facing confidence is High, Medium, or Low, with concrete evidence. Do not present pseudo-precise confidence. | Not started | TSK-001, TSK-002, TSK-003, TSK-004 | — | — | Not completed. TSK-001 can store a reading. TSK-002 stores type, High confidence, one evidence statement, inferred source, and physical dtype for Empty and Constant only. TSK-003 does the same for physical Boolean, with source physical dtype. TSK-004 does the same for physical Datetime. Timezone-aware storage keeps its own evidence statement and its physical family. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
+| REQ-S-03 | Do not silently clean, repair, coerce, or mutate the original DataFrame. Preserve the distinction between source representation and analytical interpretation. Pattern detection must not rewrite the source Series. | Not started | TSK-002, TSK-003, TSK-004 | — | — | Not completed. TSK-002, TSK-003, and TSK-004 do not mutate the Series they read. TSK-002 does not treat missing-like strings as missing. TSK-004 does not parse strings or coerce them to datetime. The requirement covers the product, not only these paths. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
+| REQ-S-04 | Make inference evidence-driven and transparent, and expose uncertainty. A column name may support an inference and must not determine semantic type by itself. | Not started | TSK-002, TSK-003, TSK-004 | — | — | Not completed. TSK-002 decides Empty and Constant from basic counts and does not use the column name. TSK-003 decides physical Boolean from the dtype family after those counts, and does not use the column name or cardinality. TSK-004 decides physical Datetime from the dtype family after those rules, and does not use the column name or parse values. It does not implement the rest of evidence-driven inference. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
+| REQ-S-05 | Distinguish physical dtype, observed characteristics, and semantic interpretation. Keep the original physical dtype inspectable. | Not started | TSK-001, TSK-002, TSK-003, TSK-004 | — | — | Not completed. TSK-001 classifies physical dtype. TSK-002 collects four exact basic counts and keeps that physical dtype on Empty and Constant interpretations. TSK-003 keeps it on physical Boolean interpretations. TSK-004 keeps it on physical Datetime interpretations, including the timezone-aware family. It does not collect the rest of the observed characteristics. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
 | REQ-S-06 | Treat explicit per-variable semantic configuration as a first-class capability. User intent normally takes precedence. If a configured interpretation cannot be meaningfully applied, report the conflict instead of silently coercing. The exact API is not frozen. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
 | REQ-S-07 | Give Timedelta dedicated duration analysis that preserves duration semantics and readable units. Do not present user-facing timedelta results as raw nanoseconds. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
 | REQ-S-08 | Do not infer ordinal ordering from category labels. Accept ordinal semantics only when the user configures them or the source explicitly represents order. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
@@ -232,8 +284,8 @@ Source files and tests stay empty on a requirement row until that requirement is
 | REQ-D-03 | Record confidence and reason for a boolean or binary inference. | Not started | TSK-003 | — | — | Not completed. TSK-003 records High confidence and one factual evidence statement for a physical Boolean reading. It does not cover other boolean or binary readings. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
 | REQ-E-01 | Earliest, latest, range or span, missingness, distinct values, duplicate timestamps, timezone, and inferred resolution. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
 | REQ-E-02 | Monotonicity, gaps, irregular intervals, frequency, relevant calendar distributions, and time-structure signals. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
-| REQ-E-03 | Distinguish a column that contains dates from an actual time-series structure. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
-| REQ-E-04 | Do not indiscriminately run deeper time-series diagnostics on every datetime column. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
+| REQ-E-03 | Distinguish a column that contains dates from an actual time-series structure. | Not started | TSK-004 | — | — | Not completed. TSK-004 can read a physical datetime dtype as Datetime and does not treat that reading as a time series. The requirement covers the product, not only this path. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
+| REQ-E-04 | Do not indiscriminately run deeper time-series diagnostics on every datetime column. | Not started | TSK-004 | — | — | Not completed. TSK-004 does not run monotonicity, frequency, gap, calendar, trend, seasonality, or autocorrelation analysis. The requirement covers the product, not only this path. | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
 | REQ-F-01 | Distinguish the string roles listed above. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
 | REQ-F-02 | Text diagnostics covering count, missing, distinct, empty strings, whitespace-only values, length statistics and distribution, word counts, leading or trailing whitespace, line breaks, Unicode or non-ASCII characteristics, pattern consistency, and duplicate text. | Not started | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
 | REQ-F-03 | Pytics core must not become a full NLP platform. | In force | — | — | — | — | [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) |
@@ -301,7 +353,7 @@ Source files and tests stay empty on a requirement row until that requirement is
 | REQ-T-04 | Do not install or pin a Pytics 2.0 dependency lock. Candidate directions from the ecosystem review are not that lock. | In force | — | — | — | — | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) |
 | REQ-T-05 | Reuse one statistical layer for general relationships, target analysis, missingness relationships, dataset comparison, and drift wherever analytically appropriate. Do not implement separate statistical truths for those uses. The exact internal API is not frozen. | Not started | — | — | — | — | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) |
 
-Total rows: 119. Not started: 110. In force: 9. Implemented, verified, and completed: 0. Completed tasks: TSK-001, TSK-002, TSK-003. Those tasks do not complete a requirement row.
+Total rows: 119. Not started: 110. In force: 9. Implemented, verified, and completed: 0. Completed tasks: TSK-001, TSK-002, TSK-003, TSK-004. Those tasks do not complete a requirement row.
 
 ## Items deliberately absent from this register
 
@@ -322,4 +374,4 @@ The following are not requirements and must not be given tasks until a decision 
 
 Migration mechanics are decided ([DEC-063](DECISIONS.md#dec-063)). They are not a requirement row.
 
-The engine diagram, the three mode names, the shared statistical layer, the method-registry concept, DataFrame-only input, held-out permutation importance, and the candidate dependency directions are accepted. Acceptance is not a task and not an implementation. TSK-001, TSK-002, and TSK-003 are the only implementation tasks, and they do not implement those engines.
+The engine diagram, the three mode names, the shared statistical layer, the method-registry concept, DataFrame-only input, held-out permutation importance, and the candidate dependency directions are accepted. Acceptance is not a task and not an implementation. TSK-001, TSK-002, TSK-003, and TSK-004 are the only implementation tasks, and they do not implement those engines.
