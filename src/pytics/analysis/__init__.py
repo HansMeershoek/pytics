@@ -3,6 +3,7 @@
 Not part of the public ``pytics.profile`` / ``pytics.compare`` API.
 Import paths and type names here are not a frozen public schema.
 Semantic inference stays in ``pytics.semantics``. This package owns the
-broader column and dataset records, the DataFrame traversal, and the
-dataset overview aggregated from an existing dataset analysis.
+broader column and dataset records, the DataFrame traversal, the dataset
+overview, and the variables summary aggregated from an existing dataset
+analysis.
 """

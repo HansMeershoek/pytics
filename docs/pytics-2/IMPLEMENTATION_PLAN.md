@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, and TSK-018 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. TSK-016 connects those components for one Series and does not invent that confidence. TSK-017 retains that column analysis for one DataFrame and does not invent that confidence. TSK-018 summarizes that analysis as a dataset overview and does not invent that confidence. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, and TSK-019 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. TSK-016 connects those components for one Series and does not invent that confidence. TSK-017 retains that column analysis for one DataFrame and does not invent that confidence. TSK-018 summarizes that analysis as a dataset overview and does not invent that confidence. TSK-019 summarizes each column of that analysis as a variable and does not invent that confidence. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, Slice 015, Slice 016, Slice 017, and Slice 018. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, Slice 015, Slice 016, Slice 017, Slice 018, and Slice 019. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, and TSK-018 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, and TSK-019 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, and TSK-018 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, REQ-H-04, REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-04, REQ-A-05, REQ-A-06, or REQ-IA-05.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, and TSK-019 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, REQ-H-04, REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-04, REQ-A-05, REQ-A-06, or REQ-IA-05.
 
 ## Reuse of 1.1.5
 
@@ -1159,4 +1159,56 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 13 p
 
 ## After TSK-018
 
-TSK-018 summarizes one `DatasetAnalysis` as a frozen overview. It copies dimensions and missing-cell totals, counts resolved selected semantic types, and names Empty, Constant, Identifier, insufficient-evidence, and ambiguous columns by position and original label. It does not rescan the DataFrame, assign candidate confidence, or change `profile` or `compare`. [DEC-089](DECISIONS.md#dec-089) records the contract, including sparse semantic counts, separate cell-completeness and semantic-resolution ratios, and the deferred memory and duplicate-row definitions. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-018 summarizes one `DatasetAnalysis` as a frozen overview. It copies dimensions and missing-cell totals, counts resolved selected semantic types, and names Empty, Constant, Identifier, insufficient-evidence, and ambiguous columns by position and original label. It does not rescan the DataFrame, assign candidate confidence, or change `profile` or `compare`. [DEC-089](DECISIONS.md#dec-089) records the contract, including sparse semantic counts, separate cell-completeness and semantic-resolution ratios, and the deferred memory and duplicate-row definitions. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-019 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-019
+
+Slice 019, variables and column-summary foundation. Approved 2026-10-03 after TSK-018. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-B-01 only for count, missing, distinct, zeros, negatives, and infinities already available from basic evidence and numeric-structure evidence. REQ-C-01 only for those universal counts and `unique_ratio_non_missing` on a categorical variable. REQ-C-02 only for the most frequent count and ratio, not the mode value. REQ-C-04 only for singleton count and ratio, not a rare-category percentage. REQ-G-01 only for Identifier as a selected variable type with pattern counts. REQ-G-02 only for those structured pattern counts, not copied evidence statements or confidence. REQ-IA-07 only for the analytical rows and type-specific details, not a rendered table. REQ-B-01, REQ-B-02, REQ-C-01, REQ-C-02, REQ-C-04, REQ-G-01, REQ-G-02, and REQ-IA-07 are not completed. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Add `NumericVariableDetail`, `CategoricalVariableDetail`, `IdentifierVariableDetail`, `VariableSummary`, `VariablesSummary`, and `build_variables_summary` in `src/pytics/analysis/variables.py`.
+- The builder accepts `DatasetAnalysis` only. It copies identity, physical dtype, resolution status, selected semantic type, and basic counts. It does not scan a DataFrame or a Series.
+- `selected_type` is present only for `RESOLVED`. A candidate-derived Numeric, Identifier, or Categorical selection is resolved while `interpretation` is `None`. Confidence and inference source are not copied.
+- `unique_ratio_non_missing` divides distinct non-missing values by non-missing values, and is `None` when that count is zero.
+- Numeric detail copies retained numeric-structure counts. Monotonicity `None` stays unknown. Mean, median, and the other descriptive summaries are not added.
+- `analyze_series` collects existing `FrequencyEvidence` for a non-structural physical categorical column and retains it on `ColumnEvidence`. The collector contract is unchanged. Categorical detail copies the most frequent count and the singleton count. It does not copy the most frequent value. Ordinary strings do not collect frequency evidence.
+- Identifier detail copies retained pattern counts. Overlap is not a score. A constant UUID stays Constant and has no Identifier detail.
+- Empty, Constant, Boolean, Datetime, Timedelta, Text, insufficient evidence, and ambiguity have common facts and no specialized detail. The constant value is not retained.
+- Variables stay in source order. Duplicate labels stay distinct. Labels are not stringified. A zero-row column is Empty with undefined ratios. A zero-column schema has an empty tuple.
+- No pandas import in the variables module. The analysis is not retained. `profile` and `compare` are unchanged.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063) and the analysis package in [DEC-088](DECISIONS.md#dec-088). The variables contract is [DEC-090](DECISIONS.md#dec-090). It narrows [OPEN-043](DECISIONS.md#open-questions) for detail applicability, [OPEN-045](DECISIONS.md#open-questions) for the product-summary location, and records this slice in [OPEN-037](DECISIONS.md#open-questions). It does not close [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), or [OPEN-047](DECISIONS.md#open-047).
+
+### Exclusions
+
+Do not rescan values from the variables builder. Do not accept a DataFrame. Do not add mean, median, standard deviation, quantiles, skewness, kurtosis, or outlier signals. Do not add Boolean true/false counts, datetime span, timedelta duration statistics, or a Text detail. Do not collect string-content evidence. Do not collect frequency evidence for ordinary strings or structural columns. Do not retain the constant value by a new scan. Do not invent candidate confidence. Do not add Binary or Ordinal. Do not add thresholds, Findings, or renderer text. Do not route `pytics.profile` or `pytics.compare` through the summary. Do not export it from top-level `pytics`. Do not add a dependency.
+
+Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049). [OPEN-043](DECISIONS.md#open-questions) records the detail-applicability narrowing and stays open for the rest of eligibility. [OPEN-045](DECISIONS.md#open-questions) records `variables.py` only as a file in the existing analysis package.
+
+Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `build_variables_summary` accepts a `DatasetAnalysis`. A DataFrame, Series, mapping, or `None` raises `TypeError` and is not analyzed.
+2. Every physical column has one summary in source order, with position, the original label, the physical dtype, resolution status, and the basic counts. `unique_ratio_non_missing` uses the non-missing denominator and is `None` when that count is zero.
+3. Numeric, Identifier, and Categorical summaries are `RESOLVED` with that selected type while `interpretation` is `None`. Insufficient evidence and ambiguity have no selected type and no specialized detail.
+4. Numeric detail copies retained numeric-structure counts, including infinities and monotonicity. `None` monotonicity is not false. `{0, 1}` and `{0.0, 1.0}` stay Numeric. Mean and the other descriptive summaries are absent.
+5. Physical categorical columns that are not Empty or Constant retain `FrequencyEvidence`. Categorical detail exposes most-frequent and singleton counts and ratios, not the top value. Ordered storage stays on the physical dtype. Unused levels follow the existing collector. Ordinary strings do not collect frequency evidence and are not Categorical.
+6. Identifier detail copies pattern counts. Compact UUID overlap is not a score. Duplicate UUIDs stay Identifier. A constant UUID is Constant and has no Identifier detail.
+7. Empty, Constant, Boolean, Datetime, timezone-aware Datetime, and Timedelta have common summaries and no specialized detail.
+8. Duplicate labels stay distinct. Non-string and MultiIndex labels are preserved. A zero-row schema is resolved Empty with undefined ratios. A zero-column schema has an empty tuple.
+9. The variables module does not import pandas or call analysis, collection, or resolution functions. It does not retain the analysis. It adds no finding, threshold, confidence, or renderer field.
+10. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added. No semantic rule was added. `StringContentEvidence` stays uncollected.
+11. Focused TSK-019 tests pass. The semantic regression stays at the previous results except for the frequency-collection assertions that this slice changes. The full suite adds only the new tests, with the known PDF failure unchanged.
+12. [OPEN-043](DECISIONS.md#open-questions) records the detail-applicability narrowing and stays open. [OPEN-045](DECISIONS.md#open-questions) records the file location and stays open. [OPEN-037](DECISIONS.md#open-questions) records this slice and does not choose the next one. [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), and [OPEN-047](DECISIONS.md#open-047) stay open.
+13. This section does not approve or implement a later slice.
+14. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 14 passed for TSK-019.
+
+## After TSK-019
+
+TSK-019 summarizes one `DatasetAnalysis` as ordered variable facts. Every column has common counts. Numeric, Categorical, and Identifier columns can carry a typed detail copied from retained evidence. The other semantic states do not. Frequency evidence is collected only for non-structural physical categorical columns. The variables builder does not rescan the DataFrame, assign candidate confidence, or change `profile` or `compare`. [DEC-090](DECISIONS.md#dec-090) records the contract, including semantic-first detail, the deferred descriptive statistics, and the constant-value gap. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

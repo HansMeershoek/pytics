@@ -826,10 +826,9 @@ def test_pipeline_does_not_add_semantic_rules():
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             imported.append(node.module)
     assert "pytics.profiler" not in imported
-    assert "pytics.semantics.frequency_evidence" not in imported
+    assert "pytics.semantics.frequency_evidence" in imported
     assert "pytics.semantics.string_content_evidence" not in imported
     for token in (
-        "collect_frequency_evidence",
         "collect_string_content_evidence",
         "Confidence",
         "InferenceSource",
@@ -843,5 +842,7 @@ def test_pipeline_does_not_add_semantic_rules():
     ):
         assert token not in source
         assert token not in wrapper
+    assert "collect_frequency_evidence" in source
+    assert "collect_frequency_evidence" not in wrapper
     assert "analyze_series" in wrapper
     assert "collect_basic_column_evidence" not in wrapper

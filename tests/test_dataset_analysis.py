@@ -20,6 +20,7 @@ from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.semantics.column_evidence import collect_basic_column_evidence
+from pytics.semantics.frequency_evidence import collect_frequency_evidence
 from pytics.semantics.inferred import InferredSemanticResult
 from pytics.semantics.interpretation import SemanticType
 from pytics.semantics.numeric_structure_evidence import NumericStructureEvidence
@@ -112,6 +113,18 @@ def test_column_evidence_rejects_invalid_composition():
             string_structure=other_structure,
             pattern=pattern,
         )
+
+    categories = pd.Series(pd.Categorical(["a", "b", "a"]))
+    category_basic = collect_basic_column_evidence(categories)
+    other_category_basic = collect_basic_column_evidence(categories)
+    frequency = collect_frequency_evidence(categories, category_basic)
+    with pytest.raises(TypeError, match="frequency"):
+        ColumnEvidence(basic=category_basic, frequency="counts")  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="frequency.basic"):
+        ColumnEvidence(basic=other_category_basic, frequency=frequency)
+    retained = ColumnEvidence(basic=category_basic, frequency=frequency)
+    assert retained.frequency is frequency
+    assert retained.frequency.basic is retained.basic
 
 
 def test_column_evidence_rejects_both_numeric_and_string_families():
@@ -260,7 +273,7 @@ def test_string_evidence_is_retained_by_identity():
     assert evidence.pattern.string_structure is evidence.string_structure
     assert analyzed.inferred.selected_type is SemanticType.IDENTIFIER
     assert not hasattr(evidence, "string_content")
-    assert not hasattr(evidence, "frequency")
+    assert evidence.frequency is None
 
 
 def test_structural_columns_keep_basic_evidence_only():
@@ -277,6 +290,7 @@ def test_structural_columns_keep_basic_evidence_only():
         assert analyzed.evidence.numeric_structure is None
         assert analyzed.evidence.string_structure is None
         assert analyzed.evidence.pattern is None
+        assert analyzed.evidence.frequency is None
         assert analyzed.inferred.interpretation is not None
 
 
@@ -437,7 +451,16 @@ def test_mixed_frame_preserves_order_and_current_semantics():
         ResolutionStatus.INSUFFICIENT_EVIDENCE
     )
     assert analyzed.columns[7].evidence.string_structure is None
+    assert analyzed.columns[7].evidence.frequency is not None
+    assert (
+        analyzed.columns[7].evidence.frequency.basic
+        is analyzed.columns[7].evidence.basic
+    )
     assert analyzed.columns[7].physical.categorical_ordered is True
+    assert analyzed.columns[0].evidence.frequency is None
+    assert analyzed.columns[2].evidence.frequency is None
+    assert analyzed.columns[5].evidence.frequency is None
+    assert analyzed.columns[6].evidence.frequency is None
     assert analyzed.n_missing_cells == 3
     assert analyzed.missing_ratio == pytest.approx(3 / 24)
 
@@ -652,13 +675,10 @@ def test_public_api_and_analysis_source_stay_internal():
     assert not hasattr(pytics, "analyze_dataframe")
     assert not hasattr(pytics, "analyze_series")
     assert not hasattr(pytics, "DatasetAnalysis")
-    source = "\n".join(
-        (
-            inspect.getsource(column_analysis),
-            inspect.getsource(dataset),
-            inspect.getsource(pipeline),
-        )
-    )
+    column_source = inspect.getsource(column_analysis)
+    dataset_source = inspect.getsource(dataset)
+    pipeline_source = inspect.getsource(pipeline)
+    source = "\n".join((column_source, dataset_source, pipeline_source))
     for token in (
         "memory_usage",
         "drop_duplicates",
@@ -668,10 +688,12 @@ def test_public_api_and_analysis_source_stay_internal():
         "joblib",
         "warnings",
         ".copy(",
-        "collect_frequency_evidence",
         "collect_string_content_evidence",
     ):
         assert token not in source
+    assert "collect_frequency_evidence" in column_source
+    assert "collect_frequency_evidence" not in dataset_source
+    assert "collect_frequency_evidence" not in pipeline_source
 
 
 def test_dataset_columns_are_not_keyed_by_label():

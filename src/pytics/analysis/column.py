@@ -5,9 +5,10 @@ physical dtype once, collects basic evidence once, and keeps every evidence
 object that this path actually produces. ``None`` means that family was not
 collected. It does not mean the underlying count was zero.
 
-Frequency evidence and string-content evidence are not collected. No current
-candidate rule reads them, and this dataset slice has no consumer that needs
-them. Structural precedence still returns before candidate-family collection.
+Frequency evidence is collected for a non-structural physical categorical
+column, which is the population a Categorical variable summary reads. It is
+not an assessor input. String-content evidence is not collected. Structural
+precedence still returns before that collection.
 """
 
 from __future__ import annotations
@@ -25,6 +26,8 @@ from pytics.semantics.column_evidence import collect_basic_column_evidence
 from pytics.semantics.core_candidates import assess_categorical_candidate
 from pytics.semantics.core_candidates import assess_numeric_candidate
 from pytics.semantics.core_candidates import assess_text_candidate
+from pytics.semantics.frequency_evidence import FrequencyEvidence
+from pytics.semantics.frequency_evidence import collect_frequency_evidence
 from pytics.semantics.identifier_candidate import assess_identifier_candidate
 from pytics.semantics.inferred import InferredSemanticResult
 from pytics.semantics.inferred import build_inferred_semantic_result
@@ -72,13 +75,15 @@ class ColumnEvidence:
     ``basic`` is always present. The other families are present only when
     this observation path collected them. A missing family is ``None``.
     A collected family keeps the object the collector returned, including
-    its composition with ``basic`` or with string structure.
+    its composition with ``basic`` or with string structure. ``frequency``
+    is that object for a non-structural physical categorical column.
     """
 
     basic: BasicColumnEvidence
     numeric_structure: Optional[NumericStructureEvidence] = None
     string_structure: Optional[StringStructureEvidence] = None
     pattern: Optional[PatternEvidence] = None
+    frequency: Optional[FrequencyEvidence] = None
 
     def __post_init__(self) -> None:
         _require(self.basic, BasicColumnEvidence, "basic")
@@ -114,6 +119,10 @@ class ColumnEvidence:
                 "numeric-structure evidence and string-structure evidence "
                 "do not apply to the same column"
             )
+        if self.frequency is not None:
+            _require(self.frequency, FrequencyEvidence, "frequency")
+            if self.frequency.basic is not self.basic:
+                raise ValueError("frequency.basic must be this evidence's basic")
 
 
 @dataclass(frozen=True)
@@ -168,12 +177,14 @@ def analyze_series(
         numeric_structure = None
         string_structure = None
         pattern = None
+        frequency = None
     else:
         numeric_structure, string_structure, pattern = _evidence_for_candidates(
             series,
             basic,
             physical,
         )
+        frequency = _frequency_for_physical_categorical(series, basic, physical)
         candidates = _assess_candidates(
             basic,
             physical,
@@ -188,6 +199,7 @@ def analyze_series(
         numeric_structure=numeric_structure,
         string_structure=string_structure,
         pattern=pattern,
+        frequency=frequency,
     )
     return ColumnAnalysis(
         position=position,
@@ -209,12 +221,12 @@ def _evidence_for_candidates(
 ]:
     """Collect the evidence the current assessors can consume.
 
-    Frequency evidence is not collected. Numeric-structure evidence is
-    collected only for integer and floating storage. String structure and
-    pattern evidence are collected only when the string-structure collector
-    accepts the population. String-content evidence is not collected.
-    Other families are assessed from the basic evidence and the physical
-    dtype alone.
+    Numeric-structure evidence is collected only for integer and floating
+    storage. String structure and pattern evidence are collected only when
+    the string-structure collector accepts the population. String-content
+    evidence is not collected. Frequency evidence is collected separately,
+    and only for physical categorical storage. Other families are assessed
+    from the basic evidence and the physical dtype alone.
     """
     if physical.family in _NUMERIC_FAMILIES:
         numeric = collect_numeric_structure_evidence(series, basic, physical)
@@ -223,6 +235,23 @@ def _evidence_for_candidates(
         structure, pattern = _string_evidence(series, basic, physical)
         return None, structure, pattern
     return None, None, None
+
+
+def _frequency_for_physical_categorical(
+    series: pd.Series,
+    basic: BasicColumnEvidence,
+    physical: PhysicalDtype,
+) -> Optional[FrequencyEvidence]:
+    """Collect frequency evidence for physical categorical storage only.
+
+    Empty and Constant columns do not reach this helper. Numeric, string,
+    object, Boolean, datetime, timedelta, and the other families are not
+    scanned. The collector contract is unchanged, including its retention
+    bound and its removal of unobserved categorical levels.
+    """
+    if physical.family is not PhysicalDtypeFamily.CATEGORICAL:
+        return None
+    return collect_frequency_evidence(series, basic)
 
 
 def _string_evidence(
@@ -273,7 +302,8 @@ def _assess_candidates(
 
     The assessors do not receive the Series. Omitted evidence stays
     ``None``. A zero-filled stand-in is not created for a family that
-    does not apply.
+    does not apply. Frequency evidence stays on the column record and is
+    not an assessor argument.
     """
     return (
         assess_identifier_candidate(
