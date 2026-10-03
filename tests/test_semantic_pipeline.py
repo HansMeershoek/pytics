@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 import pytics
+import pytics.analysis.column as column_analysis
 import pytics.semantics.pipeline as pipeline
 from pytics.semantics.candidate import CandidateDisposition
 from pytics.semantics.inferred import InferredSemanticResult
@@ -35,7 +36,6 @@ _DOWNSTREAM_COLLECTORS = (
     "collect_numeric_structure_evidence",
     "collect_string_structure_evidence",
     "collect_pattern_evidence",
-    "collect_string_content_evidence",
 )
 _ASSESSORS = (
     "assess_identifier_candidate",
@@ -464,13 +464,13 @@ def test_physical_dtype_is_classified_once(
     monkeypatch: pytest.MonkeyPatch,
 ):
     seen = []
-    real = pipeline.classify_physical_dtype
+    real = column_analysis.classify_physical_dtype
 
     def spy(source: object):
         seen.append(source)
         return real(source)
 
-    monkeypatch.setattr(pipeline, "classify_physical_dtype", spy)
+    monkeypatch.setattr(column_analysis, "classify_physical_dtype", spy)
     result = infer_series_semantics(series)
     assert seen == [series]
     assert result.physical == classify_physical_dtype(series)
@@ -481,14 +481,14 @@ def test_classified_physical_dtype_object_is_reused(
 ):
     series = pd.Series([1, 2, 3])
     seen = []
-    real = pipeline.classify_physical_dtype
+    real = column_analysis.classify_physical_dtype
 
     def spy(source: object):
         value = real(source)
         seen.append(value)
         return value
 
-    monkeypatch.setattr(pipeline, "classify_physical_dtype", spy)
+    monkeypatch.setattr(column_analysis, "classify_physical_dtype", spy)
     result = infer_series_semantics(series)
     assert len(seen) == 1
     assert result.physical is seen[0]
@@ -499,14 +499,14 @@ def test_structural_interpretation_keeps_the_classified_physical_dtype(
 ):
     series = pd.Series([True, False, True])
     seen = []
-    real = pipeline.classify_physical_dtype
+    real = column_analysis.classify_physical_dtype
 
     def spy(source: object):
         value = real(source)
         seen.append(value)
         return value
 
-    monkeypatch.setattr(pipeline, "classify_physical_dtype", spy)
+    monkeypatch.setattr(column_analysis, "classify_physical_dtype", spy)
     result = infer_series_semantics(series)
     assert len(seen) == 1
     assert result.interpretation is not None
@@ -528,13 +528,13 @@ def test_basic_evidence_is_collected_once(
     monkeypatch: pytest.MonkeyPatch,
 ):
     seen = []
-    real = pipeline.collect_basic_column_evidence
+    real = column_analysis.collect_basic_column_evidence
 
     def spy(value: pd.Series):
         seen.append(value)
         return real(value)
 
-    monkeypatch.setattr(pipeline, "collect_basic_column_evidence", spy)
+    monkeypatch.setattr(column_analysis, "collect_basic_column_evidence", spy)
     infer_series_semantics(series)
     assert seen == [series]
 
@@ -544,9 +544,9 @@ def test_numeric_evidence_reuses_basic_identity(monkeypatch: pytest.MonkeyPatch)
     basic_seen = []
     numeric_seen = []
     assessor_bundles = []
-    real_basic = pipeline.collect_basic_column_evidence
-    real_numeric = pipeline.collect_numeric_structure_evidence
-    real_assess = pipeline.assess_numeric_candidate
+    real_basic = column_analysis.collect_basic_column_evidence
+    real_numeric = column_analysis.collect_numeric_structure_evidence
+    real_assess = column_analysis.assess_numeric_candidate
 
     def basic_spy(value: pd.Series):
         evidence = real_basic(value)
@@ -562,9 +562,11 @@ def test_numeric_evidence_reuses_basic_identity(monkeypatch: pytest.MonkeyPatch)
         assessor_bundles.append((basic, kwargs))
         return real_assess(basic, physical, **kwargs)
 
-    monkeypatch.setattr(pipeline, "collect_basic_column_evidence", basic_spy)
-    monkeypatch.setattr(pipeline, "collect_numeric_structure_evidence", numeric_spy)
-    monkeypatch.setattr(pipeline, "assess_numeric_candidate", assess_spy)
+    monkeypatch.setattr(column_analysis, "collect_basic_column_evidence", basic_spy)
+    monkeypatch.setattr(
+        column_analysis, "collect_numeric_structure_evidence", numeric_spy
+    )
+    monkeypatch.setattr(column_analysis, "assess_numeric_candidate", assess_spy)
     infer_series_semantics(series)
     assert len(basic_seen) == 1
     assert len(numeric_seen) == 1
@@ -580,13 +582,11 @@ def test_string_evidence_reuses_structure_identity(monkeypatch: pytest.MonkeyPat
     basic_seen = []
     structure_seen = []
     pattern_parents = []
-    content_parents = []
     assessor_bundles = []
-    real_basic = pipeline.collect_basic_column_evidence
-    real_structure = pipeline.collect_string_structure_evidence
-    real_pattern = pipeline.collect_pattern_evidence
-    real_content = pipeline.collect_string_content_evidence
-    real_assess = pipeline.assess_identifier_candidate
+    real_basic = column_analysis.collect_basic_column_evidence
+    real_structure = column_analysis.collect_string_structure_evidence
+    real_pattern = column_analysis.collect_pattern_evidence
+    real_assess = column_analysis.assess_identifier_candidate
 
     def basic_spy(value: pd.Series):
         evidence = real_basic(value)
@@ -602,25 +602,21 @@ def test_string_evidence_reuses_structure_identity(monkeypatch: pytest.MonkeyPat
         pattern_parents.append(string_structure)
         return real_pattern(value, string_structure, physical)
 
-    def content_spy(value, string_structure, physical):
-        content_parents.append(string_structure)
-        return real_content(value, string_structure, physical)
-
     def assess_spy(basic, physical, **kwargs):
         assessor_bundles.append((basic, kwargs))
         return real_assess(basic, physical, **kwargs)
 
-    monkeypatch.setattr(pipeline, "collect_basic_column_evidence", basic_spy)
-    monkeypatch.setattr(pipeline, "collect_string_structure_evidence", structure_spy)
-    monkeypatch.setattr(pipeline, "collect_pattern_evidence", pattern_spy)
-    monkeypatch.setattr(pipeline, "collect_string_content_evidence", content_spy)
-    monkeypatch.setattr(pipeline, "assess_identifier_candidate", assess_spy)
+    monkeypatch.setattr(column_analysis, "collect_basic_column_evidence", basic_spy)
+    monkeypatch.setattr(
+        column_analysis, "collect_string_structure_evidence", structure_spy
+    )
+    monkeypatch.setattr(column_analysis, "collect_pattern_evidence", pattern_spy)
+    monkeypatch.setattr(column_analysis, "assess_identifier_candidate", assess_spy)
     infer_series_semantics(series)
     assert len(basic_seen) == 1
     assert len(structure_seen) == 1
     assert structure_seen[0].basic is basic_seen[0]
     assert pattern_parents == [structure_seen[0]]
-    assert content_parents == [structure_seen[0]]
     basic, kwargs = assessor_bundles[0]
     assert basic is basic_seen[0]
     assert kwargs["string_structure"] is structure_seen[0]
@@ -645,7 +641,7 @@ def test_structural_early_exit_skips_candidate_work(
     monkeypatch: pytest.MonkeyPatch,
 ):
     for name in _DOWNSTREAM_COLLECTORS + _ASSESSORS:
-        monkeypatch.setattr(pipeline, name, _forbid_call(name))
+        monkeypatch.setattr(column_analysis, name, _forbid_call(name))
     result = infer_series_semantics(series)
     assert result.resolution.status is ResolutionStatus.RESOLVED
     assert result.interpretation is not None
@@ -655,16 +651,15 @@ def test_numeric_path_skips_string_collectors(monkeypatch: pytest.MonkeyPatch):
     for name in (
         "collect_string_structure_evidence",
         "collect_pattern_evidence",
-        "collect_string_content_evidence",
     ):
-        monkeypatch.setattr(pipeline, name, _forbid_call(name))
+        monkeypatch.setattr(column_analysis, name, _forbid_call(name))
     result = infer_series_semantics(pd.Series([1, 2, 3, 4]))
     assert result.selected_type is SemanticType.NUMERIC
 
 
 def test_string_path_skips_numeric_collector(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
-        pipeline,
+        column_analysis,
         "collect_numeric_structure_evidence",
         _forbid_call("collect_numeric_structure_evidence"),
     )
@@ -676,33 +671,22 @@ def test_categorical_path_skips_other_family_collectors(
     monkeypatch: pytest.MonkeyPatch,
 ):
     for name in _DOWNSTREAM_COLLECTORS:
-        monkeypatch.setattr(pipeline, name, _forbid_call(name))
+        monkeypatch.setattr(column_analysis, name, _forbid_call(name))
     series = pd.Series(pd.Categorical(["red", "blue", "red"]))
     result = infer_series_semantics(series)
     assert result.selected_type is SemanticType.CATEGORICAL
 
 
-def test_ordinary_string_still_collects_string_content(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    calls = []
-    real = pipeline.collect_string_content_evidence
-
-    def spy(series, string_structure, physical):
-        calls.append(string_structure)
-        return real(series, string_structure, physical)
-
-    monkeypatch.setattr(pipeline, "collect_string_content_evidence", spy)
+def test_ordinary_string_does_not_collect_string_content():
     result = infer_series_semantics(
         pd.Series(["Amsterdam", "Berlin", "Paris"], dtype="string")
     )
     assert result.resolution.status is ResolutionStatus.INSUFFICIENT_EVIDENCE
-    assert len(calls) == 1
-    assert calls[0].basic.n_non_missing == 3
+    assert not hasattr(column_analysis, "collect_string_content_evidence")
 
 
 def test_pipeline_delegates_resolution(monkeypatch: pytest.MonkeyPatch):
-    original = pipeline.resolve_semantics
+    original = column_analysis.resolve_semantics
     calls = []
 
     def spy(*args, **kwargs):
@@ -710,7 +694,7 @@ def test_pipeline_delegates_resolution(monkeypatch: pytest.MonkeyPatch):
         calls.append((args, kwargs, value))
         return value
 
-    monkeypatch.setattr(pipeline, "resolve_semantics", spy)
+    monkeypatch.setattr(column_analysis, "resolve_semantics", spy)
     structural = infer_series_semantics(pd.Series([pd.NA, pd.NA], dtype="string"))
     numeric = infer_series_semantics(pd.Series([1, 2, 3]))
     assert len(calls) == 2
@@ -729,7 +713,7 @@ def test_pipeline_delegates_resolution(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_pipeline_delegates_inferred_construction(monkeypatch: pytest.MonkeyPatch):
-    original = pipeline.build_inferred_semantic_result
+    original = column_analysis.build_inferred_semantic_result
     calls = []
 
     def spy(physical, resolution):
@@ -737,7 +721,7 @@ def test_pipeline_delegates_inferred_construction(monkeypatch: pytest.MonkeyPatc
         calls.append((physical, resolution, value))
         return value
 
-    monkeypatch.setattr(pipeline, "build_inferred_semantic_result", spy)
+    monkeypatch.setattr(column_analysis, "build_inferred_semantic_result", spy)
     result = infer_series_semantics(pd.Series([_UUID_A, _UUID_B], dtype=object))
     assert len(calls) == 1
     physical, resolution, built = calls[0]
@@ -750,7 +734,7 @@ def test_pipeline_delegates_inferred_construction(monkeypatch: pytest.MonkeyPatc
 
 def test_assessors_do_not_receive_the_series(monkeypatch: pytest.MonkeyPatch):
     def wrap(name: str):
-        original = getattr(pipeline, name)
+        original = getattr(column_analysis, name)
 
         def spy(basic, physical, **kwargs):
             assert not isinstance(basic, pd.Series)
@@ -762,7 +746,7 @@ def test_assessors_do_not_receive_the_series(monkeypatch: pytest.MonkeyPatch):
         return spy
 
     for name in _ASSESSORS:
-        monkeypatch.setattr(pipeline, name, wrap(name))
+        monkeypatch.setattr(column_analysis, name, wrap(name))
     numeric = infer_series_semantics(pd.Series([0, 1, 0, 1]))
     identifier = infer_series_semantics(
         pd.Series([_COMPACT_A, _COMPACT_B], dtype="string")
@@ -815,7 +799,7 @@ def test_unrelated_string_collector_type_error_propagates(
     def boom(*_args: object, **_kwargs: object) -> None:
         raise TypeError("basic must be BasicColumnEvidence")
 
-    monkeypatch.setattr(pipeline, "collect_string_structure_evidence", boom)
+    monkeypatch.setattr(column_analysis, "collect_string_structure_evidence", boom)
     with pytest.raises(TypeError, match="BasicColumnEvidence"):
         infer_series_semantics(pd.Series(["a", "b"], dtype="string"))
 
@@ -832,7 +816,8 @@ def test_public_api_is_unchanged():
 
 
 def test_pipeline_does_not_add_semantic_rules():
-    source = inspect.getsource(pipeline)
+    source = inspect.getsource(column_analysis)
+    wrapper = inspect.getsource(pipeline)
     tree = ast.parse(source)
     imported = []
     for node in ast.walk(tree):
@@ -842,8 +827,10 @@ def test_pipeline_does_not_add_semantic_rules():
             imported.append(node.module)
     assert "pytics.profiler" not in imported
     assert "pytics.semantics.frequency_evidence" not in imported
+    assert "pytics.semantics.string_content_evidence" not in imported
     for token in (
         "collect_frequency_evidence",
+        "collect_string_content_evidence",
         "Confidence",
         "InferenceSource",
         "SemanticInterpretation(",
@@ -855,3 +842,6 @@ def test_pipeline_does_not_add_semantic_rules():
         "DataFrame",
     ):
         assert token not in source
+        assert token not in wrapper
+    assert "analyze_series" in wrapper
+    assert "collect_basic_column_evidence" not in wrapper

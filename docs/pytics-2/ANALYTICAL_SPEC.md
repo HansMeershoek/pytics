@@ -38,7 +38,7 @@ EFFECTIVE INTERPRETATION
 DOWNSTREAM ANALYSIS
 ```
 
-An interpretation must be able to retain semantic type, subtype where relevant, confidence, supporting evidence, alternative interpretations where relevant, and source. Sources are: inferred; directly supported by physical dtype; explicitly configured by the user. Exact object names are [OPEN-004](DECISIONS.md#open-questions). The implemented interpretation has one source. `InferenceSource.USER_CONFIGURED` exists on that value. Keeping an inferred reading beside a separate effective reading is accepted direction ([DEC-075](DECISIONS.md#dec-075)). The effective reading is not implemented. The internal inferred result after resolution is [DEC-086](DECISIONS.md#dec-086). One Series can reach that result through the internal column pipeline ([DEC-087](DECISIONS.md#dec-087)). It is not the effective interpretation and not the public result. Relevance of a competing reading is materiality ([DEC-067](DECISIONS.md#dec-067)).
+An interpretation must be able to retain semantic type, subtype where relevant, confidence, supporting evidence, alternative interpretations where relevant, and source. Sources are: inferred; directly supported by physical dtype; explicitly configured by the user. Exact object names are [OPEN-004](DECISIONS.md#open-questions). The implemented interpretation has one source. `InferenceSource.USER_CONFIGURED` exists on that value. Keeping an inferred reading beside a separate effective reading is accepted direction ([DEC-075](DECISIONS.md#dec-075)). The effective reading is not implemented. The internal inferred result after resolution is [DEC-086](DECISIONS.md#dec-086). One Series can reach that result through the internal column pipeline ([DEC-087](DECISIONS.md#dec-087)). A DataFrame analysis calls that same path once per physical column and retains the evidence ([DEC-088](DECISIONS.md#dec-088)). Neither is the effective interpretation, and neither is the public result. Relevance of a competing reading is materiality ([DEC-067](DECISIONS.md#dec-067)).
 
 ### Observations and candidate assessments
 
@@ -278,6 +278,8 @@ Surface factual findings. Do not produce a composite quality score (`REQ-P-07`).
 | REQ-A-06 | Constant columns, near-constant columns, empty columns, identifier candidates, and high-cardinality columns. | Accepted as concepts. Thresholds for near-constant and high cardinality are not set ([OPEN-018](DECISIONS.md#open-questions)). |
 | REQ-A-07 | Infinities. | Accepted |
 | REQ-A-08 | Relevant computational-analysis metadata. | Accepted as a named concept. Contents are not defined ([OPEN-018](DECISIONS.md#open-questions)). |
+
+TSK-017 stores `n_rows`, `n_columns`, and `n_cells` on an internal dataset analysis, with missing-cell totals derived from retained basic column evidence ([DEC-088](DECISIONS.md#dec-088)). That is not the Dataset Overview. Memory usage, duplicate rows, semantic-type composition, and the other dataset facts in this section are not that slice.
 
 ## B — Numeric analysis
 
