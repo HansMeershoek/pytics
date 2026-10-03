@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, and TSK-010 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, and TSK-011 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, and Slice 010. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, and Slice 011. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, and TSK-010 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, and TSK-011 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, and TSK-010 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, or REQ-H-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, and TSK-011 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, or REQ-H-04.
 
 ## Reuse of 1.1.5
 
@@ -363,7 +363,7 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-010](#after-tsk-010).
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-011](#after-tsk-011).
 
 ## After TSK-005
 
@@ -718,4 +718,68 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 30 p
 
 ## After TSK-010
 
-TSK-010 adds exact full-value pattern observations for populations that already have string-structure evidence. It does not add a semantic reading. [DEC-081](DECISIONS.md#dec-081) records the contract, including composition with string-structure evidence, the initial syntax catalog, ASCII hexadecimal tokens, allowed overlap, the non-missing denominator, and on-demand collection. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-010 adds exact full-value pattern observations for populations that already have string-structure evidence. It does not add a semantic reading. [DEC-081](DECISIONS.md#dec-081) records the contract, including composition with string-structure evidence, the initial syntax catalog, ASCII hexadecimal tokens, allowed overlap, the non-missing denominator, and on-demand collection. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-011 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-011
+
+Slice 011, candidate assessment foundation and the Identifier candidate. Approved 2026-10-03 after TSK-010. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-04 and REQ-S-05, for evidence-driven assessment kept distinct from observations and from a selected reading. REQ-S-01 is respected because no reading is selected. REQ-G-01 and REQ-G-02 are not completed. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- A frozen `CandidateAssessment` for one `SemanticType`, with `CandidateDisposition` of `SUPPORTED`, `NOT_SUPPORTED`, or `CONTRADICTED`.
+- Supporting and contradicting evidence are tuples of `SemanticEvidence`. No second evidence class. No score, confidence, winner, rank, or probability.
+- `SUPPORTED` requires supporting evidence. `CONTRADICTED` requires contradicting evidence. Both sequences may be non-empty. `NOT_SUPPORTED` may be empty.
+- `assess_identifier_candidate` consumes already collected evidence. It does not recollect observations, classify a dtype, or read a Series or column name.
+- Supplied composed evidence must be the same objects, not merely equal counts. A physical family that cannot carry the supplied family evidence is rejected.
+- Empty and Constant, including a constant UUID, are `NOT_SUPPORTED`. They are not contradictions.
+- A full non-missing population of UUID syntax, or of one ASCII hexadecimal width 32, 40, 64, or 128, is `SUPPORTED`. A compact UUID may record both facts. That is not a score. The hexadecimal statement is not a hash-algorithm name.
+- A partial ratio, a mixture of patterns, IPv4, IPv6, uniqueness, missingness, singleton ratio, and a column name do not support Identifier. Duplicates do not contradict it.
+- Numeric sequences stay `NOT_SUPPORTED`. The assessor does not reconstruct a regular step.
+- Boolean, Datetime, timezone-aware Datetime, Timedelta, and categorical storage stay `NOT_SUPPORTED`.
+- No Identifier contradiction is emitted. No resolution function is added. The precedence chain does not call the assessor.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The candidate contract is [DEC-082](DECISIONS.md#dec-082). The full-population rule narrows [OPEN-044](DECISIONS.md#open-questions) only as an initial Identifier candidate rule. It does not close that question.
+
+### Exclusions
+
+Do not resolve candidates. Do not assign High, Medium, or Low. Do not add material alternatives, a score, or an evidence-strength enum. Do not add Numeric, Categorical, Text, or Boolean candidate assessors. Do not infer Identifier from uniqueness, missingness, cardinality, IP syntax, partial pattern ratios, column names, or numeric monotonicity. Do not reconstruct regular-step evidence. Do not call the assessor from `interpret_series_precedence`. Do not change `SemanticInterpretation`.
+
+Do not add a candidate registry, a rule engine, or a resolver. Do not add a provenance object. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049).
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the assessment from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `CandidateAssessment` is a frozen dataclass. It is not a `SemanticInterpretation`.
+2. `semantic_type` is a `SemanticType`. `disposition` is `CandidateDisposition` with `SUPPORTED`, `NOT_SUPPORTED`, and `CONTRADICTED`.
+3. Supporting and contradicting evidence are tuples of `SemanticEvidence`. No second evidence class was added.
+4. `SUPPORTED` requires supporting evidence. `CONTRADICTED` requires contradicting evidence. `NOT_SUPPORTED` may be empty. Both sequences may be non-empty. The value has no Identifier-specific field.
+5. No score, confidence, winner, rank, probability, or priority field was added.
+6. `assess_identifier_candidate` consumes a consistent evidence bundle. It does not take a Series and does not recollect observations.
+7. Equal counts from another column are rejected. Pattern evidence must be the supplied string-structure object. An inapplicable physical family is rejected.
+8. Empty, all-missing string, zero-length string, constant ordinary string, and constant UUID are `NOT_SUPPORTED`. Contradicting evidence stays empty.
+9. A full UUID population is `SUPPORTED`, including compact form, uppercase, duplicates, unique values, object storage, and missing values beside non-missing UUIDs. The statement describes the UUID syntax. Uniqueness is not the reason.
+10. A full population at hexadecimal width 32, 40, 64, or 128 is `SUPPORTED`. Duplicate hexadecimal tokens stay supported. The statement names the width and ASCII hexadecimal tokens, not a hash algorithm. Compact UUID overlap records both facts and no score.
+11. A partial UUID ratio, a partial hexadecimal ratio, full IPv4, full IPv6, a mixture of patterns, date-like strings, email-like strings, URL-like strings, ordinary labels, a column name, uniqueness, zero missingness, and a singleton ratio do not support Identifier.
+12. Physical categorical, Boolean, Datetime, timezone-aware Datetime, and Timedelta are `NOT_SUPPORTED`.
+13. Unique, complete, integer-like, monotonic numeric sequences are `NOT_SUPPORTED`. The assessor does not read a step or the monotonicity flags.
+14. No Identifier assessment emits contradicting evidence.
+15. `interpret_series_precedence` does not call the assessor. A UUID column still produces no Identifier interpretation.
+16. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added.
+17. Focused candidate-foundation tests pass. Focused Identifier tests pass.
+18. TSK-010, TSK-009, TSK-008, TSK-007, and TSK-006 tests pass.
+19. Semantic tests for TSK-001 through TSK-011 pass.
+20. The legacy profiler stays at 19 passed and the known PDF failure.
+21. The full suite adds only the new tests, with the same known PDF failure.
+22. [OPEN-044](DECISIONS.md#open-questions) stays open beyond the initial full-population candidate rule. Partial-pattern thresholds, numeric sequence evidence, name and dataset context, resolution, and final confidence stay open. [OPEN-045](DECISIONS.md#open-questions) and [OPEN-048](DECISIONS.md#open-048) stay open.
+23. This section does not approve or implement a later slice.
+24. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 24 passed for TSK-011.
+
+## After TSK-011
+
+TSK-011 adds a candidate assessment and uses Identifier as the first concrete candidate. It does not select a semantic reading and does not enter the precedence chain. [DEC-082](DECISIONS.md#dec-082) records the contract, including support versus contradiction, the absence of a score and of final confidence, the initial full-population UUID and same-width hexadecimal rules, and the facts that do not support Identifier. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
