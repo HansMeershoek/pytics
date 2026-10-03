@@ -1,6 +1,6 @@
 # Decision log
 
-Accepted decisions from the Pytics 2.0 bootstrap briefing, recorded 2026-10-03, from the architecture and methodology update recorded the same day, and from Slice 001 recorded the same day.
+Accepted decisions from the Pytics 2.0 bootstrap briefing, recorded 2026-10-03, from the architecture and methodology update recorded the same day, from Slice 001 recorded the same day, and from the semantic-foundation consolidation recorded the same day.
 
 IDs are stable. Do not renumber them. A change of mind is a new decision that supersedes an old one, not an edit that hides the old text.
 
@@ -77,6 +77,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Rationale | Stated semantic-first principle, including the minimum concept list and the non-mutation rule. |
 | Implications | `REQ-S-01` through `REQ-S-09`. Boolean conservatism is [DEC-014](#dec-014) via section D, refined by [DEC-047](#dec-047). |
 | Later update | [DEC-041](#dec-041) through [DEC-054](#dec-054) refine inference, confidence, overrides, coercion, Empty/Constant, identifiers, numeric and string meaning, datetime and timedelta, ordinal policy, eligibility, and sampling. Subtype taxonomy remains [OPEN-014](#open-questions). The ordinal storage question remains [OPEN-016](#open-questions). |
+| Later update | [DEC-064](#dec-064) through [DEC-076](#dec-076) record the semantic-foundation consolidation. They refine the inference pipeline, evidence roles, v0.1 scoring scope, material alternatives, Identifier and string meanings, binary representation pressure, overrides, and evidence reuse. They do not close the open questions named in those decisions. |
 
 ## DEC-008
 
@@ -475,6 +476,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Physical dtype, observed characteristics, and semantic interpretation are distinct. Physical pandas dtype is evidence, not the final analytical meaning, and the original physical dtype stays inspectable. Inference is evidence-driven, through conceptual stages of physical classification, basic evidence, pattern and structural evidence, candidate semantic types, conflict resolution, and semantic interpretation. Those stages are not a frozen function decomposition. An interpretation must be able to retain semantic type, subtype where relevant, confidence, supporting evidence, alternative interpretations where relevant, and source. Sources include inferred, directly supported by physical dtype, and explicitly configured by the user. Exact object names are not accepted. |
 | Rationale | A dtype branch cannot express identifiers, empty columns, datetime-like strings, or conflicting readings. |
 | Implications | `REQ-S-02`, `REQ-S-04`, `REQ-S-05`. Object names remain [OPEN-004](#open-questions). Subtype taxonomy remains [OPEN-014](#open-questions). |
+| Later update | [DEC-064](#dec-064) refines the stage list in this decision into the current conceptual pipeline, including observations, candidate assessments, resolution, an inferred interpretation, an optional override, and an effective interpretation. The distinction between physical dtype, observed characteristics, and semantic interpretation stands. Retained fields and sources stand. The pipeline is still not a frozen decomposition. The superseded part is the stage list as the current description. |
 
 ## DEC-042
 
@@ -485,6 +487,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | User-facing confidence is High, Medium, or Low, together with concrete evidence. Do not expose pseudo-precise confidence such as `0.87321` unless a future statistically justified reason exists. Internal scores may help conflict resolution. They must not become unexplained user-facing precision. |
 | Rationale | A long decimal implies a measurement the inference procedure does not have. |
 | Implications | `REQ-S-02`. |
+| Later update | [DEC-066](#dec-066) leaves the internal-score permission unused for Candidate Resolution v0.1. It does not delete that permission, and it does not ban a future statistically justified numeric confidence. High, Medium, and Low remain the user-facing resolution confidence. They are not a probability and not a candidate score. |
 
 ## DEC-043
 
@@ -495,6 +498,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Pytics does not have to treat every semantic inference as certain. Uncertainty is exposed. A selected interpretation may carry medium or low confidence and a relevant alternative. The example of a `score` column read as numeric discrete, with ordinal categorical as an alternative because no order was supplied, is accepted product behavior. |
 | Rationale | Hiding a plausible alternative presents a guess as a fact. |
 | Implications | `REQ-S-02`, `REQ-S-04`. Ordinal policy is [DEC-052](#dec-052). |
+| Later update | [DEC-067](#dec-067) defines a material alternative and represents current ambiguity as the selected interpretation, resolution confidence, and any material alternatives. The score-column illustration in this decision remains accepted product behavior. It does not resolve [OPEN-016](#open-questions), and it does not mean every compatible type is an alternative. Abstention is not introduced. `None` from the implemented rule chain stays control flow. |
 
 ## DEC-044
 
@@ -505,6 +509,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Explicit semantic configuration for individual variables is a first-class capability. Explicit user intent normally takes precedence over inference. If the configured interpretation cannot be meaningfully applied to the observed data, Pytics reports the conflict. It does not silently coerce or repair the data. The exact API is not accepted. |
 | Rationale | Professionals need to correct inference. A configuration that the data cannot support is itself a finding. |
 | Implications | `REQ-S-06`. API shape remains [OPEN-004](#open-questions) and [OPEN-009](#open-questions). |
+| Later update | [DEC-075](#dec-075) accepts inferred interpretation, then optional override, then effective interpretation, as direction. The API remains unaccepted. [OPEN-043](#open-questions) stays open. Exact Empty or Constant override behavior is [OPEN-049](#open-049). |
 
 ## DEC-045
 
@@ -525,6 +530,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Empty and Constant are semantic interpretations and dataset or data-quality facts. All values missing means semantic interpretation Empty and a dataset fact that the column is empty. One unique non-missing value means semantic interpretation Constant and a dataset fact that the column is constant. Those two definitions take precedence over a Boolean, Numeric, or Identifier reading of the same column. The physical dtype remains inspectable. The architecture avoids duplicating the underlying computation unnecessarily. |
 | Rationale | The two representations describe one observation. They should not be computed as unrelated truths. |
 | Implications | `REQ-S-01`, `REQ-A-06`. |
+| Later update | The current semantic system applies Empty, then Constant, before the implemented physical Boolean, Datetime, and Timedelta rules, as well as before a Numeric or Identifier reading. Physical dtype remains inspectable when Empty or Constant wins, including ordered categorical metadata. This note does not legislate an exhaustive precedence list for every future semantic reading. |
 
 ## DEC-047
 
@@ -535,6 +541,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Boolean/Binary is a first-class analytical family. Binary cardinality does not automatically imply Boolean meaning. A physical pandas boolean is very strong Boolean/Binary evidence. `{0, 1}` may be a binary interpretation and is not automatically Boolean. Yes/no or true/false strings may be a binary interpretation under conservative token recognition. An arbitrary two-category variable stays categorical, including as a binary category, and is not described as Boolean. A column name may be weak supporting evidence and must never determine semantic type by itself. The exact subtype taxonomy is not accepted. |
 | Rationale | Two distinct values are a cardinality fact. Boolean meaning needs stronger evidence. |
 | Implications | `REQ-D-01`, `REQ-D-02`, `REQ-S-04`. Subtypes remain [OPEN-014](#open-questions). |
+| Later update | [DEC-074](#dec-074) holds heuristic `{0, 1}` and string-token Binary inference until a binary-not-Boolean reading can be represented. That hold does not withdraw the permission in this decision, and it does not resolve [OPEN-014](#open-questions). `{0.0, 1.0}` is not accepted as binary evidence ([OPEN-046](#open-046)). Conservative true/false recognition may support a binary reading. Conservative yes/no recognition may be considered, more cautiously than true/false. Neither recognition may coerce or mutate the Series. Physical Boolean is very strong direct evidence. This note does not call it the strongest evidence of every kind. |
 
 ## DEC-048
 
@@ -545,6 +552,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Identifier is a first-class semantic type. Inference may use uniqueness ratio, duplicate count, missing count, UUID or GUID-like structure, hash-like structure, sequential integer patterns, fixed-width codes, alphanumeric code patterns, prefixes and suffixes, monotonic or sequential behavior, and column name as a weak supporting signal. That list is admissible evidence, not a closed detector. `unique_ratio == 1` alone is not sufficient. Identifiers are normally excluded from ordinary correlation, diagnostic target modeling, and ordinary multivariate anomaly modeling, unless explicitly configured otherwise. |
 | Rationale | Uniqueness is common in small samples and in continuous measurements. Identifier treatment changes which analyses are meaningful. |
 | Implications | `REQ-G-01` through `REQ-G-03`. Thresholds remain [OPEN-044](#open-questions). Exact eligibility rules remain [OPEN-043](#open-questions). |
+| Later update | [DEC-068](#dec-068) states that Identifier is not a relational candidate-key definition, that perfect uniqueness and zero missingness are not definitional requirements, and that duplicates do not automatically disqualify Identifier. [DEC-069](#dec-069) requires positive Identifier evidence before a generic Numeric reading is displaced. [DEC-072](#dec-072) treats UUID-like and hash-like structure as evidence that is not automatically sufficient. The admissible-evidence list in this decision is unchanged and is not closed. |
 
 ## DEC-049
 
@@ -555,6 +563,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | A physically numeric column that is not better read as Empty, Constant, Boolean/Binary, or Identifier may be interpreted as Numeric. Numeric subtypes may include Continuous and Discrete. Integer dtype is not discrete, and float dtype is not continuous, without looking at the observed values. Subtype inference stays conservative. Categorical is a semantic interpretation, not a synonym for pandas `object`. A categorical variable may physically be a categorical dtype, a string, an object, or numeric codes. Low-cardinality numeric values are not assumed to be category codes without sufficient evidence or explicit configuration. Where evidence supports it, strings are distinguished as categorical-like, free text, identifier-like, URL-like, email-like, path-like, datetime-like, or generic string. Cardinality alone is insufficient. String evidence may include uniqueness, repetition, character-length distribution, word counts, token or pattern consistency, and structural patterns. |
 | Rationale | Storage type and cardinality are evidence. They are not the semantic type. |
 | Implications | `REQ-S-01`, `REQ-B-*`, `REQ-C-*`, `REQ-F-01`. The full subtype taxonomy remains [OPEN-014](#open-questions). Common-token diagnostics remain [OPEN-019](#open-questions). |
+| Later update | [DEC-070](#dec-070) defines Categorical as a classification vocabulary. [DEC-071](#dec-071) defines Text as textual content and does not collapse generic string into Text. [DEC-069](#dec-069) keeps physical numeric dtype as meaningful Numeric evidence. [DEC-072](#dec-072) keeps detected pattern names as observations. |
 
 ## DEC-050
 
@@ -565,6 +574,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Pytics may detect strings that appear URL-like, email-like, UUID-like, path-like, datetime-like, or another well-defined structural form. Detection does not silently rewrite the source Series. For datetime-like strings, the physical source type remains string even when a semantic datetime interpretation is selected. Native pandas datetime and timezone-aware datetime dtypes are strong evidence of Datetime semantics. String-to-datetime inference is conservative and considers parse success, representation and format consistency, plausible ranges, ambiguity, and sampling or full-column verification. Arbitrary numeric-looking strings are not blindly read as dates. A datetime variable does not automatically imply a time series. |
 | Rationale | A successful parse is an interpretation. The column the user holds is still strings until they change it. |
 | Implications | `REQ-S-03`, `REQ-E-03`, `REQ-F-01`. Sampling thresholds remain [OPEN-010](#open-questions). |
+| Later update | [DEC-072](#dec-072) records that a detected pattern name is an observation or role and does not automatically become the semantic type. Datetime-like strings still do not change the physical dtype, and no Series is rewritten. |
 
 ## DEC-051
 
@@ -585,6 +595,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Pytics does not freely infer ordinal ordering from arbitrary category labels. Ordinal semantics may be accepted when the user explicitly configures them, or when ordering is explicitly represented in the source data, for example an ordered pandas categorical dtype. Without that explicit ordering, values such as Low, Medium, and High remain categorical. Pytics does not invent semantic ordering. |
 | Rationale | A human guess about label order is not metadata the dataset supplied. |
 | Implications | `REQ-S-08`. When ordinal semantics are accepted, whether they are stored as their own type, a categorical subtype, or only a relationship case remains [OPEN-016](#open-questions). |
+| Later update | `categorical_ordered` stays on the physical dtype. A later Categorical interpretation must not erase it. Empty or Constant does not erase it. The optional subtype string must not be used as if [OPEN-016](#open-questions) were resolved. The semantic-foundation consolidation does not add an Ordinal semantic type. |
 
 ## DEC-053
 
@@ -595,6 +606,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Semantic interpretation guides which analyses are analytically meaningful. The examples below are direction, not a closed eligibility matrix. Identifier is typically eligible for a variable profile, missingness, and duplicate or identifier-quality analysis, and is normally excluded from ordinary correlation, target predictor modeling, and ordinary multivariate anomaly modeling. Numeric is normally eligible for distribution analysis, relationships, target relationships, and anomaly analysis. Text is eligible for text profiling and relevant quality or pattern analysis. Ordinary statistical relationships and target modeling for text are limited by default unless a meaningful method exists. Datetime is eligible for datetime profiling and for temporal analysis when genuine temporal structure exists. Timestamps are not converted to numbers and then treated as ordinary measurements. Exact eligibility rules belong to later method design. |
 | Rationale | Running every method on every storage type produces results that are numerically defined and analytically meaningless. |
 | Implications | `REQ-S-09`, `REQ-G-03`, `REQ-K-01`. Exact rules are [OPEN-043](#open-questions). |
+| Later update | Where an override exists, downstream eligibility uses the effective interpretation where applicable ([DEC-075](#dec-075)). Physical facts still limit what can run without coercion. This note does not close [OPEN-043](#open-questions). |
 
 ## DEC-054
 
@@ -605,6 +617,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Cheap evidence uses the full column where practical. Expensive evidence, particularly string and pattern analysis on very large data, may use controlled sampling. That sampling must be transparent, reproducible where possible, recorded, tied to the configured analysis mode, and considered when inference confidence is expressed. Exact thresholds and sample sizes are not accepted. |
 | Rationale | Hidden sampling would make a semantic type look more certain than the evidence procedure was. |
 | Implications | `REQ-P-12`, `REQ-IA-15`. Thresholds and sample sizes are [OPEN-010](#open-questions). |
+| Later update | [DEC-076](#dec-076) adds procedure provenance and observe-once evidence collection. It does not choose sample sizes, and it does not close [OPEN-010](#open-questions) or [OPEN-044](#open-questions). |
 
 ## DEC-055
 
@@ -685,6 +698,7 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Pytics 2.0 core analytical result and value models use standard-library Python frozen dataclasses, enums, and explicit type hints where appropriate. Pydantic is not required for core analytical models. Loose dictionaries and TypedDict-only structures are not the preferred representation for core analytical facts. This does not mean every future Pytics object must be a frozen dataclass. Use frozen dataclasses where they represent value objects or analytical facts. Do not prematurely freeze mutable orchestration or configuration objects that do not yet exist. Do not add Pydantic for this purpose. |
 | Rationale | The representation should be lightweight, explicit, inspectable, and friendly to IDEs and type checkers. Analytical facts should be immutable where that matches the fact. The analytical core should not take a framework dependency for its value objects. |
 | Implications | TSK-001 uses this representation for physical dtype facts and semantic interpretation values. TSK-002 uses it for basic column evidence. TSK-003 reuses those values for the physical Boolean reading and does not add a value type. TSK-004 reuses those values for the physical Datetime reading and does not add a value type or timezone metadata on `PhysicalDtype`. TSK-005 reuses those values for the physical Timedelta reading and does not add a value type or duration-unit metadata on `PhysicalDtype`. Public result names remain [OPEN-004](#open-questions). Module layout remains [OPEN-045](#open-questions). `REQ-T-04` is unchanged: do not add a dependency for this choice. |
+| Later update | The semantic-foundation consolidation did not add a value type and did not redesign `SemanticAlternative`. That value remains thinner than the material-alternative rationale in [DEC-067](#dec-067). |
 
 ## DEC-063
 
@@ -695,6 +709,154 @@ Status values: **Accepted**. Where a later decision narrows an earlier one, the 
 | Decision | Pytics 2.0 is built incrementally in place inside the existing `src/pytics` package. Existing Pytics 1.1.5 components remain temporarily intact until their Pytics 2.0 replacement has been specified, implemented, tested, and verified against the Pytics 2.0 specification. Temporary internal coexistence inside `src/pytics` is allowed. The final product must not contain a permanent second public package such as `pytics_v2`, `pytics2`, `legacy`, `old_pytics`, or `new_pytics`. Do not redirect the existing public `profile` / `compare` API except in a slice that explicitly requires that change. |
 | Rationale | [DEC-039](#dec-039) already fixed the end state as one package. The missing piece was how 1.1.5 and 2.0 share that package during the work. A second public package would become the product. Deleting 1.1.5 before its replacement is verified would remove the baseline without a successor. |
 | Implications | Resolves [OPEN-040](#open-040). TSK-001 adds internal modules under `src/pytics/semantics/` and does not delete or rewrite `profiler.py` or `visualizations.py`. TSK-002 adds basic column evidence and Empty/Constant inference in that same internal package, without changing `profile` or `compare`. TSK-003 adds physical Boolean inference there, still without changing `profile` or `compare`. TSK-004 adds physical Datetime inference in that same internal package, still without changing `profile` or `compare`. TSK-005 adds physical Timedelta inference in that same internal package, still without changing `profile` or `compare`. That directory is not a resolution of [OPEN-045](#open-questions). Unapproved slices still follow [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md). |
+
+## DEC-064
+
+| | |
+| --- | --- |
+| Title | Semantic inference follows a conceptual pipeline |
+| Status | Accepted |
+| Decision | The conceptual analytical pipeline is physical dtype, then observations and evidence, then candidate assessments, then resolution, then an inferred interpretation, then an optional user override, then an effective interpretation, then downstream analysis. This is not a frozen package, module, class, or function decomposition. The labels are not class names. It does not resolve [OPEN-045](#open-questions). It refines the stage list in [DEC-041](#dec-041). Physical metadata, basic observations, and pattern observations remain distinguishable inside the observations stage. Analysis still produces structured results before rendering ([DEC-025](#dec-025)). The diagram below is the ruling copy. The copies in [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) and [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) must match it. |
+| Rationale | The earlier stage list stopped at semantic interpretation and did not separate observations from candidate assessments, or the inferred reading from the effective reading used downstream. |
+| Implications | `REQ-S-04`, `REQ-S-05`, `REQ-T-01`. Object names remain [OPEN-004](#open-questions). This decision does not authorize a heuristic-inference slice. |
+
+```text
+PHYSICAL DTYPE
+      ↓
+OBSERVATIONS / EVIDENCE
+      ↓
+CANDIDATE ASSESSMENTS
+      ↓
+RESOLUTION
+      ↓
+INFERRED INTERPRETATION
+      ↓
+OPTIONAL USER OVERRIDE
+      ↓
+EFFECTIVE INTERPRETATION
+      ↓
+DOWNSTREAM ANALYSIS
+```
+
+## DEC-065
+
+| | |
+| --- | --- |
+| Title | Observations are facts; absence of support is not contradiction |
+| Status | Accepted |
+| Decision | Observations are objective facts about the source data or the procedure used to inspect it. Examples, not a closed catalog, include physical dtype, missing count, unique count, cardinality, an observed small value set, frequency information, string lengths, pattern matches, monotonicity, sequence regularity, ordered categorical metadata, column name metadata, and sampling provenance. Observations do not decide semantic meaning by themselves. Candidate assessments interpret observations in support of possible semantic readings. The architecture must eventually distinguish supporting evidence, contradicting evidence, and evidence that does not bear on the candidate. This decision does not create an evidence-role enum and does not freeze an evidence object shape. Absence of support is not contradiction. No UUID pattern means Identifier lacked that support; it does not contradict Identifier. No repetition does not by itself contradict Categorical. No prose structure does not by itself contradict Text. A contradicting observation is positive evidence that conflicts with a specific claim of a candidate. Do not build a hidden negative-score system in which every absent signal counts against a candidate. |
+| Rationale | Treating a missing signal as a vote against a candidate would turn an incomplete observation into a refutation. |
+| Implications | `REQ-S-04`, `REQ-S-05`. The implemented evidence value remains one statement ([DEC-062](#dec-062)). Whether an evidence-strength enum is ever needed is [OPEN-048](#open-048). |
+
+## DEC-066
+
+| | |
+| --- | --- |
+| Title | Candidate Resolution v0.1 does not use a numeric total-score |
+| Status | Accepted. Narrows use of [DEC-042](#dec-042) for v0.1. Does not withdraw it. |
+| Decision | Candidate Resolution v0.1 will not use an arbitrary numeric total-score such as Identifier = 82, Numeric = 54, Categorical = 31. It will not introduce an evidence-strength enum or pseudo-probabilities. User-facing resolution confidence remains High, Medium, and Low. Those words are not a displayed probability and not a candidate score. Evidence role, evidence strength, and resolution confidence are distinct. [DEC-042](#dec-042) still permits an internal score, and still permits a future statistically justified numeric confidence. That permission stays intact and unused. Reconsider scoring only if future concrete conflict cases show that explicit observations, candidate evidence roles, and resolution rules are insufficient. Implemented physical rules may continue to produce High because their procedure is direct and exact. A strong heuristic or a sampled observation does not automatically imply High. |
+| Rationale | A total-score would look like a measurement the v0.1 procedure does not have, and it would hide the separate questions of role, strength, and resolution confidence. |
+| Implications | `REQ-S-02`. This is a v0.1 scope limit, not a permanent ban. [OPEN-048](#open-048) stays open. [OPEN-044](#open-questions) stays open. |
+
+## DEC-067
+
+| | |
+| --- | --- |
+| Title | Ambiguity is a selected reading, confidence, and material alternatives |
+| Status | Accepted |
+| Decision | A material alternative is a competing interpretation that has its own positive evidence, survives the observations without requiring coercion, and remains plausible beside the selected interpretation. Theoretical compatibility is not enough. Every possible type is not an alternative. Downstream analytical impact may explain why an alternative is important to show. It does not define whether the alternative is material. The architecture must eventually preserve the rationale and evidence for material alternatives. The current `SemanticAlternative` value records type, an optional subtype label, and optional confidence, and does not record that rationale. This decision does not redesign that value. Current ambiguity is the selected interpretation, plus resolution confidence, plus any material alternatives. Do not introduce abstention now. Do not redefine `None`. In the implemented rule chain, `None` means that chain produced no interpretation. It must not silently become ambiguous, unknown, unsupported, conflicted, or abstained. A future abstention state may be reconsidered if concrete cases justify it. |
+| Rationale | A list of every compatible type hides which competitors actually have evidence. A control-flow `None` is not an analytical conclusion that the column is ambiguous. |
+| Implications | `REQ-S-02`, `REQ-S-04`. This refines [DEC-043](#dec-043) and does not withdraw its score-column illustration. That illustration does not resolve [OPEN-016](#open-questions). Abstention remains [OPEN-047](#open-047). |
+
+## DEC-068
+
+| | |
+| --- | --- |
+| Title | Identifier is not defined by uniqueness or completeness |
+| Status | Accepted |
+| Decision | Identifier is a semantic type, not a relational candidate-key definition. Perfect uniqueness is not sufficient and is not a definitional requirement. Zero missingness is not sufficient and is not a definitional requirement. Their weight remains future inference evidence and thresholds. Duplicates do not automatically disqualify Identifier. Duplicate identifiers may later become a quality finding. A column name may support Identifier and must never decide it alone. |
+| Rationale | Uniqueness and completeness are observations. An identifier can repeat, and a unique measurement is not an identifier. |
+| Implications | `REQ-G-01`, `REQ-G-02`, `REQ-S-04`. This narrows how the signals in [DEC-048](#dec-048) may be read. It does not remove them from the admissible list and does not close that list. The unique-ratio denominator, positive-evidence checklists, and thresholds remain [OPEN-044](#open-questions). |
+
+## DEC-069
+
+| | |
+| --- | --- |
+| Title | Identifier needs positive evidence to displace Numeric |
+| Status | Accepted |
+| Decision | A physically numeric column may be interpreted as Numeric when it is not better read as Empty, Constant, Boolean/Binary, or Identifier, as [DEC-049](#dec-049) already says. Physical numeric dtype is meaningful evidence. Do not require an additional positive heuristic before Numeric is available merely because the dtype is numeric. Identifier requires positive Identifier evidence before it displaces that generic Numeric reading. Uniqueness alone is not enough. When the selected reading remains uncertain, preserve a material competing interpretation and an appropriate confidence. Do not introduce abstention. The semantic engine precedes downstream statistical analysis. Do not casually recycle downstream Numeric outputs such as mean, skewness, kurtosis, or histogram shape as ad hoc Identifier detectors. If future semantic evidence legitimately requires a descriptive numeric observation, that use must be an explicit semantic-inference decision rather than accidental reuse of downstream analysis. |
+| Rationale | A numeric column is already numeric evidence. Identifier should displace it only with its own positive case, not with a downstream statistic borrowed for a different purpose. |
+| Implications | `REQ-S-01`, `REQ-G-01`. The detector catalog in [DEC-048](#dec-048) stays open. Thresholds remain [OPEN-044](#open-questions). |
+
+## DEC-070
+
+| | |
+| --- | --- |
+| Title | Categorical means a classification vocabulary |
+| Status | Accepted |
+| Decision | Categorical means that values function as a classification vocabulary. It is not synonymous with pandas `object` or with pandas `category`. Storage may be category, string, object, numeric code, or another compatible representation. Repetition supports a categorical reading and is not required. Cardinality alone does not establish Categorical. Low cardinality alone does not establish it. High cardinality does not remove Categorical meaning. Singleton categories remain possible. Charting and contingency cost limits do not redefine the semantic type. Arbitrary two-category label variables are Categorical rather than Boolean. Do not define Categorical as recurring values. |
+| Rationale | Recurrence and low cardinality are observations about a vocabulary. They are not the vocabulary's semantic role. |
+| Implications | `REQ-C-01`, `REQ-S-01`. This clarifies [DEC-049](#dec-049). Distinctions from Text and Identifier are [DEC-071](#dec-071) and [DEC-072](#dec-072). Subtype taxonomy remains [OPEN-014](#open-questions). No cardinality threshold is set ([OPEN-044](#open-questions), [OPEN-018](#open-questions)). |
+
+## DEC-071
+
+| | |
+| --- | --- |
+| Title | Text means textual content |
+| Status | Accepted |
+| Decision | Text means that values primarily function as textual content. Text is not defined by string dtype. Possible inference evidence includes length structure, word counts, whitespace, line breaks, lexical or textual structure, pattern regularity, and repetition, where the contract already allows that evidence. Semantic inference evidence stays separate from downstream text-profile diagnostics. Do not introduce NLP models, embeddings, language models, or language detection into core semantic inference. Do not collapse every generic string role into Text. Cardinality alone never distinguishes Categorical from Text. Repetition supports Categorical and is not sufficient. Long, multi-word, or prose-like structure may support Text. High uniqueness alone does not imply Text. High cardinality alone does not imply Text. A pandas categorical dtype is physical and source evidence and does not automatically override contradictory semantic evidence. High-cardinality Categorical remains possible. Text inference does not require NLP. This decision does not choose length, word-count, repetition, or cardinality thresholds. |
+| Rationale | String storage, cardinality, and repetition each fail to identify textual content, and a language model would change what core inference is. |
+| Implications | `REQ-F-01`, `REQ-F-03`. Generic string, and where it sits beside other string roles, remains [OPEN-014](#open-questions). Common-token diagnostics remain [OPEN-019](#open-questions). Thresholds remain [OPEN-044](#open-questions). |
+
+## DEC-072
+
+| | |
+| --- | --- |
+| Title | A structural pattern name is not the semantic type |
+| Status | Accepted |
+| Decision | Structural pattern detection produces observations first. The detected pattern name does not automatically become the final semantic type. UUID-like, hash-like, email-like, URL-like, path-like, and datetime-like are observations or roles. UUID-like and hash-like structure are accepted Identifier evidence and are not automatically sufficient for Identifier. Email-like, URL-like, and path-like structure do not automatically imply Identifier. Datetime-like string detection does not change the physical dtype. No Series is rewritten. Uniqueness alone does not distinguish Text from Identifier. Stable structural regularity may support Identifier. Prose-like structure supports Text and may contradict a specific code-like Identifier claim. It does not make every Identifier role impossible. Fixed width is evidence only. Repeated identifier-like strings may remain Identifier. All-unique free text may remain Text. Repeated entity keys can remain Identifier, and repeated labels can be Categorical, so repetition alone cannot distinguish them. Identifier needs evidence of an identity, key, or code role, not merely high cardinality. Categorical needs evidence of a label or classification role, not merely low cardinality. The same code can have different semantic roles in different datasets. A country code or an SKU may be a classification attribute in one dataset and an entity key in another. That illustration is not a detection rule. This decision does not choose pattern-agreement thresholds. |
+| Rationale | A pattern match is evidence about form. The semantic role still has to be resolved, and the source Series stays what the user holds. |
+| Implications | `REQ-S-03`, `REQ-F-01`, `REQ-G-02`. This clarifies [DEC-050](#dec-050) and [DEC-048](#dec-048). Where URL-like, email-like, path-like, and generic string live in the subtype taxonomy remains [OPEN-014](#open-questions). Whether UUID-like or hash-like structure can ever be sufficient alone remains [OPEN-044](#open-questions). |
+
+## DEC-073
+
+| | |
+| --- | --- |
+| Title | Some roles cannot be resolved from one Series |
+| Status | Accepted |
+| Decision | Some semantic roles cannot be reliably resolved from one Series alone. Column-local observations may make more than one interpretation plausible and cannot always observe dataset role. Examples of that limit, not detection rules: `customer_id` on transaction rows versus `customer_id` as an entity key; a country code as an attribute versus as the entity; an SKU on order lines versus in a product master; an email as a contact attribute versus as an account identity. The architecture must leave room for future dataset-context evidence beside column-local evidence. This decision does not implement cross-column inference, functional-dependency discovery, candidate-key mining, or schema-graph inference. User configuration remains the accepted current mechanism for context the column cannot justify. |
+| Rationale | The same values can be an attribute in one table and an entity key in another. One Series does not contain that distinction. |
+| Implications | `REQ-S-04`, `REQ-S-06`. Configuration shape remains [OPEN-009](#open-questions). This does not authorize a cross-column slice. |
+
+## DEC-074
+
+| | |
+| --- | --- |
+| Title | Heuristic binary inference waits on a binary-not-Boolean representation |
+| Status | Accepted. Does not resolve [OPEN-014](#open-questions). |
+| Decision | The contract allows a binary interpretation that is not necessarily Boolean ([DEC-047](#dec-047)). The current `SemanticType.BOOLEAN` cannot fully express that distinction. Heuristic `{0, 1}` or string-token Binary inference must not be implemented until the architecture can represent a binary-not-Boolean reading without mislabeling it. This decision does not choose whether Binary becomes a semantic type, a subtype, a semantic property, or another representation, and it does not add a `SemanticType` member. Physical pandas Boolean, when the column is not Empty and not Constant, remains the implemented Boolean reading at High confidence with physical-dtype provenance. That is very strong direct evidence. It is not a claim that physical Boolean is the strongest evidence of every kind. `{0.0, 1.0}` is not accepted as binary evidence. Two unique values alone do not establish Boolean meaning. Conservative true/false recognition may support binary semantics. Conservative yes/no recognition may be considered, more cautiously. String or token recognition never coerces or mutates the Series. A column name may support binary semantics and must never decide it. Do not grow a large language or domain dictionary of binary token pairs in core. |
+| Rationale | Implementing a binary heuristic into `SemanticType.BOOLEAN` would report a binary-not-Boolean column as Boolean. |
+| Implications | `REQ-D-01`, `REQ-D-02`. The permission in [DEC-047](#dec-047) remains. The hold is about when a heuristic may be implemented. `{0.0, 1.0}` remains [OPEN-046](#open-046). Representation remains [OPEN-014](#open-questions). |
+
+## DEC-075
+
+| | |
+| --- | --- |
+| Title | An override yields an effective interpretation and keeps the inferred one |
+| Status | Accepted as architectural direction. The API is not accepted. |
+| Decision | The direction is inferred interpretation, then an optional user override, then effective interpretation. A future override architecture must preserve the original inferred interpretation rather than silently rewriting history. User intent normally takes precedence where the requested interpretation is meaningfully applicable ([DEC-044](#dec-044)). Downstream analysis uses the effective interpretation where applicable. An override never erases physical or source facts. An override never authorizes coercion or mutation ([DEC-045](#dec-045)). Conflicts must be reportable. Removing an override should conceptually restore the inferred interpretation. An interactive renderer must not become a second analytical engine ([DEC-025](#dec-025)). Changing the semantic interpretation may require re-analysis because eligibility can change. Future reproducible configuration should be able to carry semantic overrides. Effective interpretation expresses the requested or active semantic reading. Physical applicability and immutable dataset facts still determine which analyses can actually run without coercion. A numeric Identifier overridden toward Numeric can enable Numeric analysis when the values are already physically numeric. UUID strings overridden toward Numeric cannot create valid Numeric analysis without coercion. Empty overridden toward Text cannot create textual content. A physical Boolean overridden toward Categorical may permit categorical frequency analysis without mutating values. |
+| Rationale | If the override replaces the inferred reading in place, the report can no longer show what Pytics concluded or restore it. If the override ignores physical facts, analysis would require coercion. |
+| Implications | `REQ-S-06`, `REQ-S-03`, `REQ-S-09`. These principles are accepted direction. The result object remains [OPEN-004](#open-questions). The configuration object remains [OPEN-009](#open-questions). The eligibility matrix remains [OPEN-043](#open-questions). Exact error and warning behavior is not frozen. Exact Empty or Constant override behavior is [OPEN-049](#open-049). This decision does not design an API or an HTML control. |
+
+## DEC-076
+
+| | |
+| --- | --- |
+| Title | Evidence keeps procedure provenance and is observed once |
+| Status | Accepted |
+| Decision | Evidence should eventually preserve procedure provenance. Conceptually this may include whether the procedure was exact and full-column or sampled, the sample size, the population size, the seed, and the method. This decision does not freeze those fields. Exact versus sampled belongs to provenance. Sampling can affect resolution confidence. Sampling does not itself make an interpretation true or false. Conceptual cost layering, not a module layout, is: level 0, physical metadata; level 1, cheap universal evidence; level 2, type-family evidence; level 3, candidate-specific evidence; level 4, expensive or deep evidence. Observe once, interpret many. Shared observations should be reusable by multiple candidate assessments. Avoid an architecture in which every candidate independently rescans the Series for missingness, value counts, string lengths, patterns, or monotonicity. This decision does not design a cache API. |
+| Rationale | Hidden or repeated scans would make confidence depend on an unstated procedure and would redo the same facts for every candidate. |
+| Implications | `REQ-P-12`, `REQ-S-05`, `REQ-IA-15`. This extends [DEC-054](#dec-054) and does not change its sampling permission. Sample sizes remain [OPEN-010](#open-questions). Thresholds remain [OPEN-044](#open-questions). Module layout remains [OPEN-045](#open-questions). The same cost list is described in [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md). If the copies diverge, this decision is the ruling. |
 
 ## Open questions
 
@@ -712,7 +874,7 @@ Which decisions would count as "unnecessary" blockers to a future non-pandas eng
 
 ### OPEN-004
 
-What are the public function signatures, result types, and attribute names? DataFrame-only `profile` and `compare` are accepted ([DEC-040](#dec-040)). The illustrative `ProfileReport` and `ComparisonReport` shapes are not frozen. The compare sketch also omits duplicate changes that compare navigation includes. The configuration object is [OPEN-009](#open-questions).
+What are the public function signatures, result types, and attribute names? DataFrame-only `profile` and `compare` are accepted ([DEC-040](#dec-040)). The illustrative `ProfileReport` and `ComparisonReport` shapes are not frozen. The compare sketch also omits duplicate changes that compare navigation includes. The configuration object is [OPEN-009](#open-questions). The split between inferred interpretation and effective interpretation, and the result representation of a semantic override, are part of this question ([DEC-075](#dec-075)). Exact Empty or Constant override behavior is [OPEN-049](#open-049).
 
 ### OPEN-006
 
@@ -728,11 +890,11 @@ Which analyses receive a Bayesian treatment, and what is the exact method catalo
 
 ### OPEN-009
 
-What is the configuration-object shape, and where do random seed and other reproducibility controls live?
+What is the configuration-object shape, and where do random seed and other reproducibility controls live? Future reproducible configuration should be able to carry semantic overrides ([DEC-075](#dec-075)). That direction does not decide the shape.
 
 ### OPEN-010
 
-What are the exact contents, cost thresholds, and sample sizes of `quick`, `standard`, and `deep`? The three names, and standard as the intended default, are accepted ([DEC-058](#dec-058)). The lists in that decision are not a closed catalog. Controlled sampling for expensive semantic evidence is accepted ([DEC-054](#dec-054)). Its thresholds and sample sizes, and sampling rules for other analyses, are part of this question. The mode-selection signature is not accepted.
+What are the exact contents, cost thresholds, and sample sizes of `quick`, `standard`, and `deep`? The three names, and standard as the intended default, are accepted ([DEC-058](#dec-058)). The lists in that decision are not a closed catalog. Controlled sampling for expensive semantic evidence is accepted ([DEC-054](#dec-054)). Its thresholds and sample sizes, and sampling rules for other analyses, are part of this question. Procedure-provenance fields are not frozen ([DEC-076](#dec-076)). The mode-selection signature is not accepted.
 
 ### OPEN-013
 
@@ -740,11 +902,11 @@ Which estimator family is used for the diagnostic classification model, and whic
 
 ### OPEN-014
 
-Which subtypes exist under the minimum semantic types? Continuous and Discrete are permitted numeric concepts, and that inference stays conservative ([DEC-049](#dec-049)). Boolean/Binary subtypes are not set ([DEC-047](#dec-047)). Integer dtype is not a discrete subtype, and float dtype is not a continuous subtype, without the observed values.
+Which subtypes exist under the minimum semantic types? Continuous and Discrete are permitted numeric concepts, and that inference stays conservative ([DEC-049](#dec-049)). Boolean/Binary representation is not set ([DEC-047](#dec-047), [DEC-074](#dec-074)). The contract allows a binary interpretation that is not necessarily Boolean. `SemanticType.BOOLEAN` cannot fully express that distinction. Whether Binary is its own semantic type, a subtype, a semantic property, or another representation is this question. Where URL-like, email-like, path-like, and generic string sit is also this question. Integer dtype is not a discrete subtype, and float dtype is not a continuous subtype, without the observed values. Do not close this question by overloading the optional subtype string. Ordinal storage is [OPEN-016](#open-questions), not this question. `{0.0, 1.0}` as binary evidence is [OPEN-046](#open-046).
 
 ### OPEN-016
 
-When ordinal semantics are accepted under [DEC-052](#dec-052), is that interpretation its own semantic type, a categorical subtype, or only a relationship case? The rule against inventing order is decided. This storage question is not.
+When ordinal semantics are accepted under [DEC-052](#dec-052), is that interpretation its own semantic type, a categorical subtype, or only a relationship case? The rule against inventing order is decided. `categorical_ordered` remains physical metadata and stays inspectable under Empty, Constant, and a later Categorical reading. That preservation does not answer this question. Do not treat a free-string subtype as the answer. This storage question is not decided.
 
 ### OPEN-018
 
@@ -828,15 +990,31 @@ What are the final 2.0 dependency versions, and which candidate directions becom
 
 ### OPEN-043
 
-What are the exact analysis-eligibility rules for each semantic type? [DEC-053](#dec-053) gives direction only.
+What are the exact analysis-eligibility rules for each semantic type? [DEC-053](#dec-053) gives direction only. Downstream analysis uses the effective interpretation where applicable ([DEC-075](#dec-075)). Physical applicability still limits which analyses can run without coercion. Exact error and warning behavior is not decided. The Empty or Constant override case is [OPEN-049](#open-049).
 
 ### OPEN-044
 
-What are the exact semantic-inference thresholds? [DEC-048](#dec-048) rejects uniqueness alone as an identifier rule and does not set numeric cutoffs. Sampling sizes are [OPEN-010](#open-questions).
+What are the exact semantic-inference thresholds? [DEC-048](#dec-048) rejects uniqueness alone as an identifier rule and does not set numeric cutoffs. [DEC-068](#dec-068) also rejects perfect uniqueness and zero missingness as definitional requirements for Identifier. The unique-ratio denominator is not decided. Exact positive-evidence checklists for candidate resolution are not decided. UUID-like and hash-like structure are accepted Identifier evidence and are not currently accepted as sufficient alone ([DEC-072](#dec-072)); whether either can ever be sufficient alone is part of this question. Sampling sizes are [OPEN-010](#open-questions). Candidate Resolution v0.1 does not close these questions with a numeric score ([DEC-066](#dec-066)).
 
 ### OPEN-045
 
-What is the module and file layout? [DEC-036](#dec-036) accepts the engine diagram as direction only.
+What is the module and file layout? [DEC-036](#dec-036) accepts the engine diagram as direction only. [DEC-064](#dec-064) accepts the semantic pipeline as a conceptual analytical pipeline only. [DEC-076](#dec-076) accepts evidence cost levels as conceptual layering only. None of those is a module layout.
+
+### OPEN-046
+
+Is `{0.0, 1.0}` binary-candidate evidence? [DEC-047](#dec-047) permits `{0, 1}` as a possible binary interpretation and does not decide the floating-point pair. [DEC-074](#dec-074) does not accept `{0.0, 1.0}`. Do not implement it as binary evidence while this question is open.
+
+### OPEN-047
+
+May a future ambiguity model include an abstention state distinct from the current `None` control-flow result? [DEC-067](#dec-067) does not introduce abstention. `None` means the implemented rule chain produced no interpretation. Do not redefine `None` as ambiguous, unknown, unsupported, conflicted, or abstained.
+
+### OPEN-048
+
+Is an evidence-strength enum ever needed? [DEC-066](#dec-066) keeps evidence role, evidence strength, and resolution confidence distinct, and does not introduce an evidence-strength enum for Candidate Resolution v0.1. User-facing confidence remains High, Medium, and Low.
+
+### OPEN-049
+
+What is the exact behavior when a user override meets an Empty or Constant column? [DEC-075](#dec-075) accepts override direction and does not freeze this case. Exact error and warning behavior for other overrides is also unset. Result and configuration shapes remain [OPEN-004](#open-questions) and [OPEN-009](#open-questions).
 
 ## Resolved open questions
 
@@ -950,4 +1128,5 @@ No decision is withdrawn in full.
 | [DEC-018](#dec-018) | The implication that permutation importance was only a discussion. The one-model boundary stands. | [DEC-059](#dec-059) |
 | [DEC-025](#dec-025) | The rationale clause that the pipeline sketch is unadopted. Analysis/render separation stands. | [DEC-036](#dec-036) |
 | [DEC-027](#dec-027) | The statement that the ecosystem review had not been done, and that the named libraries carried no direction. The prohibition on installing or pinning a stack stands. | [DEC-060](#dec-060) |
+| [DEC-041](#dec-041) | The conceptual stage list as the current pipeline description. Physical dtype, observed characteristics, and semantic interpretation remain distinct. Retained fields and sources remain. The stages are still not a frozen function decomposition. | [DEC-064](#dec-064) |
 

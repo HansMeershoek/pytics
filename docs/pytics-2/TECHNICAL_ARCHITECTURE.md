@@ -91,6 +91,44 @@ The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copi
 
 The bootstrap sketch listed "progressive computation" as a proposed principle. That phrase is not part of the accepted direction. Analysis modes are the accepted depth concept. No separate progressive-computation design is accepted.
 
+## Semantic inference
+
+The semantic engine in the diagram above follows the conceptual pipeline in [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md) ([DEC-064](DECISIONS.md#dec-064)). That pipeline is not a module map. [OPEN-045](DECISIONS.md#open-questions) stays open. The labels are not class names. If this file and [DEC-064](DECISIONS.md#dec-064) diverge on the pipeline, the decision is the ruling.
+
+```text
+PHYSICAL DTYPE
+      ↓
+OBSERVATIONS / EVIDENCE
+      ↓
+CANDIDATE ASSESSMENTS
+      ↓
+RESOLUTION
+      ↓
+INFERRED INTERPRETATION
+      ↓
+OPTIONAL USER OVERRIDE
+      ↓
+EFFECTIVE INTERPRETATION
+      ↓
+DOWNSTREAM ANALYSIS
+```
+
+Observations and candidate assessments are distinct ([DEC-065](DECISIONS.md#dec-065)). Absence of a supporting observation is not contradicting evidence. Candidate Resolution v0.1 does not use a numeric total-score ([DEC-066](DECISIONS.md#dec-066)). User-facing confidence remains High, Medium, or Low.
+
+Evidence is collected once and then interpreted ([DEC-076](DECISIONS.md#dec-076)). The levels below are conceptual cost, not a cache API and not a file layout. If this list and that decision diverge, the decision is the ruling.
+
+```text
+LEVEL 0 — physical metadata
+LEVEL 1 — cheap universal evidence
+LEVEL 2 — type-family evidence
+LEVEL 3 — candidate-specific evidence
+LEVEL 4 — expensive/deep evidence
+```
+
+Shared observations, including missingness, value counts, string lengths, patterns, and monotonicity, should be reusable across candidate assessments. Procedure provenance belongs with the evidence. Fields for exact versus sampled collection, sample size, population size, seed, and method are not frozen. Sampling can affect confidence. It does not decide whether an interpretation is true. Sample sizes remain [OPEN-010](DECISIONS.md#open-questions).
+
+The current `SemanticAlternative` value is thinner than the material-alternative requirement in [DEC-067](DECISIONS.md#dec-067). The consolidation did not redesign it. `None` from the implemented precedence chain is control flow, not an ambiguity state. User override is direction only ([DEC-075](DECISIONS.md#dec-075)). The renderer does not choose a second semantic reading ([DEC-025](DECISIONS.md#dec-025)). Heuristic Binary inference waits until a binary-not-Boolean reading can be represented ([DEC-074](DECISIONS.md#dec-074), [OPEN-014](DECISIONS.md#open-questions)). Some roles need dataset context the column does not contain ([DEC-073](DECISIONS.md#dec-073)). That reservation is not permission to implement cross-column inference.
+
 ## Illustrative result shapes
 
 Status: **not accepted**. Do not implement these classes or attribute names as if they were frozen ([OPEN-004](DECISIONS.md#open-questions)).
@@ -148,6 +186,8 @@ Do not implement the registry until the schema and API are decided (`REQ-T-03`, 
 Accepted ([DEC-062](DECISIONS.md#dec-062)). Core analytical result and value models use frozen dataclasses, enums, and explicit type hints where those objects are analytical facts. Pydantic is not required. Dictionaries and TypedDict-only structures are not the preferred representation for those facts. Do not freeze mutable orchestration or configuration objects before they exist. This does not freeze public result-class names ([OPEN-004](DECISIONS.md#open-questions)).
 
 TSK-001 placed the first of these objects under `src/pytics/semantics/`. TSK-002 added `BasicColumnEvidence` there, as an exact observed-characteristic fact, and Empty/Constant interpretations that reuse the Slice 001 physical classifier. TSK-003 composes those rules with one further reading: semantic Boolean when the physical family is Boolean and the column is neither Empty nor Constant. That Boolean reading uses the physical dtype as its source. Object, categorical, numeric, and string values are not read as Boolean. TSK-004 calls that chain and then reads semantic Datetime when the physical family is native datetime or timezone-aware datetime. Both families stay distinct on the physical dtype. The composition is one successor function, not a rule registry. String, object, integer, categorical, timedelta, and period values are not read as Datetime. TSK-005 calls that precedence and then reads semantic Timedelta when the physical family is timedelta. Datetime stays a point in time. Timedelta stays a duration. String, object, numeric, categorical, and period values are not read as Timedelta. That step is one further successor call plus one explicit branch, not a rule registry. Those modules are internal. That location does not resolve [OPEN-045](DECISIONS.md#open-questions). The physical classifier names storage families only. Ordinal storage remains [OPEN-016](DECISIONS.md#open-questions). The subtype taxonomy remains [OPEN-014](DECISIONS.md#open-questions). Inference thresholds remain [OPEN-044](DECISIONS.md#open-questions).
+
+The semantic-foundation consolidation did not change these modules. `SemanticAlternative` still records a type, an optional subtype label, and an optional confidence. It does not carry the alternative's evidence. `None` still means the implemented chain produced no interpretation. Heuristic candidate resolution is not implemented. A binary-not-Boolean reading is not implemented. User overrides are not implemented. `categorical_ordered` remains physical metadata when Empty or Constant wins.
 
 ## Package end state
 

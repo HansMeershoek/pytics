@@ -4,6 +4,8 @@ Status: rules and directions below that are marked Accepted are binding. The met
 
 Do not implement a catalog, a method registry, or a Bayesian stack from this file. `REQ-K-03` remains in force. [DEC-055](DECISIONS.md#dec-055) does not retire it.
 
+Numeric summaries in this file are downstream analysis. They are not semantic-inference detectors ([DEC-069](DECISIONS.md#dec-069)).
+
 ## Accepted inferential rules
 
 These are product rules. The contract detail sits in [PRODUCT_CONTRACT.md](PRODUCT_CONTRACT.md) and [ANALYTICAL_SPEC.md](ANALYTICAL_SPEC.md).

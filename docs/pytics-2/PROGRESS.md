@@ -1,6 +1,6 @@
 # Progress
 
-The project owner accepted the Slice 001 codebase on 2026-10-03 as the approved baseline for continued development. TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are complete. They are foundation slices. No requirement below is completed. TSK-005 completes the planned strong-physical-type semantics phase. The next step is a Semantic Foundation Review, not automatic implementation of another semantic type.
+The project owner accepted the Slice 001 codebase on 2026-10-03 as the approved baseline for continued development. TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are complete. They are foundation slices. No requirement below is completed. TSK-005 completes the planned strong-physical-type semantics phase. A documentation-only Semantic Foundation consolidation, recorded the same day, accepted the candidate-resolution architecture in DEC-064 through DEC-076. No heuristic semantic inference has been authorized. No TSK-006 exists. The next implementation slice has not been selected.
 
 This register is the trace from requirement to proof:
 
@@ -266,7 +266,7 @@ Timedelta is not yet emitted as a dataset-level fact. REQ-A-06 stays Not started
 
 This slice completes the planned sequence of semantic interpretations supported directly by a strong physical pandas dtype: Empty, Constant, Boolean, Datetime, timezone-aware Datetime, and Timedelta. It does not complete semantic inference.
 
-The next step is a Semantic Foundation Review, not automatic implementation of another semantic type. This slice does not approve TSK-006. Before evidence-based inference begins, that review should examine the current precedence composition, result models, evidence representation, ambiguity representation, subtype strategy, user overrides, configuration boundaries, inference thresholds, deterministic versus heuristic rules, likely interactions among Numeric, Categorical, Text, Identifier, and Binary candidates, and whether the current module boundaries should remain temporary. That list is an agenda. It is not a design.
+At the time of this slice, the next step was a Semantic Foundation Review, not automatic implementation of another semantic type. This slice does not approve TSK-006. The review agenda was the current precedence composition, result models, evidence representation, ambiguity representation, subtype strategy, user overrides, configuration boundaries, inference thresholds, deterministic versus heuristic rules, likely interactions among Numeric, Categorical, Text, Identifier, and Binary candidates, and whether the current module boundaries should remain temporary. That list was an agenda. It was not a design. The review was later consolidated in documentation. See the documentation record below. This slice still does not approve a later implementation task.
 
 Left open, and not decided in this slice: inference thresholds ([OPEN-044](DECISIONS.md#open-questions)); the subtype taxonomy ([OPEN-014](DECISIONS.md#open-questions)); ordinal storage ([OPEN-016](DECISIONS.md#open-questions)); module layout ([OPEN-045](DECISIONS.md#open-questions)); the order of later slices ([OPEN-037](DECISIONS.md#open-questions)); duration-like string inference; numeric duration inference; unit guessing; object-timedelta heuristics; period semantics; timedelta duration analysis; and time-series analysis ([OPEN-020](DECISIONS.md#open-questions)).
 
@@ -284,6 +284,16 @@ Verification, 2026-10-03, local `.venv`, Python 3.14.8, pandas 3.0.6, numpy 2.5.
 `tests/test_semantic_foundation.py` is the unchanged 43 Slice 001 tests. `tests/test_empty_constant.py` is the unchanged 29 Slice 002 tests. `tests/test_physical_boolean.py` is the unchanged 22 Slice 003 tests. `tests/test_physical_datetime.py` is the unchanged 24 Slice 004 tests. `tests/test_physical_timedelta.py` is 25 Slice 005 tests. The only failure is `tests/test_profiler.py::test_pdf_export`: `TypeError: '<' not supported between instances of 'float' and 'str'` in `xhtml2pdf`. That is the documented baseline PDF failure. No previously passing test failed. Semantic modules were fully covered on the full run. Total coverage on that run was 97%.
 
 All 45 acceptance criteria in the implementation plan passed. Dependency files were not changed.
+
+## Documentation record — semantic foundation consolidation
+
+Recorded 2026-10-03, after TSK-005. Documentation only. No production file was changed. No test was changed. No dependency file was changed. No `TSK-###` was created. Nothing in this record marks a requirement Implemented.
+
+Decisions recorded: [DEC-064](DECISIONS.md#dec-064) through [DEC-076](DECISIONS.md#dec-076). Later-update notes on earlier decisions state the relationship. [DEC-041](DECISIONS.md#dec-041)'s stage list is no longer the current pipeline description. [DEC-042](DECISIONS.md#dec-042)'s permission for an internal score, and for a future statistically justified numeric confidence, remains and is unused for Candidate Resolution v0.1.
+
+The Strong Physical Type phase remains complete. TSK-001 through TSK-005 remain the only completed implementation slices. The consolidated architecture covers observations, candidate assessments, resolution, material alternatives, High / Medium / Low confidence, inferred versus effective interpretation, and compute-once evidence. Heuristic semantic inference is not authorized. The next implementation slice was not selected ([OPEN-037](DECISIONS.md#open-questions)).
+
+Still open, among others: [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), and [OPEN-049](DECISIONS.md#open-049).
 
 ## Requirement register
 
@@ -422,7 +432,12 @@ The following are not requirements and must not be given tasks until a decision 
 - the configuration-object shape ([OPEN-009](DECISIONS.md#open-questions));
 - the closed statistical method catalog, effect-size formulas, and the multiple-testing family ([OPEN-006](DECISIONS.md#open-questions), [OPEN-007](DECISIONS.md#open-questions));
 - the method-registry schema and API ([OPEN-039](DECISIONS.md#open-questions));
-- semantic-inference thresholds and the subtype taxonomy ([OPEN-044](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions));
+- semantic-inference thresholds, positive-evidence checklists, the unique-ratio denominator, and whether UUID-like or hash-like structure can be sufficient alone ([OPEN-044](DECISIONS.md#open-questions));
+- the subtype taxonomy, Binary representation, and unresolved string roles ([OPEN-014](DECISIONS.md#open-questions));
+- `{0.0, 1.0}` as binary-candidate evidence ([OPEN-046](DECISIONS.md#open-046));
+- a future abstention state ([OPEN-047](DECISIONS.md#open-047));
+- an evidence-strength enum ([OPEN-048](DECISIONS.md#open-048));
+- exact Empty or Constant override behavior, and the override result and configuration representation ([OPEN-049](DECISIONS.md#open-049), [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions));
 - trimmed mean and common-token diagnostics ([OPEN-019](DECISIONS.md#open-questions));
 - fuzzy or near-duplicate analysis, and the scope of deep time-series diagnostics ([OPEN-020](DECISIONS.md#open-questions));
 - the diagnostic estimator family and the anomaly estimator ([OPEN-013](DECISIONS.md#open-questions), [OPEN-022](DECISIONS.md#open-questions));
@@ -432,4 +447,4 @@ The following are not requirements and must not be given tasks until a decision 
 
 Migration mechanics are decided ([DEC-063](DECISIONS.md#dec-063)). They are not a requirement row.
 
-The engine diagram, the three mode names, the shared statistical layer, the method-registry concept, DataFrame-only input, held-out permutation importance, and the candidate dependency directions are accepted. Acceptance is not a task and not an implementation. TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are the only implementation tasks, and they do not implement those engines. The next step after TSK-005 is a Semantic Foundation Review, not another implementation task.
+The engine diagram, the three mode names, the shared statistical layer, the method-registry concept, DataFrame-only input, held-out permutation importance, the candidate dependency directions, and the semantic-foundation pipeline in DEC-064 through DEC-076 are accepted. Acceptance is not a task and not an implementation. TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are the only implementation tasks, and they do not implement those engines or heuristic candidate resolution. The next implementation slice has not been selected.

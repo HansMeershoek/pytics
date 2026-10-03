@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are complete. No later slice is approved.** The next step is a human-led Semantic Foundation Review, not another semantic-inference slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. That consolidation is not an implementation slice and does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, and Slice 005. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). The strong-physical-type phase is complete. Evidence-based inference does not start from this file.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, and Slice 005. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. No TSK-006 exists.
 
 ## Authorization
 
@@ -39,6 +39,9 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 | [OPEN-004](DECISIONS.md#open-questions) | No commitment to function signatures or illustrative `ProfileReport` / `ComparisonReport` attribute names. |
 | [OPEN-013](DECISIONS.md#open-questions) | No selection of a diagnostic estimator. |
 | [OPEN-041](DECISIONS.md#open-questions) | No silent choice of a Plotly static-export mechanism for PDF. |
+| [DEC-066](DECISIONS.md#dec-066) | Candidate Resolution v0.1 uses no numeric total-score. [DEC-042](DECISIONS.md#dec-042) still permits a future statistically justified numeric confidence. |
+| [DEC-074](DECISIONS.md#dec-074), [OPEN-014](DECISIONS.md#open-questions) | No heuristic `{0, 1}` or string-token Binary inference until a binary-not-Boolean reading can be represented. |
+| [DEC-064](DECISIONS.md#dec-064), [OPEN-045](DECISIONS.md#open-questions) | The semantic pipeline is not a module layout. |
 
 ## Traceability
 
@@ -360,10 +363,12 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005.
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The current status is [After TSK-005](#after-tsk-005).
 
 ## After TSK-005
 
-The planned strong-physical-type semantics phase is complete. The next step is a human-led Semantic Foundation Review. That review is not an implementation slice. It does not approve TSK-006 or any other slice.
+The planned strong-physical-type semantics phase is complete. The Semantic Foundation Review was consolidated in documentation on 2026-10-03. [DEC-064](DECISIONS.md#dec-064) through [DEC-076](DECISIONS.md#dec-076) record that architecture. No heuristic semantic inference was authorized. No TSK-006 was created. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)).
 
-Before evidence-based inference begins, the review should examine the current precedence composition, result models, evidence representation, ambiguity representation, subtype strategy, user overrides, configuration boundaries, inference thresholds, deterministic versus heuristic rules, likely interactions among Numeric, Categorical, Text, Identifier, and Binary candidates, and whether the current module boundaries should remain temporary. This list is the review agenda. It is not a design and not an approved slice.
+Future implementation planning must respect that consolidated architecture: observations kept distinct from candidate assessments; resolution; material alternatives; High, Medium, and Low resolution confidence without a v0.1 numeric total-score; override provenance that preserves the inferred interpretation; and compute-once evidence. Those constraints are not a task and not a module layout ([OPEN-045](DECISIONS.md#open-questions)).
+
+The review agenda that TSK-005 named — precedence, result models, evidence, ambiguity, subtypes, overrides, configuration, thresholds, deterministic versus heuristic rules, interactions among Numeric, Categorical, Text, Identifier, and Binary, and temporary module boundaries — is no longer an open agenda. The accepted parts are the decisions above. The parts that stay open are the `OPEN-###` items those decisions name. That agenda was not a design and was not a slice.

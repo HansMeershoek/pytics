@@ -8,7 +8,7 @@ These documents record product and architecture direction. They do not by themse
 
 The released codebase remains Pytics 1.1.5. It is a functional and historical reference. It is not the 2.0 specification, and it is not inherited automatically. See [BASELINE_1_1_5.md](BASELINE_1_1_5.md).
 
-Established: 2026-10-03, from the Pytics 2.0 bootstrap briefing. Architecture and methodology update: 2026-10-03, recorded as DEC-036 through DEC-061. Slice 001, recorded the same day as DEC-062, DEC-063, and TSK-001, was accepted by the project owner as the development baseline. TSK-002, basic column evidence and Empty/Constant inference, was completed the same day on that baseline. TSK-003, physical Boolean inference after Empty and Constant, was completed the same day. TSK-004, physical Datetime inference after that chain, was completed the same day. TSK-005, physical Timedelta inference after that chain, was completed the same day. That completes the planned strong-physical-type semantics phase. The next step is a Semantic Foundation Review, not automatic implementation of another semantic type. None of these slices authorizes a later slice.
+Established: 2026-10-03, from the Pytics 2.0 bootstrap briefing. Architecture and methodology update: 2026-10-03, recorded as DEC-036 through DEC-061. Slice 001, recorded the same day as DEC-062, DEC-063, and TSK-001, was accepted by the project owner as the development baseline. TSK-002, basic column evidence and Empty/Constant inference, was completed the same day on that baseline. TSK-003, physical Boolean inference after Empty and Constant, was completed the same day. TSK-004, physical Datetime inference after that chain, was completed the same day. TSK-005, physical Timedelta inference after that chain, was completed the same day. That completes the planned strong-physical-type semantics phase. The Semantic Foundation Review was then consolidated into these documents the same day, as DEC-064 through DEC-076. That consolidation is documentation only. It does not authorize heuristic semantic inference, and it does not create TSK-006. The next implementation slice has not been selected. None of TSK-001 through TSK-005 authorizes a later slice.
 
 ## Status labels
 
@@ -43,7 +43,7 @@ This convention is a documentation rule so the briefing is not silently tightene
 | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) | Accepted architectural direction and constraints. Not a frozen module layout. |
 | [STATISTICAL_METHODS.md](STATISTICAL_METHODS.md) | Inferential rules and accepted methodological direction. The method catalog is not finalized. |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | 1.1.5 dependency inventory and 2.0 candidate directions. Not a lock. |
-| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | How slices are opened. TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are complete. No later slice is approved. The next step is a Semantic Foundation Review. |
+| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | How slices are opened. TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are complete. No later slice is approved. The semantic-foundation architecture is consolidated. The next implementation slice is not selected. |
 | [DECISIONS.md](DECISIONS.md) | Accepted decisions (`DEC-###`) and open questions (`OPEN-###`). |
 | [PROGRESS.md](PROGRESS.md) | Requirement → task → files → tests → verification → completion. |
 | [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md) | Required procedure for every implementation slice. |
