@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, and TSK-013 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, and TSK-015 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, and Slice 013. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, and Slice 015. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, and TSK-013 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, and TSK-015 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -949,4 +949,58 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 16 p
 
 ## After TSK-014
 
-TSK-014 resolves structural readings and already produced candidate assessments. It does not assign confidence to a candidate-derived selection, does not build that selection's `SemanticInterpretation`, and does not enter the precedence chain. [DEC-085](DECISIONS.md#dec-085) records the contract, including structural precedence, exactly-one-supported resolution, abstention when nothing is supported, ambiguity when several candidates are supported, and the rejection of duplicate candidate types. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-014 resolves structural readings and already produced candidate assessments. It does not assign confidence to a candidate-derived selection, does not build that selection's `SemanticInterpretation`, and does not enter the precedence chain. [DEC-085](DECISIONS.md#dec-085) records the contract, including structural precedence, exactly-one-supported resolution, abstention when nothing is supported, ambiguity when several candidates are supported, and the rejection of duplicate candidate types. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-015 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-015
+
+Slice 015, inferred interpretation foundation. Approved 2026-10-03 after TSK-014. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-04 and REQ-S-05, for the inferred state kept distinct from resolution, from candidate assessment, and from observation. REQ-S-01 is not completed: a structural reading is preserved, and a candidate-derived selection remains a selected type without a confidence-bearing interpretation. REQ-S-02 is not completed because that selection does not receive High, Medium, or Low. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Add one frozen `InferredSemanticResult`. Store the observed physical dtype and the `SemanticResolution` already produced. Do not store a second status, a second selected type, the candidates again, or a second structural interpretation.
+- Derive `interpretation` from the resolution's structural interpretation. Derive `selected_type` from the resolution. Reuse `ResolutionStatus` through the contained resolution.
+- `build_inferred_semantic_result` consumes those two facts. It does not read a Series, collect observations, assess candidates, or call `resolve_semantics`.
+- The physical dtype is supplied. It is not derived from the selected semantic type.
+- A structural resolution keeps that interpretation object. Its confidence, source, and physical dtype stay as they are. The supplied physical dtype must match. A mismatch is rejected.
+- A candidate-derived `RESOLVED` result keeps the selected type and does not build a `SemanticInterpretation`. No High, Medium, or Low confidence is invented from candidate counts, evidence counts, or the absence of contradiction.
+- `INSUFFICIENT_EVIDENCE` and `AMBIGUOUS` are valid inferred results. Neither has an interpretation or a selected type. Neither is an error or a bare `None`.
+- Ambiguity does not become a selected reading, a low confidence, or material alternatives.
+- `interpret_series_precedence` does not call the constructor. No override, effective interpretation, eligibility rule, public result, configuration, or threshold is added.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The inferred-result contract is [DEC-086](DECISIONS.md#dec-086). It narrows [OPEN-047](DECISIONS.md#open-047) to candidate-derived confidence, material alternatives on a future selected reading, and the public result. It does not close [OPEN-044](DECISIONS.md#open-questions).
+
+### Exclusions
+
+Do not widen `SemanticInterpretation` so that confidence is optional. Do not add `SemanticType.UNKNOWN`. Do not add a second status enum. Do not assign High, Medium, or Low from candidate counts or evidence quantity. Do not add an evidence-strength enum. Do not map a semantic type to a physical dtype family. Do not construct material alternatives. Do not turn ambiguity into a low-confidence selected reading. Do not call collectors, assessors, or the resolver from the constructor. Do not call the constructor from `interpret_series_precedence`. Do not add a user override, effective interpretation, downstream eligibility, or a public `profile()` result.
+
+Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049). [OPEN-047](DECISIONS.md#open-047) records the inferred representation of abstention and ambiguity and leaves confidence, material alternatives, and the public result open.
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the inferred result from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `InferredSemanticResult` is a frozen dataclass. Its stored fields are the physical dtype and the resolution. Status, selected type, candidates, reason, and the structural interpretation are not stored again.
+2. `interpretation` and `selected_type` are derived from the resolution. An unresolved result cannot carry an interpretation.
+3. Empty, Constant, Boolean, Datetime, timezone-aware Datetime, and Timedelta structural readings are preserved by identity. Confidence, source, and the interpretation's physical dtype are unchanged. The supplied physical dtype matches.
+4. A supplied physical dtype that differs from the structural interpretation is rejected. Neither value is replaced. An ordered-flag mismatch on categorical storage is rejected.
+5. A candidate-derived resolved result keeps the selected type and has no `SemanticInterpretation`. Integer and floating Numeric storage, string and object Identifier storage, and categorical storage, including the ordered flag, stay as observed. No confidence is created.
+6. City-name strings and prose-like strings are `INSUFFICIENT_EVIDENCE`. The inferred result retains the physical dtype, has no interpretation and no selected type, and is not `None`.
+7. An ambiguous resolution of supported Numeric and Identifier candidates is a valid inferred result. No interpretation, no selected type, no confidence, and no material alternative. Both supported candidates remain on the resolution.
+8. The constructor preserves a supplied physical dtype for Numeric, Identifier, Categorical, and Text selections. It does not contain a semantic-type-to-physical-family mapping.
+9. One supporting statement, two supporting statements, no contradiction, and a contradicted neighbor do not create an interpretation or a confidence.
+10. Construction does not collect observations, assess candidates, or call the resolver. `interpret_series_precedence` does not call the constructor, and existing precedence results stay as they were.
+11. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added. `SemanticInterpretation`, `SemanticResolution`, `Confidence`, and `SemanticType` are unchanged.
+12. Focused TSK-015 tests pass. TSK-014, TSK-013, TSK-012, TSK-011 foundation, TSK-011 Identifier, TSK-010, TSK-009, TSK-008, TSK-007, and TSK-006 tests pass.
+13. Semantic tests for TSK-001 through TSK-015 pass. The legacy profiler stays at 19 passed and the known PDF failure. The full suite adds only the new tests, with the same known PDF failure.
+14. [OPEN-047](DECISIONS.md#open-047) records the inferred representation of abstention and ambiguity and leaves candidate-derived confidence, material alternatives, and the public result open. [OPEN-044](DECISIONS.md#open-questions) stays open for that confidence. [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) stay open.
+15. This section does not approve or implement a later slice.
+16. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 16 passed for TSK-015.
+
+## After TSK-015
+
+TSK-015 records the inferred state for a physical dtype and a resolution already produced. It preserves a structural interpretation and does not assign confidence to a candidate-derived selection. It does not enter the precedence chain. [DEC-086](DECISIONS.md#dec-086) records the contract, including physical-dtype provenance, deferred candidate confidence, and abstention and ambiguity as ordinary inferred states. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
