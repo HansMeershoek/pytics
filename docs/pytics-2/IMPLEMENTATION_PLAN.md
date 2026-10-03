@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, and TSK-011 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, and TSK-012 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, and Slice 011. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, and Slice 012. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, and TSK-011 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, and TSK-012 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, and TSK-011 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, or REQ-H-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, and TSK-012 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, or REQ-H-04.
 
 ## Reuse of 1.1.5
 
@@ -363,7 +363,7 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-011](#after-tsk-011).
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-012](#after-tsk-012).
 
 ## After TSK-005
 
@@ -782,4 +782,63 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 24 p
 
 ## After TSK-011
 
-TSK-011 adds a candidate assessment and uses Identifier as the first concrete candidate. It does not select a semantic reading and does not enter the precedence chain. [DEC-082](DECISIONS.md#dec-082) records the contract, including support versus contradiction, the absence of a score and of final confidence, the initial full-population UUID and same-width hexadecimal rules, and the facts that do not support Identifier. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-011 adds a candidate assessment and uses Identifier as the first concrete candidate. It does not select a semantic reading and does not enter the precedence chain. [DEC-082](DECISIONS.md#dec-082) records the contract, including support versus contradiction, the absence of a score and of final confidence, the initial full-population UUID and same-width hexadecimal rules, and the facts that do not support Identifier. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-012 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-012
+
+Slice 012, Numeric, Categorical, and Text candidate assessments. Approved 2026-10-03 after TSK-011. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-04 and REQ-S-05, for evidence-driven assessment kept distinct from observations and from a selected reading. REQ-S-01 is respected because no reading is selected. REQ-C-01, REQ-F-01, REQ-D-01, and REQ-D-02 are not completed. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Reuse `CandidateAssessment` and `CandidateDisposition`. Do not add a specialized assessment type.
+- `assess_numeric_candidate`, `assess_categorical_candidate`, and `assess_text_candidate` consume an evidence bundle already collected. They use the Identifier bundle identity checks. They do not take a Series, read a column name, recollect observations, or classify a dtype again.
+- Empty and Constant are `NOT_SUPPORTED` for each candidate. They are not contradictions. No candidate in this slice emits `CONTRADICTED`.
+- Non-empty, non-constant physical integer or floating storage is `SUPPORTED` Numeric. The statement names that family and supports a reading. Nullable and sparse storage already classified in those families are included. Complex storage is not. Numeric-looking strings are not parsed.
+- Numeric-structure facts may be supplied. They do not add a finite, sign, integer-like, or monotonicity cutoff, and they are not required.
+- `{0, 1}` and `{0.0, 1.0}` numeric storage may support Numeric. They are not Boolean or Binary.
+- Non-empty, non-constant physical categorical storage is `SUPPORTED` Categorical, including ordered storage and unused levels. Ordered metadata stays on the physical dtype. No Ordinal type is added.
+- Repetition, two labels, and low cardinality do not support Categorical. No cardinality threshold is introduced.
+- Text stays `NOT_SUPPORTED` from current observations. No length or whitespace threshold is introduced.
+- Assessors are independent. A column may support one candidate, more than one, or none. Identifier rules are unchanged.
+- The precedence chain does not call any candidate assessor. No resolver, score, or final confidence is added.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The candidate contract is [DEC-083](DECISIONS.md#dec-083). It reuses [DEC-082](DECISIONS.md#dec-082). It does not close [OPEN-044](DECISIONS.md#open-questions).
+
+### Exclusions
+
+Do not resolve candidates. Do not assign High, Medium, or Low. Do not add material alternatives, a score, or an evidence-strength enum. Do not change Identifier rules. Do not reconstruct regular-step evidence. Do not add word counts, token counts, or NLP. Do not infer Boolean or Binary from `{0, 1}` or from string labels. Do not infer Categorical from repetition or from two values. Do not infer Text from string dtype, length, or whitespace. Do not parse numeric-looking strings. Do not call the assessors from `interpret_series_precedence`. Do not change `SemanticInterpretation`.
+
+Do not add a candidate registry, a rule engine, or a resolver. Do not add a user override. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049).
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the assessors from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `CandidateAssessment` and `CandidateDisposition` are unchanged. No Numeric, Categorical, or Text assessment dataclass was added.
+2. The three assessors consume a consistent evidence bundle. They do not take a Series and do not recollect observations.
+3. Equal counts from another column are rejected. An inapplicable physical family for supplied family evidence is rejected.
+4. Empty and Constant are `NOT_SUPPORTED` for Numeric, Categorical, and Text, including constant numeric storage, constant categorical storage, a constant paragraph, and a constant UUID. Contradicting evidence stays empty.
+5. Non-empty, non-constant integer and floating storage is `SUPPORTED` Numeric, including signed, unsigned, nullable, and sparse storage the current classifier already accepts. The statement names the physical family and supports a Numeric reading.
+6. Infinities, negatives, zeros, integer-like floats, non-integer floats, and both directions of an integer sequence stay `SUPPORTED` Numeric. Numeric-structure facts are not required and do not impose a cutoff.
+7. Numeric-looking strings are not parsed. Complex, Boolean, Datetime, timezone-aware Datetime, Timedelta, and categorical storage are `NOT_SUPPORTED` Numeric.
+8. `{0, 1}` and `{0.0, 1.0}` numeric storage may support Numeric and are not inferred as Boolean or Binary.
+9. Non-empty, non-constant physical categorical storage is `SUPPORTED` Categorical, including ordered storage and an unused level. The statement does not claim Ordinal. `categorical_ordered` stays on the physical dtype.
+10. Empty and Constant categorical storage are `NOT_SUPPORTED`. Ordinary strings, two labels, Boolean-like labels, label text that looks ordered, repeated integers, UUID strings, and IP strings are `NOT_SUPPORTED` Categorical. No cardinality threshold was added.
+11. Text stays `NOT_SUPPORTED` for ordinary words, repeated labels, unique labels, whitespace, long strings, prose-like strings, punctuation, mixed alphanumeric text, UUID, hexadecimal, IPv4, IPv6, numeric-looking strings, email-like strings, URL-like strings, empty and all-missing string columns, a constant paragraph, categorical labels, numeric storage, Boolean, and Datetime. No length or whitespace threshold was added.
+12. Assessors operate independently. An ordinary integer column supports Numeric only. Physical categorical storage supports Categorical. UUID strings support Identifier only. Ordinary strings support none. A constant UUID supports none. No resolver writes those results.
+13. No score, confidence, rank, or `CONTRADICTED` result was added. `interpret_series_precedence` does not call any candidate assessor. Current Empty, Constant, Boolean, Datetime, timezone-aware Datetime, Timedelta, numeric, string, and UUID precedence results stay as they were.
+14. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added. Identifier tests stay green.
+15. Focused TSK-012 tests pass. TSK-011 foundation and Identifier tests pass. TSK-010, TSK-009, TSK-008, TSK-007, and TSK-006 tests pass.
+16. Semantic tests for TSK-001 through TSK-012 pass. The legacy profiler stays at 19 passed and the known PDF failure. The full suite adds only the new tests, with the same known PDF failure.
+17. [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) stay open. Resolution, final confidence, numeric sequence Identifier evidence, and user overrides stay open.
+18. This section does not approve or implement a later slice.
+19. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 19 passed for TSK-012.
+
+## After TSK-012
+
+TSK-012 adds Numeric, Categorical, and Text candidate assessments on the candidate model from TSK-011. It does not select a semantic reading and does not enter the precedence chain. [DEC-083](DECISIONS.md#dec-083) records the contract, including physical integer and floating storage as Numeric support, physical categorical storage as Categorical support, the absence of an approved Text rule in the current observations, and the absence of a cardinality, length, or whitespace threshold. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
