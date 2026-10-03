@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, and TSK-004 are complete. No later slice is approved.**
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are complete. No later slice is approved.** The next step is a human-led Semantic Foundation Review, not another semantic-inference slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, and Slice 004. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions).
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, and Slice 005. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). The strong-physical-type phase is complete. Evidence-based inference does not start from this file.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, and TSK-004 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -48,7 +48,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, and TSK-004 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
 
 ## Reuse of 1.1.5
 
@@ -285,3 +285,85 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 42. No commit or push was made.
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 42 passed for TSK-004.
+
+## TSK-005
+
+Slice 005, physical Timedelta inference and completion of the strong physical-type semantics phase. Approved 2026-10-03 after the committed Slice 001, Slice 002, Slice 003, and Slice 004 baseline. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-01, REQ-S-02, REQ-S-04, and REQ-S-05, only for composing Empty, Constant, physical Boolean, physical Datetime, and physical Timedelta. REQ-S-07 is respected on this path because a Timedelta reading is not duration analysis and no unit or statistic is produced. REQ-S-03 is respected on this path and is not completed. Those requirement rows stay Not started. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Reuse `classify_physical_dtype` and `BasicColumnEvidence`. Classify the physical dtype once. Collect the four basic counts once.
+- Reuse `interpret_precedence_from_evidence` from Slice 004. Do not recompute `isna` or `nunique`, and do not copy the Empty, Constant, physical Boolean, or physical Datetime rules.
+- Precedence: Empty, then Constant, then physical Boolean, then physical Datetime, then physical Timedelta, then no interpretation. `None` means no interpretation. No unknown semantic type.
+- Semantic Timedelta only when the column is not Empty, not Constant, not physical Boolean, not physical Datetime, and `PhysicalDtypeFamily` is `TIMEDELTA`. The semantic type is `SemanticType.TIMEDELTA`. Confidence is High. Source is directly supported by the physical dtype. Evidence is `physical dtype is timedelta`. The physical dtype value is retained. Subtype is unset. Alternatives are empty. `PhysicalDtype` is not extended with duration-unit or resolution metadata.
+- A successor module calls the Slice 004 chain and then the timedelta rule. The Slice 004 function is unchanged. A physical timedelta Series is still `None` from that function. No rule engine, registry, or priority framework.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). Precedence over later readings follows [DEC-046](DECISIONS.md#dec-046). Timedelta stays a duration distinct from Datetime, which stays a point in time, following [DEC-051](DECISIONS.md#dec-051). Confidence stays on the three-level scale in [DEC-042](DECISIONS.md#dec-042). This slice does not implement the duration analysis in [DEC-051](DECISIONS.md#dec-051) or `REQ-S-07`. It does not resolve [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), or [OPEN-045](DECISIONS.md#open-questions).
+
+### Exclusions
+
+Do not infer Timedelta from duration-like strings, clock-like strings, integer or floating magnitudes, object values that happen to be Python `timedelta` or pandas `Timedelta` values, categorical timedeltas, period dtypes, or datetime dtypes. Do not call `pd.to_timedelta` on source data. Do not parse strings. Do not guess units. Do not convert values.
+
+Do not read a physical timedelta as Datetime, or a physical datetime as Timedelta. Do not implement duration statistics, readable-unit presentation, or time-series analysis.
+
+Do not implement Numeric, Continuous/Discrete, Identifier, Categorical, Text, ordinal storage, Boolean from `{0, 1}` or Boolean-like strings, thresholds, sampling, missing-like detection, relationships, statistics, target analysis, anomalies, compare/drift, HTML, PDF, a configuration API, or a public semantic API.
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the new function from top-level `pytics`. Do not add a dependency. Do not rewrite Slice 001, Slice 002, Slice 003, or Slice 004. Do not add `SemanticType` members.
+
+### Acceptance criteria
+
+1. The accepted checkpoint was clean before this slice, and Slice 001 tests still pass.
+2. Slice 002 tests still pass.
+3. Slice 003 tests still pass.
+4. Slice 004 tests still pass.
+5. Slice 001, Slice 002, Slice 003, and Slice 004 tests were not edited.
+6. Empty remains the highest precedence, including an all-missing or zero-length timedelta Series.
+7. Constant remains above the physical semantic rules, including a repeated duration and one duration plus missing values.
+8. Physical Boolean still works, and it still precedes physical Datetime and physical Timedelta.
+9. A non-empty, non-constant native datetime column remains semantic Datetime.
+10. A non-empty, non-constant timezone-aware datetime column remains semantic Datetime.
+11. Neither Datetime reading becomes Timedelta.
+12. A non-empty, non-constant physical timedelta column is semantic Timedelta.
+13. Timedelta with `NaT` is Timedelta when the column is not empty and not constant.
+14. That Timedelta result uses High confidence.
+15. That Timedelta result uses the physical-dtype inference source.
+16. That Timedelta result retains the physical dtype, and the family remains `TIMEDELTA`.
+17. That Timedelta result has the evidence statement `physical dtype is timedelta` and no numeric score.
+18. A physical Timedelta reading does not become Datetime.
+19. Duration-like strings are not inferred as Timedelta.
+20. Clock-like strings are not inferred as Timedelta.
+21. Integer and floating duration-like values are not inferred as Timedelta.
+22. Object dtype holding Python `timedelta` or pandas `Timedelta` values is not inferred as Timedelta.
+23. Categorical timedeltas are not inferred as Timedelta.
+24. Period is not inferred as Timedelta.
+25. No units are guessed, and the engine does not parse or call `pd.to_timedelta` on source data.
+26. The input Series is not coerced or mutated. Index, name, and categorical metadata stay in place.
+27. Basic evidence is collected once and reused.
+28. Physical classification is performed once on the series path and reused.
+29. Empty, Constant, Boolean, and Datetime rules are not copied.
+30. No semantic threshold was introduced.
+31. No numeric confidence score was introduced.
+32. No broad inference framework was introduced.
+33. Composition stays a direct call to the Slice 004 precedence, plus one timedelta rule.
+34. No new dependency was added.
+35. `profile()` and `compare()` are unchanged, and the new names are not on the public API.
+36. Focused tests pass.
+37. Existing regression tests remain at their documented baseline, apart from the known PDF failure.
+38. Project memory records physical Timedelta only, records completion of the strong-physical-type phase, and records a Semantic Foundation Review as the next step.
+39. This section does not approve or implement a later slice.
+40. [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), and [OPEN-045](DECISIONS.md#open-questions) stay open.
+41. No unknown, other, unclassified, or second duration semantic type was added.
+42. Empty and Constant keep their existing inferred source.
+43. No unrelated production changes were made.
+44. `PhysicalDtype` was not given duration-unit metadata.
+45. No commit or push was made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005.
+
+## After TSK-005
+
+The planned strong-physical-type semantics phase is complete. The next step is a human-led Semantic Foundation Review. That review is not an implementation slice. It does not approve TSK-006 or any other slice.
+
+Before evidence-based inference begins, the review should examine the current precedence composition, result models, evidence representation, ambiguity representation, subtype strategy, user overrides, configuration boundaries, inference thresholds, deterministic versus heuristic rules, likely interactions among Numeric, Categorical, Text, Identifier, and Binary candidates, and whether the current module boundaries should remain temporary. This list is the review agenda. It is not a design and not an approved slice.
