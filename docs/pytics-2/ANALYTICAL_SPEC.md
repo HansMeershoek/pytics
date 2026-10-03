@@ -50,7 +50,7 @@ Absence of support is not contradiction. No UUID pattern means Identifier did no
 
 ### Universal column evidence
 
-`BasicColumnEvidence` is the universal typed evidence family ([DEC-077](DECISIONS.md#dec-077)). Analytical observations use typed families, composed as needed. The core model is not a generic observation property bag. Frequency evidence is the one further family authorized so far ([DEC-078](DECISIONS.md#dec-078)). This specification does not authorize another family, and it does not establish inheritance among families.
+`BasicColumnEvidence` is the universal typed evidence family ([DEC-077](DECISIONS.md#dec-077)). Analytical observations use typed families, composed as needed. The core model is not a generic observation property bag. Frequency evidence and numeric-structure evidence are the further families authorized so far ([DEC-078](DECISIONS.md#dec-078), [DEC-079](DECISIONS.md#dec-079)). This specification does not authorize another family, and it does not establish inheritance among families.
 
 The stored primary observations are exact, full-column, and unsampled:
 
@@ -91,6 +91,24 @@ An undefined ratio is `None`. It is not `0.0`, `1.0`, NaN, or infinity. There is
 When the distinct count is within the v0.1 retention limit of 32, the exact distinct non-missing values are retained, including an empty collection when that count is zero. Above 32, the exact collection is absent. The limit is a storage guard. It does not define categorical, binary, identifier, text, or high cardinality ([OPEN-018](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions)).
 
 These observations are exact, full-column, and unsampled. They are collected when requested. The implemented precedence chain does not collect them. They do not select a semantic type. No confidence and no evidence role are attached. The class name is not a public schema ([OPEN-004](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions)).
+
+### Numeric structure evidence
+
+`NumericStructureEvidence` is a typed observation family composed with `BasicColumnEvidence` ([DEC-079](DECISIONS.md#dec-079)). It is not a subclass of that universal family. It applies only to a physical integer or floating dtype. Physical Boolean is excluded. Strings are not parsed into numbers. Datetime, Timedelta, and the other non-numeric families are not coerced.
+
+The population is non-missing observations. `n_total`, `n_missing`, and `n_non_missing` stay on the universal family. Stored observations are the finite count, the finite sign counts, the two infinity counts, the integer-like and non-integer-like counts, and two monotonicity flags. Ratios are read-only:
+
+- `finite_ratio` is `finite_count / n_non_missing` when `n_non_missing > 0`, and `None` when `n_non_missing == 0`.
+- `positive_ratio`, `negative_ratio`, and `zero_ratio` divide those counts by `finite_count` when `finite_count > 0`, and are `None` when `finite_count == 0`.
+- `integer_like_ratio` is `integer_like_count / finite_count` when `finite_count > 0`, and `None` when `finite_count == 0`.
+
+An undefined ratio is `None`. It is not `0.0`, `1.0`, NaN, or infinity. None of these ratios is a semantic threshold ([OPEN-044](DECISIONS.md#open-questions)).
+
+Finite values and the two infinities partition the non-missing observations. Sign counts partition finite values only. `0` and `-0.0` are both zero. Infinities are not sign counts and are neither integer-like nor non-integer-like. Integer-like means a finite value equals its truncation. There is no tolerance. Integer-like counts do not decide Continuous or Discrete ([OPEN-014](DECISIONS.md#open-questions)).
+
+Monotonicity is defined only when every non-missing value is finite. Otherwise both flags are undefined. Missing values are ignored, and the remaining values keep their original order. No non-missing values, one finite value, and a finite constant series are both non-decreasing and non-increasing. That is not Identifier evidence. A step size or regular sequence is not part of this family.
+
+These observations are exact, full-column, and unsampled. They are collected when requested. The implemented precedence chain does not collect them. They do not select Numeric, Identifier, Boolean, or Binary. `{0.0, 1.0}` remains open as binary evidence ([OPEN-046](DECISIONS.md#open-046)). No confidence and no evidence role are attached. Mean, quantiles, and the other numeric summaries in section B are not this family. The class name is not a public schema ([OPEN-004](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions)).
 
 ### Confidence
 
@@ -143,7 +161,7 @@ Those dataset facts are `is_empty` and `is_constant` on the universal evidence v
 
 Empty precedes Constant. In the current semantic system those two readings win over competing type readings, including the physical Boolean, Datetime, and Timedelta rules already implemented, and over a Numeric or Identifier reading of the same column. That sentence is not an exhaustive precedence law for every future semantic reading. The physical dtype remains inspectable when Empty or Constant wins. Ordered categorical metadata (`categorical_ordered`) remains inspectable in that case. Semantic interpretation and physical or source facts stay distinct. Do not duplicate the underlying computation unnecessarily.
 
-TSK-002 through TSK-005 implement the readings below. TSK-006 adds no semantic reading. TSK-007 adds frequency observations and no semantic reading. Those slices do not implement heuristic candidate resolution, user overrides, or the separate effective interpretation. Heuristic semantic inference is not authorized.
+TSK-002 through TSK-005 implement the readings below. TSK-006 adds no semantic reading. TSK-007 adds frequency observations and no semantic reading. TSK-008 adds numeric-structure observations and no semantic reading. Those slices do not implement heuristic candidate resolution, user overrides, or the separate effective interpretation. Heuristic semantic inference is not authorized.
 
 - A non-empty, non-constant physical Boolean column is Boolean, with High confidence and physical-dtype provenance. A physical pandas Boolean is very strong direct Boolean/Binary evidence ([DEC-047](DECISIONS.md#dec-047)). That phrase does not rank physical Boolean as the strongest evidence of every kind.
 - A non-empty, non-constant physical Datetime column is Datetime, with High confidence and physical-dtype provenance. A non-empty, non-constant timezone-aware Datetime column is the same semantic type, with its own physical family and its own evidence statement. Native and timezone-aware datetime dtypes are strong evidence of Datetime semantics ([DEC-050](DECISIONS.md#dec-050)). Timezone-aware storage is not a second semantic type.
@@ -218,6 +236,8 @@ Statistically rich numeric profiling, where meaningful.
 A physically numeric column that is not better interpreted as Empty, Constant, Boolean/Binary, or Identifier may be interpreted as Numeric ([DEC-049](DECISIONS.md#dec-049)). Physical numeric dtype is meaningful evidence for that reading. A numeric dtype does not need a further positive heuristic before Numeric is available merely because the storage is numeric ([DEC-069](DECISIONS.md#dec-069)). Identifier displaces that generic Numeric reading only when Identifier has positive evidence of its own. Uniqueness alone is not that evidence. When the selected reading remains uncertain, preserve a material competing interpretation and an appropriate confidence. Do not introduce abstention ([DEC-067](DECISIONS.md#dec-067), [OPEN-047](DECISIONS.md#open-047)). Subtypes may include Continuous and Discrete. Do not treat integer dtype as discrete, or float dtype as continuous, without the observed values. Subtype inference stays conservative.
 
 Statistics in this section, including mean, skewness, kurtosis, and histogram shape, are downstream numeric analysis. The semantic engine precedes that analysis. Do not recycle those outputs as ad hoc Identifier detectors. If semantic evidence legitimately needs a descriptive numeric observation, that use has to be an explicit semantic-inference decision. This boundary does not close the identifier detector catalog ([DEC-048](DECISIONS.md#dec-048), [OPEN-044](DECISIONS.md#open-questions)).
+
+Numeric-structure evidence is a separate observation family ([DEC-079](DECISIONS.md#dec-079)). It counts finite values, signs, infinities, and integer-like values, and it records monotonicity when every non-missing value is finite. It does not compute the summaries in this section, and it does not select a Numeric subtype.
 
 | ID | In-scope concepts | Status |
 | --- | --- | --- |

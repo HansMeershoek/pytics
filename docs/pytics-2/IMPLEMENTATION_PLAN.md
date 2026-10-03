@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, and TSK-007 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, and TSK-008 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, and Slice 007. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, and Slice 008. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, and TSK-007 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, and TSK-008 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, and TSK-007 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, and TSK-008 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
 
 ## Reuse of 1.1.5
 
@@ -363,7 +363,7 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-007](#after-tsk-007).
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-008](#after-tsk-008).
 
 ## After TSK-005
 
@@ -507,4 +507,73 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 33 p
 
 ## After TSK-007
 
-TSK-007 adds exact frequency observations. It does not add a semantic reading. [DEC-078](DECISIONS.md#dec-078) records the frequency contract, including the operational 32-value retention limit. That limit is not a semantic cardinality threshold. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-007 adds exact frequency observations. It does not add a semantic reading. [DEC-078](DECISIONS.md#dec-078) records the frequency contract, including the operational 32-value retention limit. That limit is not a semantic cardinality threshold. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-008 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-008
+
+Slice 008, numeric structure evidence foundation. Approved 2026-10-03 after TSK-007. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-03 and REQ-S-05, for exact observed characteristics and the prohibition on coercion. REQ-S-01 and REQ-S-04 are respected because no new semantic reading was added. Those requirement rows stay Not started. Zeros, negatives, and infinities recorded here do not complete REQ-B-01 or REQ-A-07. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- A typed `NumericStructureEvidence` value composed with `BasicColumnEvidence`. It is not a subclass and not a property bag.
+- Applicable only when the physical family is integer or floating, including nullable integer and floating dtypes the existing classifier already treats as those families. Boolean, datetime, timezone-aware datetime, timedelta, categorical, string, object, period, complex, and other non-numeric families raise `TypeError`.
+- Stored observations: `finite_count`, `positive_count`, `negative_count`, `zero_count`, `positive_infinity_count`, `negative_infinity_count`, `integer_like_count`, `non_integer_like_count`, `is_non_decreasing`, and `is_non_increasing`.
+- Derived read-only ratios: `finite_ratio`, `positive_ratio`, `negative_ratio`, `zero_ratio`, and `integer_like_ratio`, with the denominators in [DEC-079](DECISIONS.md#dec-079).
+- Universal counts stay on basic evidence. The collector reuses that evidence and the already classified physical dtype.
+- Exact, full-column, and unsampled collection, from one non-missing numeric pass.
+- Integer-like classification is exact truncation equality. There is no tolerance.
+- Monotonicity is defined only when every non-missing value is finite. Infinities make both flags undefined.
+- The collector is separate. The Empty, Constant, and physical-type chain does not call it.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The numeric-structure contract is [DEC-079](DECISIONS.md#dec-079). This slice does not resolve [OPEN-044](DECISIONS.md#open-questions) or [OPEN-046](DECISIONS.md#open-046).
+
+### Exclusions
+
+Do not implement Numeric, Identifier, Categorical, Text, Boolean, or Binary inference from these facts. Do not implement `{0, 1}` Binary, `{0.0, 1.0}` Binary, discrete or continuous subtypes, or ordinal inference. Do not implement a regular step, constant step, step size, or sequential-identifier observation. Do not add min, max, mean, median, mode, variance, standard deviation, quantiles, or other downstream numeric summaries. Do not implement candidate assessments, candidate resolution, material alternatives, confidence on this evidence, evidence roles, scoring, abstention, user overrides, or effective interpretation. Do not coerce strings with `pd.to_numeric`. Do not sample.
+
+Do not add a provenance object. Do not add an evidence-family inheritance hierarchy. Do not add a generic observation property bag. Do not collect this evidence from the existing precedence chain. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049).
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the evidence type from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `NumericStructureEvidence` is a frozen dataclass composed with `BasicColumnEvidence`, not a subclass and not a property bag.
+2. No placeholder evidence family was added.
+3. The stored fields are the eight counts and the two monotonicity flags. The ratios are properties. `n_total`, `n_missing`, and `n_non_missing` are not copied.
+4. No semantic-conclusion field, confidence, evidence role, or descriptive statistic was added.
+5. The collector accepts physical integer and floating families, including nullable `Int64` and `Float64`, and raises `TypeError` for Boolean, string, object, Datetime, timezone-aware Datetime, Timedelta, categorical, period, and complex.
+6. Numeric strings are not coerced, and `pd.to_numeric` is not used to make a Series eligible.
+7. Counts use non-missing observations. Missing NaN and `pd.NA` are not counted as non-finite numeric evidence.
+8. `finite_count + positive_infinity_count + negative_infinity_count == n_non_missing`.
+9. `positive_count + negative_count + zero_count == finite_count`. Infinities are not sign counts. `0` and `-0.0` are zero.
+10. A finite value is integer-like exactly when it equals its truncation. There is no tolerance. `1.0000000001` is not integer-like.
+11. Infinities are neither integer-like nor non-integer-like. `integer_like_count + non_integer_like_count == finite_count`.
+12. Ratios use the denominators in [DEC-079](DECISIONS.md#dec-079). An undefined ratio is `None`, not `0.0`, `1.0`, NaN, or infinity. A zero numerator with a positive denominator is `0.0`.
+13. Monotonicity is `bool` when every non-missing value is finite, and `None` when any infinity is present. Missing values are skipped. Remaining values keep their original row order.
+14. Zero non-missing values, one finite value, and a finite constant series are both non-decreasing and non-increasing. A constant infinity leaves both flags `None`.
+15. No regular-step, step-size, or sequence-role field was added.
+16. The collector reuses the supplied basic evidence and physical dtype. It does not recompute basic counts, reclassify, or collect frequency evidence.
+17. Collection is exact, full-column, and unsampled. No provenance object was added.
+18. The precedence chain does not collect numeric-structure evidence.
+19. Empty, Constant, physical Boolean, physical Datetime, and physical Timedelta interpretations are unchanged.
+20. A unique monotonic integer series is not Identifier. `{0, 1}` is not Boolean. `{0.0, 1.0}` is not Binary. Integer-like floats do not create a Numeric subtype.
+21. The input Series is not mutated.
+22. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added.
+23. Focused tests pass.
+24. TSK-007 tests pass.
+25. TSK-006 tests pass.
+26. Semantic tests for TSK-001 through TSK-008 pass.
+27. The legacy profiler stays at 19 passed and the known PDF failure.
+28. The full suite adds only the new tests, with the same known PDF failure.
+29. [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) through [OPEN-049](DECISIONS.md#open-049) stay open. `{0.0, 1.0}` does not close [OPEN-046](DECISIONS.md#open-046). Monotonicity and integer-like counts do not close [OPEN-044](DECISIONS.md#open-questions).
+30. This section does not approve or implement a later slice.
+31. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 31 passed for TSK-008.
+
+## After TSK-008
+
+TSK-008 adds exact numeric-structure observations for physically numeric columns. It does not add a semantic reading. [DEC-079](DECISIONS.md#dec-079) records the contract, including Boolean exclusion, exact integer-like classification, infinity-aware monotonicity, and on-demand collection. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
