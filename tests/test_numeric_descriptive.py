@@ -24,6 +24,7 @@ from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.numeric import _on_segment
 from pytics.analysis.numeric import collect_numeric_descriptive_analysis
+from pytics.analysis.variables import BooleanVariableDetail
 from pytics.analysis.variables import CategoricalVariableDetail
 from pytics.analysis.variables import IdentifierVariableDetail
 from pytics.analysis.variables import NumericVariableDetail
@@ -467,7 +468,8 @@ def test_variables_copy_descriptive_facts_and_keep_structure():
     assert isinstance(summary.variables[2].detail, IdentifierVariableDetail)
     assert summary.variables[2].detail.uuid_count == 5
     assert summary.variables[3].selected_type is SemanticType.BOOLEAN
-    assert summary.variables[3].detail is None
+    assert isinstance(summary.variables[3].detail, BooleanVariableDetail)
+    assert not isinstance(summary.variables[3].detail, NumericVariableDetail)
     assert summary.variables[4].selected_type is SemanticType.CONSTANT
     assert summary.variables[4].detail is None
     assert analysis.columns[3].numeric_analysis is None

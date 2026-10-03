@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 
 import pytics
+import pytics.analysis.boolean as boolean_descriptive
 import pytics.analysis.column as column_module
 import pytics.analysis.dataset as dataset_module
 import pytics.analysis.numeric as numeric_descriptive
@@ -31,6 +32,7 @@ from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
+from pytics.analysis.variables import BooleanVariableDetail
 from pytics.analysis.variables import CategoricalVariableDetail
 from pytics.analysis.variables import IdentifierVariableDetail
 from pytics.analysis.variables import NumericVariableDetail
@@ -114,6 +116,8 @@ def _assert_detail_matches(variable: VariableSummary) -> None:
         assert detail is None or isinstance(detail, CategoricalVariableDetail)
     elif variable.selected_type is SemanticType.IDENTIFIER:
         assert detail is None or isinstance(detail, IdentifierVariableDetail)
+    elif variable.selected_type is SemanticType.BOOLEAN:
+        assert detail is None or isinstance(detail, BooleanVariableDetail)
     else:
         assert detail is None
 
@@ -670,7 +674,12 @@ def test_structural_types_have_common_facts_and_no_specialized_detail(
     variable = summary.variables[0]
     assert variable.selected_type is semantic_type
     assert variable.physical.family is family
-    assert variable.detail is None
+    if semantic_type is SemanticType.BOOLEAN:
+        assert isinstance(variable.detail, BooleanVariableDetail)
+        assert variable.detail.true_count == 2
+        assert variable.detail.false_count == 1
+    else:
+        assert variable.detail is None
     assert analysis.columns[0].evidence.frequency is None
     assert analysis.columns[0].inferred.interpretation is not None
 
@@ -847,6 +856,7 @@ def test_builder_does_not_rescan_after_analysis(monkeypatch: pytest.MonkeyPatch)
         (frequency_evidence, "collect_frequency_evidence"),
         (numeric_evidence, "collect_numeric_structure_evidence"),
         (numeric_descriptive, "collect_numeric_descriptive_analysis"),
+        (boolean_descriptive, "collect_boolean_descriptive_analysis"),
         (string_evidence, "collect_string_structure_evidence"),
         (pattern_evidence, "collect_pattern_evidence"),
         (string_content_evidence, "collect_string_content_evidence"),
@@ -1043,7 +1053,7 @@ def test_invalid_variable_models_are_rejected():
                 singleton_count=3,
             )
         )
-    with pytest.raises(TypeError, match="only to Numeric"):
+    with pytest.raises(TypeError, match="BooleanVariableDetail"):
         _variable(
             resolution_status=ResolutionStatus.RESOLVED,
             selected_type=SemanticType.BOOLEAN,

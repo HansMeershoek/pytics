@@ -11,9 +11,9 @@ the retained evidence for that detail is present. Numeric detail copies
 numeric-structure counts and, when that column analysis retained one,
 the finite-population descriptive statistics. Categorical detail copies
 frequency counts. Identifier detail copies pattern counts. Those counts
-may overlap and are not scores. Empty, Constant, Boolean, Datetime,
-Timedelta, Text, insufficient evidence, and ambiguity have no
-specialized detail.
+may overlap and are not scores. Boolean detail copies retained true and
+false counts. Empty, Constant, Datetime, Timedelta, Text, insufficient
+evidence, and ambiguity have no specialized detail.
 
 Confidence and inference source are not copied. A candidate-derived
 selection has neither, and this result does not invent them.
@@ -278,10 +278,53 @@ class IdentifierVariableDetail:
         return _ratio(self.hex_128_count, self.n_non_missing)
 
 
+@dataclass(frozen=True)
+class BooleanVariableDetail:
+    """True and false counts for a column selected as Boolean.
+
+    The counts are copied from the retained Boolean descriptive result.
+    They are not a second observation of the Series. ``n_non_missing``
+    is their sum. It is not stored. The variable summary requires that
+    sum to equal the universal non-missing count.
+
+    ``true_ratio`` and ``false_ratio`` divide by that non-missing count.
+    Missing counts stay on the variable summary.
+    """
+
+    true_count: int
+    false_count: int
+
+    def __post_init__(self) -> None:
+        _require_count(self.true_count, "true_count")
+        _require_count(self.false_count, "false_count")
+
+    @property
+    def n_non_missing(self) -> int:
+        """Non-missing Boolean observations, ``true_count + false_count``."""
+        return self.true_count + self.false_count
+
+    @property
+    def true_ratio(self) -> Optional[float]:
+        """``True`` values divided by non-missing values.
+
+        ``None`` when there is no non-missing value.
+        """
+        return _ratio(self.true_count, self.n_non_missing)
+
+    @property
+    def false_ratio(self) -> Optional[float]:
+        """``False`` values divided by non-missing values.
+
+        ``None`` when there is no non-missing value.
+        """
+        return _ratio(self.false_count, self.n_non_missing)
+
+
 VariableDetail = Union[
     NumericVariableDetail,
     CategoricalVariableDetail,
     IdentifierVariableDetail,
+    BooleanVariableDetail,
 ]
 
 _PATTERN_COUNTS = (
@@ -318,7 +361,7 @@ class VariableSummary:
 
     ``detail`` follows ``selected_type``. It is absent when that type
     has no specialized detail in this result, and when the retained
-    evidence for that detail was not collected.
+    facts for that detail were not collected.
     """
 
     position: int
@@ -461,6 +504,8 @@ def _detail_for(
         return _categorical_detail(column)
     if selected is SemanticType.IDENTIFIER:
         return _identifier_detail(column)
+    if selected is SemanticType.BOOLEAN:
+        return _boolean_detail(column)
     return None
 
 
@@ -533,6 +578,17 @@ def _categorical_detail(
     )
 
 
+def _boolean_detail(column: ColumnAnalysis) -> Optional[BooleanVariableDetail]:
+    """Copy retained true/false counts without counting the Series again."""
+    described = column.boolean_analysis
+    if described is None:
+        return None
+    return BooleanVariableDetail(
+        true_count=described.true_count,
+        false_count=described.false_count,
+    )
+
+
 def _identifier_detail(
     column: ColumnAnalysis,
 ) -> Optional[IdentifierVariableDetail]:
@@ -579,9 +635,14 @@ def _require_detail(
         if detail is not None and not isinstance(detail, IdentifierVariableDetail):
             raise TypeError("identifier detail must be an IdentifierVariableDetail")
         return
+    if selected_type is SemanticType.BOOLEAN:
+        if detail is not None and not isinstance(detail, BooleanVariableDetail):
+            raise TypeError("boolean detail must be a BooleanVariableDetail")
+        return
     if detail is not None:
         raise TypeError(
-            "specialized detail applies only to Numeric, Categorical, and Identifier"
+            "specialized detail applies only to Numeric, Categorical, "
+            "Identifier, and Boolean"
         )
 
 
@@ -603,6 +664,10 @@ def _require_detail_consistency(summary: VariableSummary) -> None:
     if isinstance(detail, IdentifierVariableDetail):
         if detail.n_non_missing != summary.n_non_missing:
             raise ValueError("identifier detail n_non_missing must match the variable")
+        return
+    if isinstance(detail, BooleanVariableDetail):
+        if detail.n_non_missing != summary.n_non_missing:
+            raise ValueError("boolean detail counts must equal n_non_missing")
 
 
 def _require_numeric_uniqueness(

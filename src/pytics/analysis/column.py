@@ -13,8 +13,16 @@ precedence still returns before that collection.
 Numeric descriptive statistics are not evidence. After resolution, a column
 whose selected semantic type is Numeric is described from its finite
 non-missing values. Constant, Empty, and every other selected type do not
-take that pass. The result is retained on the column analysis, not on the
-evidence bundle and not on the inferred semantic result.
+take that pass.
+
+Boolean descriptive counts are the same kind of fact. After resolution, a
+column whose selected semantic type is Boolean is counted as ``True`` and
+``False``. Constant, Empty, and every other selected type do not take that
+pass. ``{0, 1}`` stays Numeric and is not counted as Boolean.
+
+Each result is retained on the column analysis, not on the evidence bundle
+and not on the inferred semantic result. The two results stay separate
+fields. This path does not register analyses by semantic type.
 """
 
 from __future__ import annotations
@@ -26,6 +34,8 @@ from typing import Tuple
 
 import pandas as pd
 
+from pytics.analysis.boolean import BooleanDescriptiveAnalysis
+from pytics.analysis.boolean import collect_boolean_descriptive_analysis
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.numeric import collect_numeric_descriptive_analysis
 from pytics.semantics.candidate import CandidateAssessment
@@ -147,7 +157,14 @@ class ColumnAnalysis:
     ``numeric_analysis`` is the descriptive profile collected after
     resolution when the selected semantic type is Numeric. It is absent
     for every other outcome, including a physically numeric column that
-    resolved as Constant or Empty. It is not stored on ``evidence``.
+    resolved as Constant or Empty.
+
+    ``boolean_analysis`` is the true/false profile collected after
+    resolution when the selected semantic type is Boolean. It is absent
+    for every other outcome, including a physical Boolean column that
+    resolved as Constant or Empty, and including numeric ``{0, 1}``.
+
+    Neither profile is stored on ``evidence``.
     """
 
     position: int
@@ -156,6 +173,7 @@ class ColumnAnalysis:
     evidence: ColumnEvidence
     inferred: InferredSemanticResult
     numeric_analysis: Optional[NumericDescriptiveAnalysis] = None
+    boolean_analysis: Optional[BooleanDescriptiveAnalysis] = None
 
     def __post_init__(self) -> None:
         if type(self.position) is not int or self.position < 0:
@@ -166,6 +184,7 @@ class ColumnAnalysis:
         if self.inferred.physical is not self.physical:
             raise ValueError("inferred.physical must be this column's physical")
         _require_numeric_analysis(self)
+        _require_boolean_analysis(self)
 
 
 def analyze_series(
@@ -182,10 +201,11 @@ def analyze_series(
     The Series is not copied and is not modified.
 
     Semantic evidence is collected, then the semantic type is resolved.
-    Only after that resolution, and only when the selected type is
-    Numeric, does this function collect descriptive statistics. A
-    physically numeric column that resolves as Constant, Empty, or any
-    other type is not described.
+    Only after that resolution does this function collect a type-specific
+    description. A selected Numeric column receives numeric descriptive
+    statistics. A selected Boolean column receives true/false counts.
+    A column that resolves as Constant, Empty, or any other type is not
+    given either result. Physical storage alone does not choose the pass.
     """
     if not isinstance(series, pd.Series):
         raise TypeError("analyze_series expects a pandas Series")
@@ -217,6 +237,7 @@ def analyze_series(
         resolution = resolve_semantics(candidates=candidates)
     inferred = build_inferred_semantic_result(physical, resolution)
     numeric_analysis = _descriptive_after_resolution(series, inferred)
+    boolean_analysis = _boolean_descriptive_after_resolution(series, inferred)
     evidence = ColumnEvidence(
         basic=basic,
         numeric_structure=numeric_structure,
@@ -231,6 +252,7 @@ def analyze_series(
         evidence=evidence,
         inferred=inferred,
         numeric_analysis=numeric_analysis,
+        boolean_analysis=boolean_analysis,
     )
 
 
@@ -247,6 +269,22 @@ def _descriptive_after_resolution(
     if inferred.selected_type is not SemanticType.NUMERIC:
         return None
     return collect_numeric_descriptive_analysis(series)
+
+
+def _boolean_descriptive_after_resolution(
+    series: pd.Series,
+    inferred: InferredSemanticResult,
+) -> Optional[BooleanDescriptiveAnalysis]:
+    """Collect Boolean true/false counts only after a Boolean selection.
+
+    Physical boolean storage is not enough. Constant and Empty boolean
+    columns have already resolved, and this function does not count them.
+    Numeric ``{0, 1}``, two-valued strings, and categorical boolean values
+    are not counted. Unresolved and ambiguous columns are not counted.
+    """
+    if inferred.selected_type is not SemanticType.BOOLEAN:
+        return None
+    return collect_boolean_descriptive_analysis(series)
 
 
 def _require_numeric_analysis(analysis: ColumnAnalysis) -> None:
@@ -266,6 +304,21 @@ def _require_numeric_analysis(analysis: ColumnAnalysis) -> None:
             "numeric descriptive finite_count must match numeric-structure "
             "finite_count"
         )
+
+
+def _require_boolean_analysis(analysis: ColumnAnalysis) -> None:
+    """Keep true/false counts on a selected Boolean column only."""
+    described = analysis.boolean_analysis
+    if described is None:
+        return
+    _require(described, BooleanDescriptiveAnalysis, "boolean_analysis")
+    if analysis.inferred.selected_type is not SemanticType.BOOLEAN:
+        raise ValueError(
+            "boolean descriptive analysis applies only when the selected "
+            "semantic type is Boolean"
+        )
+    if described.n_non_missing != analysis.evidence.basic.n_non_missing:
+        raise ValueError("boolean true and false counts must equal n_non_missing")
 
 
 def _evidence_for_candidates(

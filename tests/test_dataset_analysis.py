@@ -632,6 +632,7 @@ def test_analysis_does_not_retain_source_values():
             column.evidence.pattern,
             column.inferred,
             column.numeric_analysis,
+            column.boolean_analysis,
         ):
             assert not isinstance(value, (pd.DataFrame, pd.Series, np.ndarray))
     assert not any(
