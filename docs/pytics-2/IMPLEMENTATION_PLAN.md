@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, and TSK-008 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, and TSK-009 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, and Slice 008. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, and Slice 009. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, and TSK-008 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, and TSK-009 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, and TSK-008 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, and TSK-009 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, or REQ-H-04.
 
 ## Reuse of 1.1.5
 
@@ -363,7 +363,7 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-008](#after-tsk-008).
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-009](#after-tsk-009).
 
 ## After TSK-005
 
@@ -576,4 +576,76 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 31 p
 
 ## After TSK-008
 
-TSK-008 adds exact numeric-structure observations for physically numeric columns. It does not add a semantic reading. [DEC-079](DECISIONS.md#dec-079) records the contract, including Boolean exclusion, exact integer-like classification, infinity-aware monotonicity, and on-demand collection. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-008 adds exact numeric-structure observations for physically numeric columns. It does not add a semantic reading. [DEC-079](DECISIONS.md#dec-079) records the contract, including Boolean exclusion, exact integer-like classification, infinity-aware monotonicity, and on-demand collection. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-009 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-009
+
+Slice 009, string structure evidence foundation. Approved 2026-10-03 after TSK-008. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-03 and REQ-S-05, for exact observed characteristics and the prohibition on coercion. REQ-S-01 and REQ-S-04 are respected because no new semantic reading was added. Those requirement rows stay Not started. Empty-string, whitespace, and length observations recorded here do not complete REQ-F-02. Preserving missing-like literals as ordinary strings does not complete REQ-H-04. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- A typed `StringStructureEvidence` value composed with `BasicColumnEvidence`. It is not a subclass and not a property bag.
+- Applicable to a physical string dtype, including the pandas string storage the existing classifier already treats as string, and including an all-missing or zero-length string column.
+- Applicable to an object column only when every non-missing value is a Python `str`, tested with `isinstance(value, str)`. An empty or all-missing object column is not eligible.
+- Physical categorical storage is not eligible. Boolean, integer, floating, Datetime, timezone-aware Datetime, Timedelta, Period, complex, Interval, mixed object, non-string object, and byte strings raise `TypeError`. Byte strings are not decoded. Physical classification is not changed.
+- Stored observations: `empty_string_count`, `whitespace_only_count`, `contains_whitespace_count`, `contains_alpha_count`, `contains_digit_count`, `contains_other_count`, `min_length`, and `max_length`.
+- Derived read-only ratios with denominator `n_non_missing`, as in [DEC-080](DECISIONS.md#dec-080). Undefined ratios are `None`.
+- Universal counts stay on basic evidence. The collector reuses that evidence and the already classified physical dtype.
+- Exact, full-column, and unsampled collection, from one pass over non-missing values. Character classes use Python Unicode string methods. Length is `len` of the original string.
+- The collector is separate. The Empty, Constant, and physical-type chain does not call it.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The string-structure contract is [DEC-080](DECISIONS.md#dec-080). This slice does not resolve [OPEN-014](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), or [OPEN-044](DECISIONS.md#open-questions).
+
+### Exclusions
+
+Do not implement Text, Categorical, Identifier, Boolean, Binary, Datetime, or Numeric inference from these facts. Do not implement word counts, token counts, or pattern recognition, including UUID, email, URL, path, hash, phone, date-like, or numeric-like strings. Do not add `PatternEvidence`. Do not coerce with `astype(str)` or an equivalent. Do not treat missing-like literals as missing. Do not sample. Do not add candidate assessments, candidate resolution, material alternatives, confidence on this evidence, evidence roles, scoring, abstention, user overrides, or effective interpretation.
+
+Do not add a provenance object. Do not add an evidence-family inheritance hierarchy. Do not add a generic observation property bag. Do not collect this evidence from the existing precedence chain. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049).
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the evidence type from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `StringStructureEvidence` is a frozen dataclass composed with `BasicColumnEvidence`, not a subclass and not a property bag.
+2. No placeholder evidence family was added.
+3. The stored fields are the six counts and the two length bounds. The ratios are properties. `n_total`, `n_missing`, `n_non_missing`, and `n_unique_non_missing` are not copied.
+4. No semantic-conclusion field, confidence, evidence role, score, or threshold was added.
+5. A physical string dtype is eligible, including nullable string storage and an all-missing or zero-length string Series. Python-backed and the project's `str` string storage are not treated as different semantic cases.
+6. An object Series is eligible only when every non-missing value is a Python `str`. `isinstance(value, str)` accepts a `str` subclass. The check covers every non-missing value.
+7. An empty object Series and an all-missing object Series raise `TypeError`.
+8. A mixed object Series, a numeric object Series, and `bytes` raise `TypeError` and are not stringified.
+9. Categorical storage raises `TypeError` even when the labels are strings. Labels are not converted.
+10. Boolean, integer, floating, Datetime, timezone-aware Datetime, Timedelta, Period, complex, and Interval raise `TypeError`.
+11. Numpy byte-string storage remains a physical string dtype and raises `TypeError` here. It is not decoded. Physical classification is unchanged.
+12. Pandas missingness matches basic evidence. `""`, whitespace, `"NA"`, `"N/A"`, `"null"`, `"None"`, and `"?"` remain ordinary strings.
+13. An empty string is `value == ""`. It is not whitespace-only. Whitespace-only uses `str.isspace`. Contains-whitespace uses `character.isspace`, so a whitespace-only string also contains whitespace.
+14. Alphabetic, digit, and other use `str.isalpha`, `str.isdigit`, and the generic other definition. The same string may increment more than one content count. There is no ASCII-only substitute.
+15. Strings are not Unicode-normalized, case-folded, or stripped.
+16. Length is `len` of the original string. Both bounds are `None` when `n_non_missing` is 0. An observed empty string may make `min_length` 0.
+17. Each ratio divides by `n_non_missing` and is `None` when that count is 0. A zero numerator with a positive denominator is `0.0`. There is no second denominator.
+18. No word, token, or pattern observation was added.
+19. The facts do not select Text, Categorical, Identifier, Boolean, Binary, Datetime, or Numeric.
+20. The collector reuses the supplied basic evidence and physical dtype. It does not recompute basic counts, reclassify, or collect frequency evidence.
+21. Collection is exact, full-column, and unsampled. No provenance object was added.
+22. The precedence chain does not collect string-structure evidence. Empty and Constant precedence is unchanged.
+23. The input Series is not mutated.
+24. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added.
+25. Focused tests pass.
+26. TSK-008 tests pass.
+27. TSK-007 tests pass.
+28. TSK-006 tests pass.
+29. Semantic tests for TSK-001 through TSK-009 pass.
+30. The legacy profiler stays at 19 passed and the known PDF failure.
+31. The full suite adds only the new tests, with the same known PDF failure.
+32. [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) through [OPEN-049](DECISIONS.md#open-049) stay open. Character-class counts and length bounds do not close [OPEN-014](DECISIONS.md#open-questions) or [OPEN-044](DECISIONS.md#open-questions). Empty-string and whitespace counts do not close [OPEN-018](DECISIONS.md#open-questions). The absence of word counts does not close [OPEN-019](DECISIONS.md#open-questions).
+33. This section does not approve or implement a later slice.
+34. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 34 passed for TSK-009.
+
+## After TSK-009
+
+TSK-009 adds exact string-structure observations for physical string columns and for object columns whose non-missing values are Python strings. It does not add a semantic reading. [DEC-080](DECISIONS.md#dec-080) records the contract, including conditional object applicability, categorical exclusion, Python Unicode character classes, length bounds, ratio denominators, and on-demand collection. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

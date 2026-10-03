@@ -50,7 +50,7 @@ Absence of support is not contradiction. No UUID pattern means Identifier did no
 
 ### Universal column evidence
 
-`BasicColumnEvidence` is the universal typed evidence family ([DEC-077](DECISIONS.md#dec-077)). Analytical observations use typed families, composed as needed. The core model is not a generic observation property bag. Frequency evidence and numeric-structure evidence are the further families authorized so far ([DEC-078](DECISIONS.md#dec-078), [DEC-079](DECISIONS.md#dec-079)). This specification does not authorize another family, and it does not establish inheritance among families.
+`BasicColumnEvidence` is the universal typed evidence family ([DEC-077](DECISIONS.md#dec-077)). Analytical observations use typed families, composed as needed. The core model is not a generic observation property bag. Frequency evidence, numeric-structure evidence, and string-structure evidence are the further families authorized so far ([DEC-078](DECISIONS.md#dec-078), [DEC-079](DECISIONS.md#dec-079), [DEC-080](DECISIONS.md#dec-080)). This specification does not authorize another family, and it does not establish inheritance among families.
 
 The stored primary observations are exact, full-column, and unsampled:
 
@@ -109,6 +109,22 @@ Finite values and the two infinities partition the non-missing observations. Sig
 Monotonicity is defined only when every non-missing value is finite. Otherwise both flags are undefined. Missing values are ignored, and the remaining values keep their original order. No non-missing values, one finite value, and a finite constant series are both non-decreasing and non-increasing. That is not Identifier evidence. A step size or regular sequence is not part of this family.
 
 These observations are exact, full-column, and unsampled. They are collected when requested. The implemented precedence chain does not collect them. They do not select Numeric, Identifier, Boolean, or Binary. `{0.0, 1.0}` remains open as binary evidence ([OPEN-046](DECISIONS.md#open-046)). No confidence and no evidence role are attached. Mean, quantiles, and the other numeric summaries in section B are not this family. The class name is not a public schema ([OPEN-004](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions)).
+
+### String structure evidence
+
+`StringStructureEvidence` is a typed observation family composed with `BasicColumnEvidence` ([DEC-080](DECISIONS.md#dec-080)). It is not a subclass of that universal family. It applies to a physical string dtype, including an all-missing string column. An object column is eligible only when every non-missing value is a Python `str`. An empty or all-missing object column is not eligible. Physical categorical storage is not eligible, even when its labels are strings. Other physical families are not coerced into strings. Numpy byte-string values are not decoded.
+
+The population is non-missing strings. Pandas missingness decides what is missing. `""`, whitespace, and literals such as `"NA"` remain ordinary strings. `n_total`, `n_missing`, `n_non_missing`, and `n_unique_non_missing` stay on the universal family. Stored observations are the empty-string count, the whitespace-only count, the contains-whitespace count, the alphabetic, digit, and other character counts, and the minimum and maximum lengths. Ratios are read-only:
+
+- `empty_string_ratio`, `whitespace_only_ratio`, `contains_whitespace_ratio`, `contains_alpha_ratio`, `contains_digit_ratio`, and `contains_other_ratio` each divide the named count by `n_non_missing` when `n_non_missing > 0`, and are `None` when `n_non_missing == 0`.
+
+An undefined ratio is `None`. It is not `0.0`, `1.0`, NaN, or infinity. None of these ratios is a semantic threshold ([OPEN-044](DECISIONS.md#open-questions)).
+
+An empty string is exactly `""`. It is not whitespace-only, and its length is 0. Whitespace-only uses Python `str.isspace`. A string contains whitespace when one of its characters does, so a whitespace-only string also contains whitespace. Alphabetic uses `str.isalpha`. Digit uses `str.isdigit`. Other means a character that is not alphabetic, not a digit, and not whitespace. Those content counts may overlap. They are not a partition of the non-missing strings. The definitions use Python's Unicode string methods. Strings are not normalized, case-folded, or stripped.
+
+Length is `len` of the original string. `min_length` and `max_length` are `None` when there is no non-missing string. They are integers when there is at least one. An observed empty string can make `min_length` 0. That 0 is not used for the case with no observations.
+
+These observations are exact, full-column, and unsampled. They are collected when requested. The implemented precedence chain does not collect them. They do not select Text, Categorical, Identifier, Boolean, Binary, Datetime, or Numeric. They do not count words or tokens, and they do not name patterns such as UUID, email, or URL. No confidence and no evidence role are attached. The class name is not a public schema ([OPEN-004](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions)). Word counts, pattern semantics, and the missing-like literal list remain open ([OPEN-019](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions)).
 
 ### Confidence
 
@@ -328,6 +344,8 @@ Text means that values primarily function as textual content ([DEC-071](DECISION
 Structural pattern detection produces observations first ([DEC-072](DECISIONS.md#dec-072), [DEC-050](DECISIONS.md#dec-050)). The detected pattern name does not automatically become the semantic type. UUID-like, hash-like, email-like, URL-like, path-like, and datetime-like are observations or roles. UUID-like and hash-like structure are Identifier evidence and are not automatically sufficient for Identifier. Whether either pattern can ever be sufficient alone is [OPEN-044](DECISIONS.md#open-questions). Email-like, URL-like, and path-like structure do not by themselves select Identifier. Datetime-like string detection does not change the physical dtype. No Series is rewritten.
 
 Cardinality alone never distinguishes Categorical from Text. Repetition supports Categorical and is not sufficient for it. Long, multi-word, or prose-like textual structure may support Text. High uniqueness alone does not imply Text. High cardinality alone does not imply Text. A pandas categorical dtype is physical and source evidence. It does not automatically override contradictory semantic evidence. High-cardinality Categorical remains possible. Text inference does not require NLP. No length, word-count, repetition, or cardinality threshold is chosen here.
+
+`StringStructureEvidence` records empty strings, whitespace, alphabetic, digit, and other characters, and minimum and maximum length ([DEC-080](DECISIONS.md#dec-080)). Those facts are observations. They are not word counts, pattern names, or a Text, Categorical, or Identifier reading.
 
 Uniqueness alone does not distinguish Text from Identifier. Stable structural regularity may support Identifier. Prose-like structure supports Text and may contradict a specific code-like Identifier claim. It does not make every Identifier role impossible. Fixed width is evidence only. Repeated identifier-like strings may remain Identifier. All-unique free text may remain Text. No pattern-agreement threshold is chosen here.
 
