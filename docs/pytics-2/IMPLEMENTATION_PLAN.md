@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, and TSK-006 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, and TSK-007 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, and Slice 006. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. No TSK-007 exists.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, and Slice 007. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, and TSK-006 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, and TSK-007 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, and TSK-006 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, and TSK-007 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
 
 ## Reuse of 1.1.5
 
@@ -363,7 +363,7 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-006](#after-tsk-006).
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-007](#after-tsk-007).
 
 ## After TSK-005
 
@@ -437,4 +437,74 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 31 p
 
 ## After TSK-006
 
-TSK-006 strengthens the universal column-evidence family. It does not add a semantic reading. [DEC-077](DECISIONS.md#dec-077) records the primary-versus-derived contract and the denominator of `unique_ratio_non_missing`. No later evidence family was authorized. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create TSK-007.
+TSK-006 strengthens the universal column-evidence family. It does not add a semantic reading. [DEC-077](DECISIONS.md#dec-077) records the primary-versus-derived contract and the denominator of `unique_ratio_non_missing`. No later evidence family was authorized at that point. TSK-007 was approved later and is recorded below. The next concrete implementation slice after TSK-007 remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)).
+
+## TSK-007
+
+Slice 007, frequency and cardinality evidence foundation. Approved 2026-10-03 after TSK-006. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-03 and REQ-S-05, for exact observed characteristics and the prohibition on coercion. REQ-S-01 and REQ-S-04 are respected because no new semantic reading was added. Those requirement rows stay Not started. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- A typed `FrequencyEvidence` value composed with `BasicColumnEvidence`. It is not a subclass and not a property bag.
+- Stored observations: `most_frequent_count`, `singleton_count`, and a bounded exact set of distinct non-missing values.
+- Derived read-only ratios: `most_frequent_ratio` and `singleton_ratio`, with the denominators in [DEC-078](DECISIONS.md#dec-078).
+- The frequency population is non-missing observations. Missing counts stay on basic evidence.
+- Exact, full-column, and unsampled collection, from one frequency pass that reuses the basic counts.
+- Exact distinct values are retained only while `n_unique_non_missing` is at most 32. That number is a storage limit, not a semantic threshold.
+- Above that limit the exact set is absent and the full frequency mapping is not retained.
+- The collector is separate. The Empty, Constant, and physical-type chain does not call it.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The frequency contract is [DEC-078](DECISIONS.md#dec-078). This slice does not resolve [OPEN-018](DECISIONS.md#open-questions) or [OPEN-044](DECISIONS.md#open-questions).
+
+### Exclusions
+
+Do not implement Numeric, Identifier, Categorical, Text, Boolean, or Binary inference from frequency facts. Do not implement `{0, 1}` Binary, `{0.0, 1.0}` Binary, true/false, or yes/no inference. Do not implement candidate assessments, candidate resolution, material alternatives, confidence on frequency evidence, evidence roles, evidence-strength enums, scoring, abstention, user overrides, or effective interpretation. Do not implement numeric-structure, string-structure, or pattern evidence. Do not implement sampling, sketches, or approximate cardinality.
+
+Do not add a provenance object. Do not add an evidence-family inheritance hierarchy. Do not add a generic observation property bag. Do not collect frequency evidence from the existing precedence chain. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049).
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the evidence type from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `FrequencyEvidence` is a frozen dataclass composed with `BasicColumnEvidence`, not a subclass and not a property bag.
+2. No placeholder evidence family was added.
+3. The stored frequency fields are `most_frequent_count`, `singleton_count`, and `exact_distinct_non_missing_values`. The ratios are properties.
+4. No semantic-conclusion field, confidence, or evidence role was added.
+5. The frequency population is non-missing observations. Missing values are not keys.
+6. `n_missing`, `missing_ratio`, and `has_missing` are not frequency fields.
+7. `most_frequent_count` is an int. It is `0` when `n_non_missing` is `0`, and at least `1` otherwise. It is not `None`.
+8. `singleton_count` is an int. It is `0` when there is no non-missing observation, and otherwise counts distinct non-missing values that occur once.
+9. `most_frequent_ratio` is `most_frequent_count / n_non_missing` when `n_non_missing > 0`, and `None` otherwise. The denominator is the composed basic count.
+10. `singleton_ratio` is `singleton_count / n_unique_non_missing` when `n_unique_non_missing > 0`, and `None` otherwise. The denominator is the distinct count. There is no second singleton ratio.
+11. An undefined ratio is `None`, not `0.0`, `1.0`, NaN, or infinity.
+12. The collector does not recompute `n_non_missing` or `n_unique_non_missing`. One frequency pass produces the frequency facts.
+13. The exact distinct values are a `frozenset` when `n_unique_non_missing <= 32`, including an empty `frozenset` when that count is `0`. They are `None` when the count is greater than 32.
+14. `32` is one named retention constant. It is not used as a semantic threshold.
+15. The retained set does not require values to be sortable, and values are not stringified.
+16. A result above the limit does not retain the full frequency mapping or the full distinct-value collection.
+17. Collection is exact, full-column, and unsampled. No sketch or approximate cardinality was added.
+18. Empty frequency facts agree with empty universal evidence.
+19. A constant non-missing column has `most_frequent_count == n_non_missing` and `most_frequent_ratio == 1.0`. `singleton_count` is `1` only when that one value occurs once.
+20. Missing-like literals remain ordinary values.
+21. Unhashable non-missing values still raise `TypeError` and are not normalized, including when a frequency pass can group them.
+22. Frequency facts do not select Categorical, Identifier, Text, Boolean, or Binary.
+23. The precedence chain does not collect frequency evidence.
+24. Empty, Constant, physical Boolean, physical Datetime, and physical Timedelta interpretations are unchanged.
+25. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added.
+26. Focused tests pass.
+27. TSK-006 tests pass.
+28. Semantic tests for TSK-001 through TSK-007 pass.
+29. The legacy profiler stays at 19 passed and the known PDF failure.
+30. The full suite adds only the new tests, with the same known PDF failure, and coverage remains about 97%.
+31. [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) through [OPEN-049](DECISIONS.md#open-049) stay open. The retention limit does not close [OPEN-018](DECISIONS.md#open-questions) or [OPEN-044](DECISIONS.md#open-questions).
+32. This section does not approve or implement a later slice.
+33. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 33 passed for TSK-007.
+
+## After TSK-007
+
+TSK-007 adds exact frequency observations. It does not add a semantic reading. [DEC-078](DECISIONS.md#dec-078) records the frequency contract, including the operational 32-value retention limit. That limit is not a semantic cardinality threshold. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

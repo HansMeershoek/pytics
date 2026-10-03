@@ -50,7 +50,7 @@ Absence of support is not contradiction. No UUID pattern means Identifier did no
 
 ### Universal column evidence
 
-`BasicColumnEvidence` is the universal typed evidence family ([DEC-077](DECISIONS.md#dec-077)). Analytical observations use typed families, composed as needed. The core model is not a generic observation property bag. This specification does not name or authorize a later family, and it does not establish inheritance among families.
+`BasicColumnEvidence` is the universal typed evidence family ([DEC-077](DECISIONS.md#dec-077)). Analytical observations use typed families, composed as needed. The core model is not a generic observation property bag. Frequency evidence is the one further family authorized so far ([DEC-078](DECISIONS.md#dec-078)). This specification does not authorize another family, and it does not establish inheritance among families.
 
 The stored primary observations are exact, full-column, and unsampled:
 
@@ -74,6 +74,23 @@ An undefined ratio is `None`. It is not `0.0`, `1.0`, NaN, or infinity. There is
 `is_empty` covers a zero-length Series and an all-missing Series. Both are empty, not constant. One repeated non-missing value is constant, including when missing observations are also present, and including a one-row non-missing Series.
 
 These four counts do not carry a procedure-provenance object. They are definitionally exact. A reusable provenance model waits for a second procedure ([DEC-076](DECISIONS.md#dec-076)). Sample sizes remain [OPEN-010](DECISIONS.md#open-questions).
+
+### Frequency evidence
+
+`FrequencyEvidence` is a typed observation family composed with `BasicColumnEvidence` ([DEC-078](DECISIONS.md#dec-078)). It is not a subclass of that universal family. The frequency population is non-missing observations. Missing values are not frequency keys. Unobserved categorical levels, which a count table can list at zero, are not frequency keys either. `n_missing`, `missing_ratio`, and `has_missing` stay on the universal family.
+
+Stored frequency observations are `most_frequent_count`, `singleton_count`, and a bounded exact set of distinct non-missing values. Ratios are read-only:
+
+- `most_frequent_ratio` is `most_frequent_count / n_non_missing` when `n_non_missing > 0`, and `None` when `n_non_missing == 0`.
+- `singleton_ratio` is `singleton_count / n_unique_non_missing` when `n_unique_non_missing > 0`, and `None` when `n_unique_non_missing == 0`. The denominator is the number of distinct non-missing values, not the number of rows.
+
+An undefined ratio is `None`. It is not `0.0`, `1.0`, NaN, or infinity. There is no second singleton ratio. Neither ratio is a semantic threshold ([OPEN-044](DECISIONS.md#open-questions)).
+
+`most_frequent_count` is `0` when there is no non-missing observation, and otherwise the largest occurrence count. `singleton_count` is `0` in that empty case, and otherwise the number of distinct non-missing values that occur once. Neither count is `None`.
+
+When the distinct count is within the v0.1 retention limit of 32, the exact distinct non-missing values are retained, including an empty collection when that count is zero. Above 32, the exact collection is absent. The limit is a storage guard. It does not define categorical, binary, identifier, text, or high cardinality ([OPEN-018](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions)).
+
+These observations are exact, full-column, and unsampled. They are collected when requested. The implemented precedence chain does not collect them. They do not select a semantic type. No confidence and no evidence role are attached. The class name is not a public schema ([OPEN-004](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions)).
 
 ### Confidence
 
@@ -126,7 +143,7 @@ Those dataset facts are `is_empty` and `is_constant` on the universal evidence v
 
 Empty precedes Constant. In the current semantic system those two readings win over competing type readings, including the physical Boolean, Datetime, and Timedelta rules already implemented, and over a Numeric or Identifier reading of the same column. That sentence is not an exhaustive precedence law for every future semantic reading. The physical dtype remains inspectable when Empty or Constant wins. Ordered categorical metadata (`categorical_ordered`) remains inspectable in that case. Semantic interpretation and physical or source facts stay distinct. Do not duplicate the underlying computation unnecessarily.
 
-TSK-002 through TSK-005 implement the readings below. TSK-006 adds no semantic reading. Those slices do not implement heuristic candidate resolution, user overrides, or the separate effective interpretation. Heuristic semantic inference is not authorized.
+TSK-002 through TSK-005 implement the readings below. TSK-006 adds no semantic reading. TSK-007 adds frequency observations and no semantic reading. Those slices do not implement heuristic candidate resolution, user overrides, or the separate effective interpretation. Heuristic semantic inference is not authorized.
 
 - A non-empty, non-constant physical Boolean column is Boolean, with High confidence and physical-dtype provenance. A physical pandas Boolean is very strong direct Boolean/Binary evidence ([DEC-047](DECISIONS.md#dec-047)). That phrase does not rank physical Boolean as the strongest evidence of every kind.
 - A non-empty, non-constant physical Datetime column is Datetime, with High confidence and physical-dtype provenance. A non-empty, non-constant timezone-aware Datetime column is the same semantic type, with its own physical family and its own evidence statement. Native and timezone-aware datetime dtypes are strong evidence of Datetime semantics ([DEC-050](DECISIONS.md#dec-050)). Timezone-aware storage is not a second semantic type.
