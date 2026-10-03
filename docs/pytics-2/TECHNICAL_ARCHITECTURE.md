@@ -113,7 +113,7 @@ EFFECTIVE INTERPRETATION
 DOWNSTREAM ANALYSIS
 ```
 
-Observations and candidate assessments are distinct ([DEC-065](DECISIONS.md#dec-065)). Absence of a supporting observation is not contradicting evidence. Candidate Resolution v0.1 does not use a numeric total-score ([DEC-066](DECISIONS.md#dec-066)). User-facing confidence remains High, Medium, or Low. The resolution foundation does not derive those words from how many candidates are supported ([DEC-085](DECISIONS.md#dec-085)). The inferred result does not derive them either ([DEC-086](DECISIONS.md#dec-086)).
+Observations and candidate assessments are distinct ([DEC-065](DECISIONS.md#dec-065)). Absence of a supporting observation is not contradicting evidence. Candidate Resolution v0.1 does not use a numeric total-score ([DEC-066](DECISIONS.md#dec-066)). User-facing confidence remains High, Medium, or Low. The resolution foundation does not derive those words from how many candidates are supported ([DEC-085](DECISIONS.md#dec-085)). The inferred result does not derive them either ([DEC-086](DECISIONS.md#dec-086)). One internal function now runs that column path from a Series through the inferred result ([DEC-087](DECISIONS.md#dec-087)). It stops before the optional override, the effective interpretation, and downstream analysis. It does not freeze the module layout ([OPEN-045](DECISIONS.md#open-questions)).
 
 Evidence is collected once and then interpreted ([DEC-076](DECISIONS.md#dec-076)). The levels below are conceptual cost, not a cache API and not a file layout. If this list and that decision diverge, the decision is the ruling.
 
