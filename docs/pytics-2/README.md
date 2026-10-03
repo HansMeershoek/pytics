@@ -4,11 +4,11 @@ This directory is the durable source of truth for Pytics 2.0.
 
 Chat context is not a substitute. When an approved decision changes, update the relevant document and the decision log in the same change.
 
-These documents record product and architecture direction. They do not by themselves authorize implementation. No Pytics 2.0 production code is to be written until a slice is explicitly approved under [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md). TSK-001 and TSK-002 are approved for their recorded scopes only.
+These documents record product and architecture direction. They do not by themselves authorize implementation. No Pytics 2.0 production code is to be written until a slice is explicitly approved under [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md). TSK-001, TSK-002, and TSK-003 are approved for their recorded scopes only.
 
 The released codebase remains Pytics 1.1.5. It is a functional and historical reference. It is not the 2.0 specification, and it is not inherited automatically. See [BASELINE_1_1_5.md](BASELINE_1_1_5.md).
 
-Established: 2026-10-03, from the Pytics 2.0 bootstrap briefing. Architecture and methodology update: 2026-10-03, recorded as DEC-036 through DEC-061. Slice 001, recorded the same day as DEC-062, DEC-063, and TSK-001, was accepted by the project owner as the development baseline. TSK-002, basic column evidence and Empty/Constant inference, was completed the same day on that baseline. Neither slice authorizes a later slice.
+Established: 2026-10-03, from the Pytics 2.0 bootstrap briefing. Architecture and methodology update: 2026-10-03, recorded as DEC-036 through DEC-061. Slice 001, recorded the same day as DEC-062, DEC-063, and TSK-001, was accepted by the project owner as the development baseline. TSK-002, basic column evidence and Empty/Constant inference, was completed the same day on that baseline. TSK-003, physical Boolean inference after Empty and Constant, was completed the same day. None of these slices authorizes a later slice.
 
 ## Status labels
 
@@ -43,7 +43,7 @@ This convention is a documentation rule so the briefing is not silently tightene
 | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) | Accepted architectural direction and constraints. Not a frozen module layout. |
 | [STATISTICAL_METHODS.md](STATISTICAL_METHODS.md) | Inferential rules and accepted methodological direction. The method catalog is not finalized. |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | 1.1.5 dependency inventory and 2.0 candidate directions. Not a lock. |
-| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | How slices are opened. TSK-001 and TSK-002 are complete. No later slice is approved. |
+| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | How slices are opened. TSK-001, TSK-002, and TSK-003 are complete. No later slice is approved. |
 | [DECISIONS.md](DECISIONS.md) | Accepted decisions (`DEC-###`) and open questions (`OPEN-###`). |
 | [PROGRESS.md](PROGRESS.md) | Requirement → task → files → tests → verification → completion. |
 | [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md) | Required procedure for every implementation slice. |
@@ -54,7 +54,7 @@ This convention is a documentation rule so the briefing is not silently tightene
 - `DEC-###` — an accepted decision. Defined only in [DECISIONS.md](DECISIONS.md).
 - `OPEN-###` — a question that still needs a product or architecture decision. Not a decision.
 - `REQ-###` — an accepted requirement, defined in the specification files and tracked in [PROGRESS.md](PROGRESS.md).
-- `TSK-###` — an implementation task. TSK-001 and TSK-002 exist. Neither completes a requirement row.
+- `TSK-###` — an implementation task. TSK-001, TSK-002, and TSK-003 exist. None completes a requirement row.
 
 ## What not to do with this directory
 

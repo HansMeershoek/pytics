@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001 and TSK-002 are complete. No later slice is approved.**
+Status: **TSK-001, TSK-002, and TSK-003 are complete. No later slice is approved.**
 
-Pytics 2.0 implementation has started only for Slice 001 and Slice 002. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions).
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, and Slice 003. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions).
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001 and TSK-002 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, and TSK-003 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -48,7 +48,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001 and TSK-002 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-04, or REQ-S-05.
+No requirement row in that register is completed. TSK-001, TSK-002, and TSK-003 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, REQ-D-01, REQ-D-02, or REQ-D-03.
 
 ## Reuse of 1.1.5
 
@@ -151,3 +151,63 @@ Do not store the constant value. Do not report Empty or Constant as dataset-leve
 24. No unrelated production changes were made.
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 24 passed for TSK-002.
+
+## TSK-003
+
+Slice 003, physical Boolean inference and semantic precedence. Approved 2026-10-03 after the committed Slice 001 and Slice 002 baseline. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-01, REQ-S-02, REQ-S-04, and REQ-S-05, only for composing Empty, Constant, and physical Boolean. REQ-D-01 and REQ-D-03 are touched only for a physical pandas Boolean dtype. REQ-D-02 and REQ-S-03 are respected on this path and are not completed. Those requirement rows stay Not started. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Reuse `classify_physical_dtype` and `BasicColumnEvidence`. Classify the physical dtype once. Collect the four basic counts once.
+- Reuse `interpret_empty_or_constant_from_evidence`. Do not recompute `isna` or `nunique`, and do not copy the Empty or Constant rules.
+- Precedence: Empty, then Constant, then physical Boolean, then no interpretation. `None` means no interpretation. No unknown semantic type.
+- Semantic Boolean only when the column is not Empty, not Constant, and `PhysicalDtypeFamily` is Boolean. Native `bool` and nullable pandas `boolean` both qualify. Confidence is High. Source is directly supported by the physical dtype. Evidence is the statement `physical dtype is boolean`. The physical dtype value is retained. Subtype is unset. Alternatives are empty.
+- A small orchestration function. No rule engine, registry, or priority framework.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). Precedence over Boolean follows [DEC-046](DECISIONS.md#dec-046). The physical-dtype rule follows [DEC-047](DECISIONS.md#dec-047). This slice does not resolve [OPEN-044](DECISIONS.md#open-questions). It does not set Boolean subtypes ([OPEN-014](DECISIONS.md#open-questions)).
+
+### Exclusions
+
+Do not infer Boolean from `{0, 1}`, yes/no or true/false strings, object values that happen to be `True` and `False`, categorical values that happen to be `True` and `False`, an ordered categorical, or any other two-valued column. Binary cardinality is not Boolean meaning.
+
+Do not implement Numeric, Continuous/Discrete, Identifier, Categorical, Text, datetime semantic inference, timedelta semantic inference, ordinal storage, thresholds, sampling, missing-like detection, near-constant, high cardinality, dataset findings, relationships, statistics, target analysis, anomalies, compare/drift, HTML, PDF, a configuration API, or a public semantic API.
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the new function from top-level `pytics`. Do not add a dependency. Do not rewrite Slice 001 or Slice 002. Do not add `SemanticType` members.
+
+### Acceptance criteria
+
+1. The accepted checkpoint was clean before this slice, and Slice 001 tests still pass.
+2. Slice 002 tests still pass.
+3. Empty still takes precedence, including on a physical Boolean column.
+4. Constant still takes precedence, including on a physical Boolean column.
+5. A non-empty, non-constant physical Boolean column is semantic Boolean.
+6. Native `bool` is supported.
+7. Nullable pandas `boolean` is supported.
+8. That Boolean result uses High confidence.
+9. That Boolean result uses the physical-dtype inference source, not inferred.
+10. That Boolean result retains the physical dtype.
+11. That Boolean result has factual semantic evidence and no numeric score.
+12. `{0, 1}` is not inferred Boolean.
+13. Boolean-like strings are not inferred Boolean.
+14. Object dtype holding Python `True` and `False` is not inferred Boolean.
+15. Categorical `True`/`False` is not inferred Boolean.
+16. An ordered categorical is not inferred Boolean or ordinal.
+17. Other unsupported columns still produce no interpretation.
+18. Basic evidence is reused rather than collected again inside the Boolean rule.
+19. No semantic threshold was introduced.
+20. The input Series is not mutated.
+21. No new dependency was added.
+22. `profile()` and `compare()` are unchanged, and the new names are not on the public API.
+23. Focused tests pass.
+24. Existing regression tests remain at least at their documented baseline.
+25. Project memory records physical Boolean only, and leaves other Boolean representations open.
+26. No unrelated production changes were made.
+27. [OPEN-044](DECISIONS.md#open-questions) stays open.
+28. No second semantic type was added for binary.
+29. Slice 001 and Slice 002 tests were not edited.
+30. No rule framework was added.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 30 passed for TSK-003.
