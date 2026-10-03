@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, and TSK-017 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. TSK-016 connects those components for one Series and does not invent that confidence. TSK-017 retains that column analysis for one DataFrame and does not invent that confidence. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, and TSK-018 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. TSK-016 connects those components for one Series and does not invent that confidence. TSK-017 retains that column analysis for one DataFrame and does not invent that confidence. TSK-018 summarizes that analysis as a dataset overview and does not invent that confidence. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, Slice 015, Slice 016, and Slice 017. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, Slice 015, Slice 016, Slice 017, and Slice 018. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, and TSK-017 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, and TSK-018 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, and TSK-017 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, REQ-H-04, REQ-A-01, REQ-A-02, or REQ-A-03.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, and TSK-018 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, REQ-H-04, REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-04, REQ-A-05, REQ-A-06, or REQ-IA-05.
 
 ## Reuse of 1.1.5
 
@@ -1110,4 +1110,53 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 15 p
 
 ## After TSK-017
 
-TSK-017 keeps one column analysis per physical DataFrame column and derives missing-cell totals from basic evidence already retained. It does not add a semantic rule, collect frequency or string-content evidence, or change `profile` or `compare`. [DEC-088](DECISIONS.md#dec-088) records the contract, including column position and original label, evidence applicability, and the semantics/analysis package boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-017 keeps one column analysis per physical DataFrame column and derives missing-cell totals from basic evidence already retained. It does not add a semantic rule, collect frequency or string-content evidence, or change `profile` or `compare`. [DEC-088](DECISIONS.md#dec-088) records the contract, including column position and original label, evidence applicability, and the semantics/analysis package boundary. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-018 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-018
+
+Slice 018, dataset overview foundation. Approved 2026-10-03 after TSK-017. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-A-01 for exposing the stored row, column, and cell counts on an internal overview. REQ-A-03 only for cell completeness, not complete or incomplete rows. REQ-A-05 only for counts of resolved selected semantic types, not physical dtype composition. REQ-A-06 only for Empty, Constant, and Identifier columns already selected, not near-constant or high-cardinality columns. REQ-IA-05 only for the analytical facts behind size, semantic composition, and notable or unresolved columns, not a rendered Overview and not a dataset identity. REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-04, REQ-A-05, REQ-A-06, and REQ-IA-05 are not completed. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Add `ColumnRef`, `SemanticTypeCount`, `DatasetOverview`, and `build_dataset_overview` in `src/pytics/analysis/overview.py`.
+- The builder accepts `DatasetAnalysis` only. It copies `n_rows`, `n_columns`, and `n_cells`, and it copies the analysis missing-cell totals. It does not scan a DataFrame or a Series.
+- `completeness_ratio` is cell completeness: non-missing cells divided by cells, `None` when there are no cells. `missing_ratio` uses the same denominator. Semantic-resolution coverage is resolved columns divided by columns, `None` when there are no columns.
+- A resolved column contributes its `selected_type`. A candidate-derived selection counts while `interpretation` is `None`. Semantic type counts omit zeros and follow `SemanticType` definition order.
+- `INSUFFICIENT_EVIDENCE` and `AMBIGUOUS` are separate column-reference groups. They are not semantic types. Resolved, insufficient, and ambiguous counts sum to the column count. The sum of semantic type counts equals the resolved count.
+- Empty, Constant, and Identifier groups are the columns with that selected type. A constant UUID stays Constant. Each reference stores position and the original label. Duplicate labels stay distinct.
+- A zero-row schema follows the current Empty rule. Its cell ratios stay undefined and its semantic-resolution ratio is `1.0`. A zero-column schema does not claim full resolution.
+- No memory usage, duplicate rows, near-constant rule, high-cardinality rule, physical-dtype histogram, confidence summary, finding, severity, or quality score. No pandas import. The analysis is not retained. `profile` and `compare` are unchanged.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063) and the analysis package in [DEC-088](DECISIONS.md#dec-088). The overview contract is [DEC-089](DECISIONS.md#dec-089). It narrows [OPEN-018](DECISIONS.md#open-questions) for the three dimension counts and the cell-completeness ratio, and it records this slice in [OPEN-037](DECISIONS.md#open-questions). It does not close [OPEN-004](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), or [OPEN-047](DECISIONS.md#open-047).
+
+### Exclusions
+
+Do not rescan values or re-run semantic inference. Do not accept a DataFrame. Do not add memory usage or duplicate-row analysis while their semantics are undecided. Do not add near-constant or high-cardinality thresholds. Do not parse resolver reasons or evidence statements. Do not aggregate confidence. Do not emit Findings or a quality score. Do not render HTML. Do not route `pytics.profile` or `pytics.compare` through the overview. Do not export it from top-level `pytics`. Do not add a dependency.
+
+Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049). [OPEN-018](DECISIONS.md#open-questions) records the dimension and cell-completeness narrowing and stays open for near-constant, high cardinality, and the other unset definitions. [OPEN-045](DECISIONS.md#open-questions) records `overview.py` only as a file in the existing analysis package.
+
+Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `build_dataset_overview` accepts a `DatasetAnalysis`. A DataFrame, Series, mapping, or `None` raises `TypeError` and is not analyzed.
+2. The overview copies `n_rows`, `n_columns`, `n_cells`, `n_missing_cells`, and `n_non_missing_cells`. It does not recompute them from a frame.
+3. `completeness_ratio` is non-missing cells divided by cells, and `None` when there are no cells. For a positive cell count it and `missing_ratio` sum to 1 within ordinary floating-point arithmetic. Completeness is not semantic-resolution coverage.
+4. Every resolved `selected_type` is counted, including Numeric, Identifier, and Categorical when `interpretation` is `None`, and including a synthetic Text selection. Zero counts are omitted. Order is `SemanticType` definition order. The sum of those counts equals the resolved column count.
+5. Insufficient evidence and ambiguity are separate groups. They are not merged and they are not semantic types. Resolved, insufficient, and ambiguous counts sum to `n_columns`. `semantic_resolution_ratio` is `None` when there are no columns.
+6. Empty, Constant, and Identifier membership is the selected semantic type. A repeated UUID is Constant. Group counts are the lengths of the reference tuples. References keep position and the original label, including duplicate labels and non-string labels.
+7. A zero-row schema is resolved Empty, with semantic-resolution ratio `1.0` and undefined cell ratios. An all-missing populated dataset has missing ratio `1.0` and completeness `0.0`, and its Empty columns come from column semantics.
+8. The overview module does not import pandas or call analysis, collection, or resolution functions. It does not retain the analysis. It adds no memory fact, duplicate-row fact, near-constant rule, high-cardinality rule, confidence summary, finding, severity, or quality score.
+9. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added. No semantic rule was added.
+10. Focused TSK-018 tests pass. TSK-017 and the semantic regression stay at the previous results. The full suite adds only the new tests, with the known PDF failure unchanged.
+11. [OPEN-018](DECISIONS.md#open-questions) records the dimension and cell-completeness narrowing and stays open for near-constant and high cardinality. [OPEN-037](DECISIONS.md#open-questions) records this slice and does not choose the next one. [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), and [OPEN-047](DECISIONS.md#open-047) stay open.
+12. This section does not approve or implement a later slice.
+13. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 13 passed for TSK-018.
+
+## After TSK-018
+
+TSK-018 summarizes one `DatasetAnalysis` as a frozen overview. It copies dimensions and missing-cell totals, counts resolved selected semantic types, and names Empty, Constant, Identifier, insufficient-evidence, and ambiguous columns by position and original label. It does not rescan the DataFrame, assign candidate confidence, or change `profile` or `compare`. [DEC-089](DECISIONS.md#dec-089) records the contract, including sparse semantic counts, separate cell-completeness and semantic-resolution ratios, and the deferred memory and duplicate-row definitions. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

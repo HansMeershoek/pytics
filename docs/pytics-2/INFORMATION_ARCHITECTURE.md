@@ -105,6 +105,8 @@ No arbitrary quality score (`REQ-P-07`).
 | --- | --- | --- |
 | REQ-IA-05 | Overview answers those four questions and does not show a composite quality score. | Accepted |
 
+An internal analytical overview now exposes size, cell completeness, the resolved semantic types that are present, semantic-resolution coverage, and the columns that are Empty, Constant, Identifier, insufficient, or ambiguous ([DEC-089](DECISIONS.md#dec-089)). It does not render this view, name the dataset, or add a composite quality score. "What deserves attention" is not yet a Finding.
+
 ### Findings
 
 Findings link back to their analytical evidence (`REQ-N-01`).
