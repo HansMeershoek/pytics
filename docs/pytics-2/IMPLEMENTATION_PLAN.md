@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, and TSK-012 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, and TSK-013 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, and Slice 012. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, and Slice 013. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, and TSK-012 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, and TSK-013 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, and TSK-012 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, or REQ-H-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, and TSK-013 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, or REQ-H-04.
 
 ## Reuse of 1.1.5
 
@@ -363,7 +363,7 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-012](#after-tsk-012).
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-013](#after-tsk-013).
 
 ## After TSK-005
 
@@ -841,4 +841,56 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 19 p
 
 ## After TSK-012
 
-TSK-012 adds Numeric, Categorical, and Text candidate assessments on the candidate model from TSK-011. It does not select a semantic reading and does not enter the precedence chain. [DEC-083](DECISIONS.md#dec-083) records the contract, including physical integer and floating storage as Numeric support, physical categorical storage as Categorical support, the absence of an approved Text rule in the current observations, and the absence of a cardinality, length, or whitespace threshold. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-012 adds Numeric, Categorical, and Text candidate assessments on the candidate model from TSK-011. It does not select a semantic reading and does not enter the precedence chain. [DEC-083](DECISIONS.md#dec-083) records the contract, including physical integer and floating storage as Numeric support, physical categorical storage as Categorical support, the absence of an approved Text rule in the current observations, and the absence of a cardinality, length, or whitespace threshold. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-013 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-013
+
+Slice 013, string vocabulary and text-structure evidence. Approved 2026-10-03 after TSK-012. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-03 and REQ-S-05, for observations kept distinct from interpretation. REQ-S-01 and REQ-S-04 are respected because no reading is selected and no column name is used. REQ-F-01, REQ-F-02, and REQ-C-01 are not completed. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Add one typed evidence family, `StringContentEvidence`, composed with `StringStructureEvidence`. Do not copy basic counts, length bounds, character-class counts, or whole-value frequency counts.
+- A token is a maximal contiguous run of characters for which `str.isalnum` is true. Case is preserved. Accents are not normalized. Empty strings and whitespace-only strings have no token and remain observed strings. Missing values stay missing.
+- Store the zero/one/multiple-token partition, total token count, total character count, distinct-token count, singleton-token count, and most-frequent-token count. Derive ratios and means. Do not store means. Undefined ratios are `None`.
+- `token_singleton_ratio` divides by distinct tokens. `most_frequent_token_ratio` divides by token occurrences. The string ratios and means divide by `n_non_missing`.
+- Do not retain raw strings, tokens, or a vocabulary. A temporary occurrence map during collection is not part of the returned value.
+- Collection is exact, full-column, and unsampled. The collector reuses supplied string-structure evidence and does not recollect basic, frequency, string-structure, or pattern evidence.
+- Do not change Numeric, Categorical, Text, or Identifier candidate rules. One-token strings and multi-token strings do not by themselves support Categorical or Text. Token repetition does not support Categorical.
+- The precedence chain does not collect this family. No resolver, score, or final confidence is added.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The evidence contract is [DEC-084](DECISIONS.md#dec-084). It does not close [OPEN-044](DECISIONS.md#open-questions).
+
+### Exclusions
+
+Do not resolve candidates. Do not assign High, Medium, or Low. Do not add a Text or ordinary-string Categorical rule. Do not add a cardinality, uniqueness, token-count, length, or whitespace threshold. Do not lowercase, case-fold, strip, or Unicode-normalize source values. Do not add language detection, stopwords, embeddings, or an NLP library. Do not expand the pattern catalog. Do not infer email, URL, or path. Do not use a column name. Do not add regular-step numeric Identifier evidence. Do not infer Binary or Ordinal. Do not call the collector from `interpret_series_precedence`. Do not change `SemanticInterpretation` or `core_candidates.py`.
+
+Do not add a tokenizer package, a vocabulary store, or a resolver. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049). [OPEN-019](DECISIONS.md#open-questions) may record only the evidence-collection portion that this slice actually solves.
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the collector from top-level `pytics`. Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `StringContentEvidence` is a frozen dataclass composed with `StringStructureEvidence`. It is not a subclass. Basic counts, length bounds, and whole-value frequency counts are not copied.
+2. Eligibility follows string-structure evidence. A physical string dtype is eligible, including an all-missing string column. An object column is eligible only when every non-missing value is a Python `str`. Categorical, numeric, Boolean, Datetime, Timedelta, and `bytes` values are not coerced into tokens.
+3. The collector reuses the supplied string-structure evidence. It does not recollect basic, frequency, string-structure, or pattern evidence, and it does not classify the physical dtype again. The Series is not mutated.
+4. A token is a maximal `str.isalnum` run. Case stays distinct. Accents are not normalized. `""` and whitespace-only strings are observed strings with zero tokens. Missing values are not treated as `""`, `"nan"`, or `"None"`.
+5. Stored fields are the token partition, `total_token_count`, `total_character_count`, `n_distinct_tokens`, `singleton_token_count`, and `most_frequent_token_count`. Means and ratios are derived. An undefined ratio or mean is `None`. `token_singleton_ratio` uses distinct tokens as its denominator. `most_frequent_token_ratio` uses token occurrences.
+6. The returned evidence retains no raw string and no vocabulary. Whole-value frequency and token vocabulary remain different observations.
+7. Collection is exact, full-column, and unsampled. `interpret_series_precedence` does not collect it. String-structure collection does not collect it. Candidate assessors do not collect it.
+8. `core_candidates.py` is unchanged. `["Amsterdam", "Berlin", "Paris"]` stays `NOT_SUPPORTED` for Categorical and Text. Multi-token sentences stay `NOT_SUPPORTED` for Text and Categorical. UUID Identifier support, physical categorical support, Numeric support, and `{0, 1}` Numeric behavior stay as they were.
+9. No cardinality, uniqueness, token-count, length, or whitespace threshold was added. No resolution, final confidence, Binary inference, Ordinal inference, or numeric-sequence Identifier evidence was added.
+10. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added.
+11. Focused TSK-013 tests pass. TSK-012, TSK-011 foundation, TSK-011 Identifier, TSK-010, TSK-009, TSK-008, TSK-007, and TSK-006 tests pass.
+12. Semantic tests for TSK-001 through TSK-013 pass. The legacy profiler stays at 19 passed and the known PDF failure. The full suite adds only the new tests, with the same known PDF failure.
+13. [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) stay open. [OPEN-019](DECISIONS.md#open-questions) records the token-evidence collection and leaves diagnostics and inference rules open. Resolution, final confidence, numeric sequence Identifier evidence, and user overrides stay open.
+14. This section does not approve or implement a later slice.
+15. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 15 passed for TSK-013.
+
+## After TSK-013
+
+TSK-013 adds string-content observations composed with string-structure evidence. It does not select a semantic reading and does not enter the precedence chain. [DEC-084](DECISIONS.md#dec-084) records the contract, including the alphanumeric token definition, case-sensitive aggregate vocabulary counts, the separation from whole-value frequency, and the decision that those facts do not support Text or ordinary-string Categorical. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
