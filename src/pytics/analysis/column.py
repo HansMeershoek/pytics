@@ -9,6 +9,12 @@ Frequency evidence is collected for a non-structural physical categorical
 column, which is the population a Categorical variable summary reads. It is
 not an assessor input. String-content evidence is not collected. Structural
 precedence still returns before that collection.
+
+Numeric descriptive statistics are not evidence. After resolution, a column
+whose selected semantic type is Numeric is described from its finite
+non-missing values. Constant, Empty, and every other selected type do not
+take that pass. The result is retained on the column analysis, not on the
+evidence bundle and not on the inferred semantic result.
 """
 
 from __future__ import annotations
@@ -20,6 +26,8 @@ from typing import Tuple
 
 import pandas as pd
 
+from pytics.analysis.numeric import NumericDescriptiveAnalysis
+from pytics.analysis.numeric import collect_numeric_descriptive_analysis
 from pytics.semantics.candidate import CandidateAssessment
 from pytics.semantics.column_evidence import BasicColumnEvidence
 from pytics.semantics.column_evidence import collect_basic_column_evidence
@@ -31,6 +39,7 @@ from pytics.semantics.frequency_evidence import collect_frequency_evidence
 from pytics.semantics.identifier_candidate import assess_identifier_candidate
 from pytics.semantics.inferred import InferredSemanticResult
 from pytics.semantics.inferred import build_inferred_semantic_result
+from pytics.semantics.interpretation import SemanticType
 from pytics.semantics.numeric_structure_evidence import NumericStructureEvidence
 from pytics.semantics.numeric_structure_evidence import (
     collect_numeric_structure_evidence,
@@ -134,6 +143,11 @@ class ColumnAnalysis:
     and it is not semantic evidence. ``physical``, ``evidence``, and
     ``inferred`` are the facts this path already produced. The Series
     itself is not stored.
+
+    ``numeric_analysis`` is the descriptive profile collected after
+    resolution when the selected semantic type is Numeric. It is absent
+    for every other outcome, including a physically numeric column that
+    resolved as Constant or Empty. It is not stored on ``evidence``.
     """
 
     position: int
@@ -141,6 +155,7 @@ class ColumnAnalysis:
     physical: PhysicalDtype
     evidence: ColumnEvidence
     inferred: InferredSemanticResult
+    numeric_analysis: Optional[NumericDescriptiveAnalysis] = None
 
     def __post_init__(self) -> None:
         if type(self.position) is not int or self.position < 0:
@@ -150,6 +165,7 @@ class ColumnAnalysis:
         _require(self.inferred, InferredSemanticResult, "inferred")
         if self.inferred.physical is not self.physical:
             raise ValueError("inferred.physical must be this column's physical")
+        _require_numeric_analysis(self)
 
 
 def analyze_series(
@@ -164,6 +180,12 @@ def analyze_series(
     read by physical classification, evidence collection, candidate
     assessment, or resolution. The Series name and index are not read.
     The Series is not copied and is not modified.
+
+    Semantic evidence is collected, then the semantic type is resolved.
+    Only after that resolution, and only when the selected type is
+    Numeric, does this function collect descriptive statistics. A
+    physically numeric column that resolves as Constant, Empty, or any
+    other type is not described.
     """
     if not isinstance(series, pd.Series):
         raise TypeError("analyze_series expects a pandas Series")
@@ -194,6 +216,7 @@ def analyze_series(
         )
         resolution = resolve_semantics(candidates=candidates)
     inferred = build_inferred_semantic_result(physical, resolution)
+    numeric_analysis = _descriptive_after_resolution(series, inferred)
     evidence = ColumnEvidence(
         basic=basic,
         numeric_structure=numeric_structure,
@@ -207,7 +230,42 @@ def analyze_series(
         physical=physical,
         evidence=evidence,
         inferred=inferred,
+        numeric_analysis=numeric_analysis,
     )
+
+
+def _descriptive_after_resolution(
+    series: pd.Series,
+    inferred: InferredSemanticResult,
+) -> Optional[NumericDescriptiveAnalysis]:
+    """Collect Numeric descriptive statistics only after a Numeric selection.
+
+    Physical integer or floating storage is not enough. Constant and Empty
+    numeric columns have already resolved, and this function does not
+    describe them. Unresolved and ambiguous columns are not described.
+    """
+    if inferred.selected_type is not SemanticType.NUMERIC:
+        return None
+    return collect_numeric_descriptive_analysis(series)
+
+
+def _require_numeric_analysis(analysis: ColumnAnalysis) -> None:
+    """Keep descriptive statistics on a selected Numeric column only."""
+    descriptive = analysis.numeric_analysis
+    if descriptive is None:
+        return
+    _require(descriptive, NumericDescriptiveAnalysis, "numeric_analysis")
+    if analysis.inferred.selected_type is not SemanticType.NUMERIC:
+        raise ValueError(
+            "numeric descriptive analysis applies only when the selected "
+            "semantic type is Numeric"
+        )
+    structure = analysis.evidence.numeric_structure
+    if structure is not None and structure.finite_count != descriptive.finite_count:
+        raise ValueError(
+            "numeric descriptive finite_count must match numeric-structure "
+            "finite_count"
+        )
 
 
 def _evidence_for_candidates(

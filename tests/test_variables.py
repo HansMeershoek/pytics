@@ -13,6 +13,7 @@ import pytest
 import pytics
 import pytics.analysis.column as column_module
 import pytics.analysis.dataset as dataset_module
+import pytics.analysis.numeric as numeric_descriptive
 import pytics.analysis.variables as variables_module
 import pytics.semantics.column_evidence as basic_evidence
 import pytics.semantics.core_candidates as core_candidates
@@ -52,7 +53,14 @@ _UUID_B = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 _UUID_C = "6ba7b811-9dad-11d1-80b4-00c04fd430c8"
 _COMPACT_A = "550e8400e29b41d4a716446655440000"
 _COMPACT_B = "6ba7b8109dad11d180b400c04fd430c8"
-_FORBIDDEN_TYPES = (pd.DataFrame, pd.Series, DatasetAnalysis, ColumnAnalysis)
+_FORBIDDEN_TYPES = (
+    pd.DataFrame,
+    pd.Series,
+    np.ndarray,
+    np.generic,
+    DatasetAnalysis,
+    ColumnAnalysis,
+)
 
 
 def _summary(frame: pd.DataFrame) -> VariablesSummary:
@@ -838,6 +846,7 @@ def test_builder_does_not_rescan_after_analysis(monkeypatch: pytest.MonkeyPatch)
         (basic_evidence, "collect_basic_column_evidence"),
         (frequency_evidence, "collect_frequency_evidence"),
         (numeric_evidence, "collect_numeric_structure_evidence"),
+        (numeric_descriptive, "collect_numeric_descriptive_analysis"),
         (string_evidence, "collect_string_structure_evidence"),
         (pattern_evidence, "collect_pattern_evidence"),
         (string_content_evidence, "collect_string_content_evidence"),
@@ -854,6 +863,10 @@ def test_builder_does_not_rescan_after_analysis(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(pd.Series, "value_counts", _fail)
     monkeypatch.setattr(pd.Series, "nunique", _fail)
     monkeypatch.setattr(pd.Series, "isna", _fail)
+    monkeypatch.setattr(pd.Series, "dropna", _fail)
+    monkeypatch.setattr(pd.Series, "quantile", _fail)
+    monkeypatch.setattr(pd.Series, "std", _fail)
+    monkeypatch.setattr(pd.Series, "mean", _fail)
     summary = build_variables_summary(analysis)
     _assert_invariants(summary, analysis)
     detail = summary.variables[0].detail
@@ -861,6 +874,11 @@ def test_builder_does_not_rescan_after_analysis(monkeypatch: pytest.MonkeyPatch)
     assert detail.negative_count == 1
     assert detail.zero_count == 1
     assert detail.positive_count == 1
+    assert detail.descriptive is not None
+    assert detail.descriptive is not analysis.columns[0].numeric_analysis
+    assert detail.descriptive.minimum == -1.0
+    assert detail.descriptive.maximum == 2.0
+    assert detail.descriptive.mean == pytest.approx((-1.0 + 0.0 + 2.0) / 3.0)
 
 
 def test_frequency_is_collected_only_for_nonstructural_categoricals(
@@ -915,6 +933,7 @@ def test_variables_module_does_not_import_pandas_or_collectors():
         "collect_basic_column_evidence",
         "collect_frequency_evidence",
         "collect_numeric_structure_evidence",
+        "collect_numeric_descriptive_analysis",
         "collect_string_structure_evidence",
         "collect_pattern_evidence",
         "collect_string_content_evidence",

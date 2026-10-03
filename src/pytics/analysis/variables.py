@@ -8,10 +8,12 @@ semantic type. The result does not keep the analysis it was built from.
 Every physical column has one common summary. A specialized detail is
 attached only for the semantic type resolution selected, and only when
 the retained evidence for that detail is present. Numeric detail copies
-numeric-structure counts. Categorical detail copies frequency counts.
-Identifier detail copies pattern counts. Those counts may overlap and
-are not scores. Empty, Constant, Boolean, Datetime, Timedelta, Text,
-insufficient evidence, and ambiguity have no specialized detail.
+numeric-structure counts and, when that column analysis retained one,
+the finite-population descriptive statistics. Categorical detail copies
+frequency counts. Identifier detail copies pattern counts. Those counts
+may overlap and are not scores. Empty, Constant, Boolean, Datetime,
+Timedelta, Text, insufficient evidence, and ambiguity have no
+specialized detail.
 
 Confidence and inference source are not copied. A candidate-derived
 selection has neither, and this result does not invent them.
@@ -26,6 +28,7 @@ from typing import Union
 
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.dataset import DatasetAnalysis
+from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.semantics.interpretation import SemanticType
 from pytics.semantics.physical import PhysicalDtype
 from pytics.semantics.resolution import ResolutionStatus
@@ -45,12 +48,15 @@ class NumericVariableDetail:
     Finite values and the two infinities partition non-missing values.
     ``is_non_decreasing`` and ``is_non_increasing`` are ``bool`` when
     every non-missing value is finite, and both are ``None`` when any
-    non-missing value is infinite. ``None`` is not false. No non-missing
+    non-missing value is infinite. ``None`` is not false.     No non-missing
     values and one finite value are both directions. These flags do not
     record a step size.
 
-    This is not a numeric profile. Minimum, maximum, mean, median,
-    standard deviation, and quantiles are not here.
+    ``descriptive`` is the retained finite-population profile when column
+    analysis collected one. It is a separate frozen value, not the
+    numeric-structure evidence and not a Series. Range and interquartile
+    range stay on that value. Skewness, kurtosis, and outlier signals are
+    not part of it.
     """
 
     n_non_missing: int
@@ -64,6 +70,7 @@ class NumericVariableDetail:
     non_integer_like_count: int
     is_non_decreasing: Optional[bool]
     is_non_increasing: Optional[bool]
+    descriptive: Optional[NumericDescriptiveAnalysis] = None
 
     def __post_init__(self) -> None:
         _require_count(self.n_non_missing, "n_non_missing")
@@ -99,6 +106,7 @@ class NumericVariableDetail:
             self.is_non_decreasing,
             self.is_non_increasing,
         )
+        _require_descriptive(self.finite_count, self.descriptive)
 
     @property
     def infinity_count(self) -> int:
@@ -472,7 +480,42 @@ def _numeric_detail(column: ColumnAnalysis) -> Optional[NumericVariableDetail]:
         non_integer_like_count=evidence.non_integer_like_count,
         is_non_decreasing=evidence.is_non_decreasing,
         is_non_increasing=evidence.is_non_increasing,
+        descriptive=_copied_descriptive(column.numeric_analysis),
     )
+
+
+def _copied_descriptive(
+    descriptive: Optional[NumericDescriptiveAnalysis],
+) -> Optional[NumericDescriptiveAnalysis]:
+    """Copy retained descriptive facts without calculating them again.
+
+    The product value is a new frozen object. It does not alias the
+    analysis object, and it does not keep a Series or the source array.
+    """
+    if descriptive is None:
+        return None
+    return NumericDescriptiveAnalysis(
+        finite_count=descriptive.finite_count,
+        minimum=descriptive.minimum,
+        maximum=descriptive.maximum,
+        mean=descriptive.mean,
+        median=descriptive.median,
+        standard_deviation=descriptive.standard_deviation,
+        q1=descriptive.q1,
+        q3=descriptive.q3,
+    )
+
+
+def _require_descriptive(
+    finite_count: int,
+    descriptive: Optional[NumericDescriptiveAnalysis],
+) -> None:
+    if descriptive is None:
+        return
+    if not isinstance(descriptive, NumericDescriptiveAnalysis):
+        raise TypeError("descriptive must be a NumericDescriptiveAnalysis")
+    if descriptive.finite_count != finite_count:
+        raise ValueError("descriptive finite_count must match numeric detail")
 
 
 def _categorical_detail(

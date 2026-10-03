@@ -5,5 +5,6 @@ Import paths and type names here are not a frozen public schema.
 Semantic inference stays in ``pytics.semantics``. This package owns the
 broader column and dataset records, the DataFrame traversal, the dataset
 overview, and the variables summary aggregated from an existing dataset
-analysis.
+analysis. Numeric descriptive statistics for a selected Numeric column
+are collected in this package after semantic resolution.
 """

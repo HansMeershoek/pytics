@@ -123,7 +123,7 @@ Start with a searchable, sortable, professional variable table. Variable detail 
 | --- | --- | --- |
 | REQ-IA-07 | Variables begin as a searchable, sortable table, with type-aware detail under progressive disclosure. | Accepted |
 
-An internal variables summary now exposes one ordered row per physical column, with universal counts and type-specific detail for Numeric, Categorical, and Identifier ([DEC-090](DECISIONS.md#dec-090)). It does not render the table, add sort controls, or disclose Boolean, Datetime, Timedelta, Text, Empty, or Constant statistics beyond the common facts and the selected type.
+An internal variables summary now exposes one ordered row per physical column, with universal counts and type-specific detail for Numeric, Categorical, and Identifier ([DEC-090](DECISIONS.md#dec-090)). A selected Numeric row also carries finite-population descriptive statistics ([DEC-091](DECISIONS.md#dec-091)). The summary does not render the table, add sort controls, or disclose Boolean, Datetime, Timedelta, Text, Empty, or Constant statistics beyond the common facts and the selected type.
 
 ### Missing
 

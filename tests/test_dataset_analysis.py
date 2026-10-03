@@ -291,6 +291,7 @@ def test_structural_columns_keep_basic_evidence_only():
         assert analyzed.evidence.string_structure is None
         assert analyzed.evidence.pattern is None
         assert analyzed.evidence.frequency is None
+        assert analyzed.numeric_analysis is None
         assert analyzed.inferred.interpretation is not None
 
 
@@ -630,6 +631,7 @@ def test_analysis_does_not_retain_source_values():
             column.evidence.string_structure,
             column.evidence.pattern,
             column.inferred,
+            column.numeric_analysis,
         ):
             assert not isinstance(value, (pd.DataFrame, pd.Series, np.ndarray))
     assert not any(
