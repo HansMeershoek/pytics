@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. That consolidation is not an implementation slice and does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, and TSK-006 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, and Slice 005. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. No TSK-006 exists.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, and Slice 006. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Evidence-based inference does not start from this file. No TSK-007 exists.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, and TSK-006 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, and TSK-005 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, and TSK-006 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, or REQ-E-04.
 
 ## Reuse of 1.1.5
 
@@ -363,12 +363,78 @@ Do not change `pytics.profile` or `pytics.compare`. Do not export the new functi
 44. `PhysicalDtype` was not given duration-unit metadata.
 45. No commit or push was made.
 
-Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The current status is [After TSK-005](#after-tsk-005).
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 45 passed for TSK-005. Criterion 38 records the project memory at that verification. The status recorded for that verification is [After TSK-005](#after-tsk-005). The current status is [After TSK-006](#after-tsk-006).
 
 ## After TSK-005
 
-The planned strong-physical-type semantics phase is complete. The Semantic Foundation Review was consolidated in documentation on 2026-10-03. [DEC-064](DECISIONS.md#dec-064) through [DEC-076](DECISIONS.md#dec-076) record that architecture. No heuristic semantic inference was authorized. No TSK-006 was created. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)).
+The planned strong-physical-type semantics phase is complete. The Semantic Foundation Review was consolidated in documentation on 2026-10-03. [DEC-064](DECISIONS.md#dec-064) through [DEC-076](DECISIONS.md#dec-076) record that architecture. No heuristic semantic inference was authorized. No TSK-006 existed at that consolidation. TSK-006 was approved later and is recorded below. The next concrete implementation slice after TSK-006 remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)).
 
 Future implementation planning must respect that consolidated architecture: observations kept distinct from candidate assessments; resolution; material alternatives; High, Medium, and Low resolution confidence without a v0.1 numeric total-score; override provenance that preserves the inferred interpretation; and compute-once evidence. Those constraints are not a task and not a module layout ([OPEN-045](DECISIONS.md#open-questions)).
 
 The review agenda that TSK-005 named — precedence, result models, evidence, ambiguity, subtypes, overrides, configuration, thresholds, deterministic versus heuristic rules, interactions among Numeric, Categorical, Text, Identifier, and Binary, and temporary module boundaries — is no longer an open agenda. The accepted parts are the decisions above. The parts that stay open are the `OPEN-###` items those decisions name. That agenda was not a design and was not a slice.
+
+## TSK-006
+
+Slice 006, universal column evidence foundation. Approved 2026-10-03 after the semantic-foundation consolidation. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-S-03 and REQ-S-05, for exact observed characteristics and the prohibition on coercion. REQ-S-01 and REQ-S-04 are respected because Empty and Constant keep their existing readings. Those requirement rows stay Not started. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Keep the frozen `BasicColumnEvidence` fields `n_total`, `n_missing`, `n_non_missing`, and `n_unique_non_missing` as the stored primary observations.
+- Those four counts remain exact, full-column, and unsampled.
+- Derived read-only facts, computed from the stored counts and not stored themselves: `missing_ratio`, `unique_ratio_non_missing`, `has_missing`, `is_empty`, and `is_constant`, with the definitions in [DEC-077](DECISIONS.md#dec-077).
+- Undefined ratios are `None`. There is no `unique_ratio` alias.
+- Empty and Constant interpretation uses `is_empty` and `is_constant`. Precedence, evidence statements, confidence, and inference source stay as they were.
+- The composed chain still classifies the physical dtype once and collects basic evidence once.
+- Focused unit tests, plus the existing suite as a regression check.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows [DEC-063](DECISIONS.md#dec-063). The primary-versus-derived contract is [DEC-077](DECISIONS.md#dec-077). This slice narrows [OPEN-044](DECISIONS.md#open-questions) only for the denominator of `unique_ratio_non_missing`. It does not set an Identifier threshold.
+
+### Exclusions
+
+Do not implement a later evidence family. Do not implement value-frequency analysis, dominant-frequency analysis, singleton analysis, UUID, hash, email, URL, path, or datetime-string detection. Do not implement Numeric, Identifier, Categorical, Text, `{0, 1}` Binary, `{0.0, 1.0}` Binary, true/false, or yes/no inference. Do not implement candidate assessments, candidate resolution, material alternatives, new confidence rules, evidence-strength enums, scoring, abstention, user overrides, effective interpretation, ordinal representation, cross-column evidence, dataset-context inference, functional dependencies, downstream profiling statistics, or sampling.
+
+Do not add a provenance object. Do not add an evidence-family inheritance hierarchy. Do not add a generic observation property bag. Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049). Do not close [OPEN-044](DECISIONS.md#open-questions) beyond the denominator of this one property.
+
+Do not change `pytics.profile` or `pytics.compare`. Do not export the evidence type from top-level `pytics`. Do not add a dependency. Do not approve TSK-007.
+
+### Acceptance criteria
+
+1. The stored fields remain the four primary counts.
+2. Those counts stay exact and full-column. No sampling is used for them.
+3. `missing_ratio`, `unique_ratio_non_missing`, `has_missing`, `is_empty`, and `is_constant` are computed from the stored counts and are not stored fields.
+4. `missing_ratio` is `n_missing / n_total` when `n_total > 0`, and `None` when `n_total == 0`.
+5. `unique_ratio_non_missing` is `n_unique_non_missing / n_non_missing` when `n_non_missing > 0`, and `None` when `n_non_missing == 0`.
+6. An undefined ratio is not `0.0`, `1.0`, NaN, or infinity.
+7. There is no `unique_ratio` alias.
+8. `has_missing` is `n_missing > 0`.
+9. `is_empty` is `n_non_missing == 0`, for both a zero-length Series and an all-missing Series.
+10. `is_constant` is `n_non_missing > 0` and `n_unique_non_missing == 1`.
+11. A constant non-missing Series, a constant Series with missing observations, and a one-row non-missing Series are constant.
+12. A zero-length Series and an all-missing Series are empty and are not constant.
+13. A fully unique non-missing Series has `unique_ratio_non_missing == 1.0` and is not interpreted as Identifier.
+14. Missing-like literals remain observed values.
+15. Unhashable non-missing values still raise `TypeError` and are not normalized.
+16. Empty and Constant interpretation uses `is_empty` and `is_constant`.
+17. Precedence, evidence statements, confidence, and inferred source for Empty and Constant are unchanged.
+18. Physical Boolean, Datetime, timezone-aware Datetime, and Timedelta inference is unchanged.
+19. Normal collection obeys the count invariants.
+20. The composed chain classifies the physical dtype once and collects basic evidence once.
+21. Interpretation from already collected evidence does not scan the Series again.
+22. No provenance object was added.
+23. No later evidence family and no new semantic reading were added.
+24. No public API change and no new dependency.
+25. Focused tests pass.
+26. The semantic tests for TSK-001 through TSK-006 pass.
+27. The full suite stays at the documented baseline apart from the known PDF failure.
+28. [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-045](DECISIONS.md#open-questions), and [OPEN-046](DECISIONS.md#open-046) through [OPEN-049](DECISIONS.md#open-049) stay open.
+29. [OPEN-044](DECISIONS.md#open-questions) stays open except for the denominator of `unique_ratio_non_missing`.
+30. This section does not approve or implement a later slice.
+31. No unrelated production changes were made.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 31 passed for TSK-006.
+
+## After TSK-006
+
+TSK-006 strengthens the universal column-evidence family. It does not add a semantic reading. [DEC-077](DECISIONS.md#dec-077) records the primary-versus-derived contract and the denominator of `unique_ratio_non_missing`. No later evidence family was authorized. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create TSK-007.

@@ -48,6 +48,33 @@ Candidate assessments interpret observations in support of possible semantic rea
 
 Absence of support is not contradiction. No UUID pattern means Identifier did not receive UUID-pattern support. It does not mean Identifier has been contradicted. No repetition does not by itself contradict Categorical. No prose structure does not by itself contradict Text. A contradicting observation is positive evidence that conflicts with a specific claim of a candidate. Do not count every absent signal against a candidate.
 
+### Universal column evidence
+
+`BasicColumnEvidence` is the universal typed evidence family ([DEC-077](DECISIONS.md#dec-077)). Analytical observations use typed families, composed as needed. The core model is not a generic observation property bag. This specification does not name or authorize a later family, and it does not establish inheritance among families.
+
+The stored primary observations are exact, full-column, and unsampled:
+
+- `n_total`
+- `n_missing`
+- `n_non_missing`
+- `n_unique_non_missing`
+
+Each count is retained even when another count is mathematically related. There is no sampling for these four values. Missing-like literals such as `""`, `"NA"`, `"N/A"`, `"null"`, and `"?"` remain observed values unless pandas already represents them as missing.
+
+Derived convenience facts are read-only computations from those counts. They are not a second stored source of truth.
+
+- `missing_ratio` is `n_missing / n_total` when `n_total > 0`, and `None` when `n_total == 0`.
+- `unique_ratio_non_missing` is `n_unique_non_missing / n_non_missing` when `n_non_missing > 0`, and `None` when `n_non_missing == 0`.
+- `has_missing` is `n_missing > 0`.
+- `is_empty` is `n_non_missing == 0`.
+- `is_constant` is `n_non_missing > 0` and `n_unique_non_missing == 1`.
+
+An undefined ratio is `None`. It is not `0.0`, `1.0`, NaN, or infinity. There is no `unique_ratio` alias. `unique_ratio_non_missing` decides the denominator of this property only. It is not an Identifier threshold ([OPEN-044](DECISIONS.md#open-questions)).
+
+`is_empty` covers a zero-length Series and an all-missing Series. Both are empty, not constant. One repeated non-missing value is constant, including when missing observations are also present, and including a one-row non-missing Series.
+
+These four counts do not carry a procedure-provenance object. They are definitionally exact. A reusable provenance model waits for a second procedure ([DEC-076](DECISIONS.md#dec-076)). Sample sizes remain [OPEN-010](DECISIONS.md#open-questions).
+
 ### Confidence
 
 User-facing resolution confidence is High, Medium, or Low, together with concrete evidence ([DEC-042](DECISIONS.md#dec-042)). Those three words are not a displayed probability and not a candidate score.
@@ -56,7 +83,7 @@ Evidence role, evidence strength, and resolution confidence are distinct ([DEC-0
 
 The implemented physical rules may use High because the procedure is direct and exact. A strong heuristic or a sampled observation does not automatically imply High.
 
-The following block shows fields an interpretation can retain. It is not a detector, not a threshold, and not an assignment of High confidence. It does not define a unique-ratio denominator ([OPEN-044](DECISIONS.md#open-questions)).
+The following block shows fields an interpretation can retain. It is not a detector, not a threshold, and not an assignment of High confidence. It does not define an Identifier uniqueness threshold ([OPEN-044](DECISIONS.md#open-questions)). The denominator of `unique_ratio_non_missing` is [DEC-077](DECISIONS.md#dec-077). That property is not this illustration.
 
 ```text
 Semantic type
@@ -95,9 +122,11 @@ Empty and Constant are semantic interpretations and dataset facts ([DEC-046](DEC
 - an all-missing column is semantic interpretation Empty, and a dataset fact that the column is empty;
 - a column with exactly one distinct non-missing value is semantic interpretation Constant, and a dataset fact that the column is constant.
 
+Those dataset facts are `is_empty` and `is_constant` on the universal evidence value ([DEC-077](DECISIONS.md#dec-077)). A zero-length column is empty, not constant. Empty and Constant interpretation uses those facts.
+
 Empty precedes Constant. In the current semantic system those two readings win over competing type readings, including the physical Boolean, Datetime, and Timedelta rules already implemented, and over a Numeric or Identifier reading of the same column. That sentence is not an exhaustive precedence law for every future semantic reading. The physical dtype remains inspectable when Empty or Constant wins. Ordered categorical metadata (`categorical_ordered`) remains inspectable in that case. Semantic interpretation and physical or source facts stay distinct. Do not duplicate the underlying computation unnecessarily.
 
-TSK-002 through TSK-005 implement the readings below. They do not implement heuristic candidate resolution, user overrides, or the separate effective interpretation. Heuristic semantic inference is not authorized.
+TSK-002 through TSK-005 implement the readings below. TSK-006 adds no semantic reading. Those slices do not implement heuristic candidate resolution, user overrides, or the separate effective interpretation. Heuristic semantic inference is not authorized.
 
 - A non-empty, non-constant physical Boolean column is Boolean, with High confidence and physical-dtype provenance. A physical pandas Boolean is very strong direct Boolean/Binary evidence ([DEC-047](DECISIONS.md#dec-047)). That phrase does not rank physical Boolean as the strongest evidence of every kind.
 - A non-empty, non-constant physical Datetime column is Datetime, with High confidence and physical-dtype provenance. A non-empty, non-constant timezone-aware Datetime column is the same semantic type, with its own physical family and its own evidence statement. Native and timezone-aware datetime dtypes are strong evidence of Datetime semantics ([DEC-050](DECISIONS.md#dec-050)). Timezone-aware storage is not a second semantic type.
@@ -281,7 +310,7 @@ Identifier is a first-class semantic concept (`REQ-S-01`). It is a semantic type
 
 Admissible evidence, not a closed detector ([DEC-048](DECISIONS.md#dec-048)): uniqueness ratio, duplicate count, missing count, UUID or GUID-like structure, hash-like structure, sequential integer patterns, fixed-width codes, alphanumeric code patterns, prefixes and suffixes, monotonic or sequential behavior, and column name as a weak supporting signal.
 
-`unique_ratio == 1` alone is not sufficient. Perfect uniqueness is not a definitional requirement. Zero missingness is not sufficient and is not a definitional requirement. Their weight remains future evidence and thresholds. The unique-ratio denominator is not decided. Duplicates do not automatically disqualify Identifier. Duplicate identifiers may later be a quality finding under section I. A column name may support Identifier and must never decide it alone. Positive Identifier evidence is required before Identifier displaces a generic Numeric reading ([DEC-069](DECISIONS.md#dec-069)). UUID-like and hash-like structure are stronger Identifier evidence than generic uniqueness and are not currently sufficient alone ([DEC-072](DECISIONS.md#dec-072)). Thresholds, checklists, and that sufficiency question are [OPEN-044](DECISIONS.md#open-questions).
+`unique_ratio == 1` alone is not sufficient. Perfect uniqueness is not a definitional requirement. Zero missingness is not sufficient and is not a definitional requirement. Their weight remains future evidence and thresholds. The universal property `unique_ratio_non_missing` uses the non-missing count as its denominator ([DEC-077](DECISIONS.md#dec-077)). That does not decide an Identifier threshold, and it does not create a `unique_ratio` alias. Duplicates do not automatically disqualify Identifier. Duplicate identifiers may later be a quality finding under section I. A column name may support Identifier and must never decide it alone. Positive Identifier evidence is required before Identifier displaces a generic Numeric reading ([DEC-069](DECISIONS.md#dec-069)). UUID-like and hash-like structure are stronger Identifier evidence than generic uniqueness and are not currently sufficient alone ([DEC-072](DECISIONS.md#dec-072)). Thresholds, checklists, and that sufficiency question are [OPEN-044](DECISIONS.md#open-questions).
 
 Some semantic roles cannot be reliably resolved from one Series ([DEC-073](DECISIONS.md#dec-073)). Column-local observations may make more than one interpretation plausible. They cannot always observe dataset role. Example, not a fixture and not a detection rule: `customer_id` on transaction rows versus `customer_id` as an entity key; a country code as an attribute versus a country code as the entity; an SKU on order lines versus an SKU in a product master; an email as a contact attribute versus an email as an account identity.
 

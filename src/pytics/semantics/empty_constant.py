@@ -1,7 +1,7 @@
 """Empty and Constant interpretations from basic column evidence.
 
-Empty is zero non-missing observations. Constant is one distinct non-missing
-value in a column that is not empty. Empty is tested first. Any other column
+Empty is ``BasicColumnEvidence.is_empty``. Constant is
+``BasicColumnEvidence.is_constant``. Empty is tested first. Any other column
 gets no interpretation from these rules: absence is not an unknown type.
 
 Confidence is ``Confidence.HIGH`` because both rules are exact definitions
@@ -49,10 +49,10 @@ def interpret_empty_or_constant_from_evidence(
         raise TypeError("evidence must be BasicColumnEvidence")
     if not isinstance(physical, PhysicalDtype):
         raise TypeError("physical must be a PhysicalDtype")
-    if evidence.n_non_missing == 0:
+    if evidence.is_empty:
         semantic_type = SemanticType.EMPTY
         statement = f"0 non-missing observations out of {evidence.n_total}"
-    elif evidence.n_unique_non_missing == 1:
+    elif evidence.is_constant:
         semantic_type = SemanticType.CONSTANT
         statement = (
             "1 distinct non-missing value among "
