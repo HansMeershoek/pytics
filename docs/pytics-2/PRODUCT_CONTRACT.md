@@ -133,7 +133,7 @@ Where appropriate, analyses should consider:
 | --- | --- | --- |
 | REQ-P-10 | Lead inferential presentation with effect size, uncertainty, and context. Do not lead with the p-value, use significance stars, or treat a tiny p-value as inherent importance. Where correction applies, distinguish raw and adjusted p-values. | Accepted |
 
-"Where appropriate" is unresolved at the level of individual methods ([OPEN-006](DECISIONS.md#open-questions)). False-discovery-rate control is the preferred screening direction, with Benjamini-Hochberg as the leading candidate. The test family is not defined ([OPEN-007](DECISIONS.md#open-questions), [DEC-056](DECISIONS.md#dec-056)).
+"Where appropriate" is unresolved at the level of individual methods ([OPEN-006](DECISIONS.md#open-questions)). False-discovery-rate control is the preferred screening direction, with Benjamini-Hochberg as the leading candidate. The test family is not defined ([OPEN-007](DECISIONS.md#open-questions), [DEC-056](DECISIONS.md#dec-056)). TSK-024 stores a Numeric × Numeric estimate before its raw p-value and does not adjust that p-value ([DEC-095](DECISIONS.md#dec-095)).
 
 ## Bayesian inference
 

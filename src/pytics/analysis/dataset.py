@@ -3,8 +3,9 @@
 Each physical column is analyzed once, in source order. The result keeps
 dataset dimensions, the column analyses, missing-cell totals derived from
 basic evidence already retained, the exact missingness aggregates
-collected from one DataFrame pass, and the exact duplicate-row groups
-collected from a separate pass. It does not keep the DataFrame.
+collected from one DataFrame pass, the exact duplicate-row groups
+collected from a separate pass, and the Numeric × Numeric relationships
+collected from selected semantic types. It does not keep the DataFrame.
 """
 
 from __future__ import annotations
@@ -23,6 +24,9 @@ from pytics.analysis.duplicate import collect_duplicate_analysis
 from pytics.analysis.missing import MissingAnalysis
 from pytics.analysis.missing import _require_missing_attachment
 from pytics.analysis.missing import collect_missing_analysis
+from pytics.analysis.relationship import RelationshipAnalysis
+from pytics.analysis.relationship import _require_relationship_attachment
+from pytics.analysis.relationship import collect_relationship_analysis
 
 
 @dataclass(frozen=True)
@@ -40,9 +44,11 @@ class DatasetAnalysis:
 
     ``missing_analysis`` is the retained row distribution and exact
     missingness patterns. ``duplicate_analysis`` is the retained exact
-    duplicate groups. Both facts are cross-column, so they are not
-    derived from the column records. The missingness mask and the row
-    values are not stored. Neither pass depends on the other.
+    duplicate groups. ``relationship_analysis`` is the retained Numeric
+    × Numeric associations and the pair-coverage counts. All three are
+    cross-column, so they are not derived from one column record. The
+    missingness mask, the row values, and the paired arrays are not
+    stored. The three passes do not call each other.
     """
 
     n_rows: int
@@ -51,6 +57,7 @@ class DatasetAnalysis:
     columns: Tuple[ColumnAnalysis, ...]
     missing_analysis: MissingAnalysis
     duplicate_analysis: DuplicateAnalysis
+    relationship_analysis: RelationshipAnalysis
 
     def __post_init__(self) -> None:
         _require_count(self.n_rows, "n_rows")
@@ -82,6 +89,11 @@ class DatasetAnalysis:
             self.duplicate_analysis,
             n_rows=self.n_rows,
             n_columns=self.n_columns,
+        )
+        _require_relationship_attachment(
+            self.relationship_analysis,
+            self.columns,
+            n_rows=self.n_rows,
         )
 
     @property
@@ -117,8 +129,9 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
     converted. Column order is the DataFrame's column order. Duplicate
     labels stay distinct records. After the column analyses, one
     missingness pass counts exact row patterns, then one duplicate pass
-    groups exactly equal rows. Those two passes do not call each other.
-    The DataFrame is not copied and is not modified, and it is not stored
+    groups exactly equal rows, then one relationship pass describes
+    selected Numeric pairs. Those passes do not call each other. The
+    DataFrame is not copied and is not modified, and it is not stored
     on the result.
     """
     if not isinstance(frame, pd.DataFrame):
@@ -140,6 +153,7 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
         columns=columns,
         missing_analysis=collect_missing_analysis(frame),
         duplicate_analysis=collect_duplicate_analysis(frame),
+        relationship_analysis=collect_relationship_analysis(frame, columns),
     )
 
 

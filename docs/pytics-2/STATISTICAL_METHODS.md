@@ -36,6 +36,8 @@ Status: **Accepted as direction** ([DEC-055](DECISIONS.md#dec-055)). Not a close
 
 Standard analysis uses Spearman as a monotonic or rank perspective and Pearson as a linear perspective where applicable. Include uncertainty where methodologically appropriate, plus sample size and missing-pair information. Pearson and Spearman are not the same phenomenon.
 
+TSK-024 implements that standard pair for selected Numeric × selected Numeric only ([DEC-095](DECISIONS.md#dec-095)). Spearman is the primary descriptive association. Pearson is complementary. Both may exist together. The Pearson uncertainty in that slice is the classical Fisher z interval at 95%, without a bias correction, when `n >= 4` and the estimate is strictly inside `(-1, 1)`. Spearman has no interval there. The p-value is the raw two-sided SciPy p-value when `n >= 3`. Multiple-testing adjustment is not applied. This does not close the catalog, and it does not add Kendall, bootstrap, or a normality gate.
+
 Deep analysis may add Kendall, bootstrap confidence intervals, permutation or resampling inference, and further robust or nonlinear diagnostics where justified.
 
 ### Numeric × binary
@@ -90,7 +92,7 @@ Text and timedelta relationship methods are not specified. Omission is not a rej
 | Standard | Likely: descriptive statistics, effect sizes, primary relationships, confidence intervals where appropriate, appropriate frequentist inference, multiple-testing correction, missing analysis, duplicate analysis, univariate outliers, and controlled multivariate anomaly analysis. | Intended default. Not a closed list. Correction still depends on [OPEN-007](DECISIONS.md#open-questions). |
 | Deep | May add further bootstrap or resampling, further robust alternatives, broader Bayesian inference, post-hoc analysis, deeper temporal analysis, more expensive anomaly analysis, and deeper drift inference. | Direction, not a closed list |
 
-Exact contents and thresholds are [OPEN-010](DECISIONS.md#open-questions). An internal exact duplicate-row pass now exists ([DEC-094](DECISIONS.md#dec-094)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents.
+Exact contents and thresholds are [OPEN-010](DECISIONS.md#open-questions). An internal exact duplicate-row pass now exists ([DEC-094](DECISIONS.md#dec-094)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Numeric × Numeric relationship pass now exists ([DEC-095](DECISIONS.md#dec-095)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. Multiple-testing correction inside that pass is still not applied ([OPEN-007](DECISIONS.md#open-questions)).
 
 ## Bayesian work
 

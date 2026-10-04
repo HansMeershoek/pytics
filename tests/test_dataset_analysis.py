@@ -21,6 +21,7 @@ from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
 from pytics.analysis.missing import MissingAnalysis
+from pytics.analysis.relationship import RelationshipAnalysis
 from pytics.semantics.column_evidence import collect_basic_column_evidence
 from pytics.semantics.frequency_evidence import collect_frequency_evidence
 from pytics.semantics.inferred import InferredSemanticResult
@@ -43,6 +44,16 @@ _UUID_A = "550e8400-e29b-41d4-a716-446655440000"
 _UUID_B = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 _NO_OBSERVED_ROWS = MissingAnalysis(row_distribution=(), patterns=())
 _NO_DUPLICATE_GROUPS = DuplicateAnalysis(duplicate_groups=())
+_NO_RELATIONSHIPS = RelationshipAnalysis(
+    n_rows=0,
+    n_total_pairs=0,
+    n_supported_pairs=0,
+    n_analyzed_pairs=0,
+    n_unimplemented_family_pairs=0,
+    n_ineligible_pairs=0,
+    unimplemented_family_counts=(),
+    relationships=(),
+)
 
 
 def _numeric_column() -> ColumnAnalysis:
@@ -309,6 +320,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             columns=(),
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(ValueError, match="n_cells"):
         DatasetAnalysis(
@@ -318,6 +330,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             columns=(column,),
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(TypeError, match="tuple"):
         DatasetAnalysis(
@@ -327,6 +340,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             columns=[column],  # type: ignore[arg-type]
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(ValueError, match="one record"):
         DatasetAnalysis(
@@ -336,6 +350,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             columns=(column,),
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(TypeError, match="ColumnAnalysis"):
         DatasetAnalysis(
@@ -345,6 +360,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             columns=("column",),  # type: ignore[arg-type]
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     shifted = analyze_series(pd.Series([1, 2, 3]), position=1, label="amount")
     with pytest.raises(ValueError, match="column position"):
@@ -355,6 +371,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             columns=(shifted,),
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(ValueError, match="n_total"):
         DatasetAnalysis(
@@ -364,6 +381,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             columns=(column,),
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(dataclasses.FrozenInstanceError):
         DatasetAnalysis(
@@ -373,6 +391,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             columns=(),
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         ).n_rows = 1  # type: ignore[misc]
 
 
@@ -398,6 +417,7 @@ def test_dataset_facts_for_a_rectangular_frame():
         "columns",
         "missing_analysis",
         "duplicate_analysis",
+        "relationship_analysis",
     }
     assert isinstance(analyzed.missing_analysis, MissingAnalysis)
     assert isinstance(analyzed.columns, tuple)

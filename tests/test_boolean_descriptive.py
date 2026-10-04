@@ -22,6 +22,7 @@ from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.relationship import relationship_analysis_for_columns
 from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.variables import BooleanVariableDetail
@@ -367,6 +368,10 @@ def test_boolean_selection_without_retained_counts_omits_detail():
                 (column.evidence.basic.n_missing,),
             ),
             duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
+            relationship_analysis=relationship_analysis_for_columns(
+                (column,),
+                n_rows=2,
+            ),
         )
     )
     assert summary.variables[0].selected_type is SemanticType.BOOLEAN

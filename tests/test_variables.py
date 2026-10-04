@@ -32,6 +32,7 @@ from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.relationship import relationship_analysis_for_columns
 from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.variables import BooleanVariableDetail
@@ -185,6 +186,10 @@ def _analysis_of(column: ColumnAnalysis) -> DatasetAnalysis:
             (column.evidence.basic.n_missing,),
         ),
         duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
+        relationship_analysis=relationship_analysis_for_columns(
+            (column,),
+            n_rows=n_rows,
+        ),
     )
 
 
@@ -872,6 +877,7 @@ def test_builder_does_not_rescan_after_analysis(monkeypatch: pytest.MonkeyPatch)
         (core_candidates, "assess_numeric_candidate"),
         (core_candidates, "assess_categorical_candidate"),
         (core_candidates, "assess_text_candidate"),
+        (dataset_module, "collect_relationship_analysis"),
     )
     for module, name in targets:
         monkeypatch.setattr(module, name, _fail)

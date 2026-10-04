@@ -16,6 +16,7 @@ from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.relationship import RelationshipAnalysis
 from pytics.analysis.missing import ColumnMissingness
 from pytics.analysis.missing import MissingAnalysis
 from pytics.analysis.missing import MissingSummary
@@ -28,6 +29,16 @@ from pytics.analysis.variables import build_variables_summary
 
 _RETAINED = (pd.DataFrame, pd.Series, pd.Index, np.ndarray)
 _NO_DUPLICATE_GROUPS = DuplicateAnalysis(duplicate_groups=())
+_NO_RELATIONSHIPS = RelationshipAnalysis(
+    n_rows=0,
+    n_total_pairs=0,
+    n_supported_pairs=0,
+    n_analyzed_pairs=0,
+    n_unimplemented_family_pairs=0,
+    n_ineligible_pairs=0,
+    unimplemented_family_counts=(),
+    relationships=(),
+)
 
 
 def _summary(frame: pd.DataFrame) -> MissingSummary:
@@ -467,6 +478,7 @@ def test_models_are_frozen_and_reject_inconsistent_facts():
             columns=(column,),
             missing_analysis=None,  # type: ignore[arg-type]
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(ValueError, match="sum to n_rows"):
         DatasetAnalysis(
@@ -479,6 +491,7 @@ def test_models_are_frozen_and_reject_inconsistent_facts():
                 patterns=(MissingnessPattern((), 1),),
             ),
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(ValueError, match="less than n_columns"):
         DatasetAnalysis(
@@ -497,6 +510,7 @@ def test_models_are_frozen_and_reject_inconsistent_facts():
                 ),
             ),
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(ValueError, match="weighted pattern cells"):
         DatasetAnalysis(
@@ -515,6 +529,7 @@ def test_models_are_frozen_and_reject_inconsistent_facts():
                 ),
             ),
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
     with pytest.raises(ValueError, match="pattern margins"):
         DatasetAnalysis(
@@ -527,6 +542,7 @@ def test_models_are_frozen_and_reject_inconsistent_facts():
                 patterns=(MissingnessPattern((0,), 2),),
             ),
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
+            relationship_analysis=_NO_RELATIONSHIPS,
         )
 
     with pytest.raises(ValueError, match="positive int"):

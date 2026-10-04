@@ -22,6 +22,7 @@ from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.relationship import relationship_analysis_for_columns
 from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.numeric import _on_segment
@@ -747,6 +748,10 @@ def test_numeric_detail_may_omit_descriptive_analysis():
                 (column.evidence.basic.n_missing,),
             ),
             duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
+            relationship_analysis=relationship_analysis_for_columns(
+                (column,),
+                n_rows=3,
+            ),
         )
     )
     detail = summary.variables[0].detail
@@ -843,6 +848,10 @@ def test_ambiguous_column_without_descriptive_analysis_has_no_detail():
                 (column.evidence.basic.n_missing,),
             ),
             duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
+            relationship_analysis=relationship_analysis_for_columns(
+                (column,),
+                n_rows=3,
+            ),
         )
     )
     assert summary.variables[0].resolution_status is ResolutionStatus.AMBIGUOUS

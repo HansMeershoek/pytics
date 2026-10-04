@@ -511,6 +511,8 @@ The shared statistical layer is accepted (`REQ-T-05`). The method-registry conce
 
 Pair-type direction is accepted in [STATISTICAL_METHODS.md](STATISTICAL_METHODS.md) ([DEC-055](DECISIONS.md#dec-055)). It covers numeric–numeric, numeric–binary, numeric–categorical, binary–binary, categorical–categorical, datetime–numeric, and datetime–categorical. Ordinal pairs apply only under `REQ-S-08`. That direction is not a closed catalog. Exact formulas, selection rules, and pair types with no direction yet are [OPEN-006](DECISIONS.md#open-questions).
 
+TSK-024 calculates one family in `pytics.analysis` ([DEC-095](DECISIONS.md#dec-095)). Both columns must be selected as Numeric. The pair is identified by physical position. Spearman rank correlation is the primary descriptive association. Pearson product-moment correlation is complementary. The population is the pairwise finite rows. The estimate, a Pearson Fisher z interval at 95% when defined, and the raw p-value are separate components. Spearman has no interval in that slice. Adjusted p-values are not calculated. No normality test chooses the method. No strength label or Finding is added. Other accepted pair directions are counted and not calculated. This does not complete the Relationships contract.
+
 Identifiers are excluded from ordinary correlation by default (`REQ-G-03`). Extreme high-cardinality categorical pairs are protected from meaningless or computationally explosive analysis. Datetime values are not converted to integers for ordinary correlation. A datetime column does not by itself establish a time-series context (`REQ-E-03`).
 
 ## L — Target analysis

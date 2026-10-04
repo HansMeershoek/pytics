@@ -21,6 +21,7 @@ from pytics.analysis.duplicate import DuplicateGroup
 from pytics.analysis.duplicate import DuplicateSummary
 from pytics.analysis.duplicate import build_duplicate_summary
 from pytics.analysis.duplicate import collect_duplicate_analysis
+from pytics.analysis.relationship import RelationshipAnalysis
 from pytics.analysis.missing import build_missing_summary
 from pytics.analysis.overview import build_dataset_overview
 from pytics.analysis.variables import VariableSummary
@@ -517,6 +518,16 @@ def test_models_are_frozen_and_reject_inconsistent_groups():
             columns=(),
             missing_analysis=missing_analysis_for_margins(5, ()),
             duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
+            relationship_analysis=RelationshipAnalysis(
+                n_rows=0,
+                n_total_pairs=0,
+                n_supported_pairs=0,
+                n_analyzed_pairs=0,
+                n_unimplemented_family_pairs=0,
+                n_ineligible_pairs=0,
+                unimplemented_family_counts=(),
+                relationships=(),
+            ),
         )
     with pytest.raises(TypeError, match="DuplicateAnalysis"):
         DatasetAnalysis(
@@ -526,6 +537,16 @@ def test_models_are_frozen_and_reject_inconsistent_groups():
             columns=(),
             missing_analysis=missing_analysis_for_margins(0, ()),
             duplicate_analysis=None,  # type: ignore[arg-type]
+            relationship_analysis=RelationshipAnalysis(
+                n_rows=0,
+                n_total_pairs=0,
+                n_supported_pairs=0,
+                n_analyzed_pairs=0,
+                n_unimplemented_family_pairs=0,
+                n_ineligible_pairs=0,
+                unimplemented_family_counts=(),
+                relationships=(),
+            ),
         )
 
 

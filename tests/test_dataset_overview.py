@@ -28,6 +28,7 @@ from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.relationship import relationship_analysis_for_columns
 from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.overview import ColumnRef
 from pytics.analysis.overview import DatasetOverview
@@ -279,6 +280,10 @@ def _manual_analysis(
             tuple(column.evidence.basic.n_missing for column in columns),
         ),
         duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
+        relationship_analysis=relationship_analysis_for_columns(
+            columns,
+            n_rows=n_rows,
+        ),
     )
 
 
@@ -714,6 +719,7 @@ def test_builder_does_not_call_analysis_or_semantic_collection(monkeypatch):
     targets = (
         (dataset_module, "analyze_dataframe"),
         (dataset_module, "collect_duplicate_analysis"),
+        (dataset_module, "collect_relationship_analysis"),
         (column_module, "analyze_series"),
         (pipeline, "infer_series_semantics"),
         (physical, "classify_physical_dtype"),
@@ -759,6 +765,7 @@ def test_overview_module_does_not_import_pandas_or_collectors():
         "resolve_semantics",
         "collect_duplicate_analysis",
         "collect_missing_analysis",
+        "collect_relationship_analysis",
     }
     assert forbidden.isdisjoint(names)
 
