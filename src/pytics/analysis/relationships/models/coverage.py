@@ -9,8 +9,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 from typing import Tuple
 from typing import Union
+
+from pytics.semantics.interpretation import SemanticType
 
 from pytics.analysis.relationships.models.boolean_boolean import (
     BooleanBooleanRelationship,
@@ -43,6 +46,99 @@ class UnimplementedRelationshipFamily(Enum):
     DATETIME_NUMERIC = "datetime_numeric"
     DATETIME_CATEGORICAL = "datetime_categorical"
     CATEGORICAL_BOOLEAN = "categorical_boolean"
+
+
+class SelectedPairCoverage(Enum):
+    """Coverage of one unordered pair of selected semantic types.
+
+    ``CALCULATED`` means this version produces a relationship record.
+    ``UNIMPLEMENTED`` means a recognized family has no calculator yet.
+    ``INELIGIBLE`` means the contract does not treat the pair as a
+    relationship candidate. A missing selected type is ineligible.
+    """
+
+    CALCULATED = "calculated"
+    UNIMPLEMENTED = "unimplemented"
+    INELIGIBLE = "ineligible"
+
+
+@dataclass(frozen=True)
+class SelectedPairClass:
+    """Classification of one unordered semantic pair.
+
+    ``unimplemented_family`` is set only for ``UNIMPLEMENTED``. A
+    calculated pair names its family by the record that is produced,
+    not by this object.
+    """
+
+    coverage: SelectedPairCoverage
+    unimplemented_family: Optional[UnimplementedRelationshipFamily] = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.coverage, SelectedPairCoverage):
+            raise TypeError("coverage must be a SelectedPairCoverage")
+        if self.coverage is SelectedPairCoverage.UNIMPLEMENTED:
+            if not isinstance(
+                self.unimplemented_family,
+                UnimplementedRelationshipFamily,
+            ):
+                raise ValueError("an unimplemented pair names its recognized family")
+            return
+        if self.unimplemented_family is not None:
+            raise ValueError("only an unimplemented pair names a family")
+
+
+# Recognized directions that are not calculated. Lookup ignores order.
+_UNIMPLEMENTED_FAMILIES = {
+    frozenset((SemanticType.DATETIME, SemanticType.NUMERIC)): (
+        UnimplementedRelationshipFamily.DATETIME_NUMERIC
+    ),
+    frozenset((SemanticType.DATETIME, SemanticType.CATEGORICAL)): (
+        UnimplementedRelationshipFamily.DATETIME_CATEGORICAL
+    ),
+    frozenset((SemanticType.CATEGORICAL, SemanticType.BOOLEAN)): (
+        UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN
+    ),
+}
+
+
+def classify_selected_pair(
+    left: Optional[SemanticType],
+    right: Optional[SemanticType],
+) -> SelectedPairClass:
+    """Classify one unordered pair of selected semantic types.
+
+    ``None`` is an unresolved column. It is ineligible, as are Identifier,
+    Constant, Empty, Text, Timedelta, and pair types with no recognized
+    family. A recognized family that is not calculated is unimplemented.
+    Categorical × Boolean is that family in either physical order.
+    Datetime × Boolean is ineligible: no datetime-boolean family is
+    recognized, and Boolean is not collapsed into Categorical.
+    This function does not read values and does not calculate a statistic.
+    """
+    if left is not None and not isinstance(left, SemanticType):
+        raise TypeError("left must be a SemanticType or None")
+    if right is not None and not isinstance(right, SemanticType):
+        raise TypeError("right must be a SemanticType or None")
+    if left is None or right is None:
+        return SelectedPairClass(coverage=SelectedPairCoverage.INELIGIBLE)
+    if left is SemanticType.NUMERIC and right is SemanticType.NUMERIC:
+        return SelectedPairClass(coverage=SelectedPairCoverage.CALCULATED)
+    if {left, right} == {SemanticType.NUMERIC, SemanticType.CATEGORICAL}:
+        return SelectedPairClass(coverage=SelectedPairCoverage.CALCULATED)
+    if left is SemanticType.BOOLEAN and right is SemanticType.BOOLEAN:
+        return SelectedPairClass(coverage=SelectedPairCoverage.CALCULATED)
+    if {left, right} == {SemanticType.NUMERIC, SemanticType.BOOLEAN}:
+        return SelectedPairClass(coverage=SelectedPairCoverage.CALCULATED)
+    if left is SemanticType.CATEGORICAL and right is SemanticType.CATEGORICAL:
+        return SelectedPairClass(coverage=SelectedPairCoverage.CALCULATED)
+    family = _UNIMPLEMENTED_FAMILIES.get(frozenset((left, right)))
+    if family is None:
+        return SelectedPairClass(coverage=SelectedPairCoverage.INELIGIBLE)
+    return SelectedPairClass(
+        coverage=SelectedPairCoverage.UNIMPLEMENTED,
+        unimplemented_family=family,
+    )
 
 
 @dataclass(frozen=True)

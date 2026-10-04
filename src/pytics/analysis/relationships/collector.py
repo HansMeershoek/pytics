@@ -65,6 +65,8 @@ from pytics.analysis.relationships.models import RelationshipsSummary
 from pytics.analysis.relationships.models import StandardizedMeanDifference
 from pytics.analysis.relationships.models import UnimplementedFamilyCount
 from pytics.analysis.relationships.models import UnimplementedRelationshipFamily
+from pytics.analysis.relationships.models.coverage import SelectedPairCoverage
+from pytics.analysis.relationships.models.coverage import classify_selected_pair
 from pytics.analysis.relationships.models import _require_nonnegative
 from pytics.analysis.relationships.numeric_boolean import (
     analyze as _analyze_numeric_boolean,
@@ -86,20 +88,6 @@ class _Eligibility(Enum):
 
 
 _PairClass = Union[UnimplementedRelationshipFamily, _Eligibility]
-
-
-# Recognized directions that are not implemented. Lookup ignores order.
-_UNIMPLEMENTED_FAMILIES = {
-    frozenset((SemanticType.DATETIME, SemanticType.NUMERIC)): (
-        UnimplementedRelationshipFamily.DATETIME_NUMERIC
-    ),
-    frozenset((SemanticType.DATETIME, SemanticType.CATEGORICAL)): (
-        UnimplementedRelationshipFamily.DATETIME_CATEGORICAL
-    ),
-    frozenset((SemanticType.CATEGORICAL, SemanticType.BOOLEAN)): (
-        UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN
-    ),
-}
 
 
 @dataclass(frozen=True)
@@ -531,29 +519,18 @@ def _pair_class(
 ) -> _PairClass:
     """Classify one unordered pair of selected types.
 
-    ``None`` is an unresolved column. It is ineligible, as are Identifier,
-    Constant, Empty, Text, Timedelta, and pair types with no recognized
-    family. A recognized family that is not calculated is unimplemented.
-    Categorical × Boolean is that family in either physical order.
-    Datetime × Boolean is ineligible: no datetime-boolean family is
-    recognized, and Boolean is not collapsed into Categorical.
+    The coverage decision is ``classify_selected_pair``. This adapter
+    keeps the collector's supported-pair list on that same decision.
     """
-    if left is None or right is None:
-        return _Eligibility.INELIGIBLE
-    if left is SemanticType.NUMERIC and right is SemanticType.NUMERIC:
+    classified = classify_selected_pair(left, right)
+    if classified.coverage is SelectedPairCoverage.CALCULATED:
         return _Eligibility.SUPPORTED
-    if {left, right} == {SemanticType.NUMERIC, SemanticType.CATEGORICAL}:
-        return _Eligibility.SUPPORTED
-    if left is SemanticType.BOOLEAN and right is SemanticType.BOOLEAN:
-        return _Eligibility.SUPPORTED
-    if {left, right} == {SemanticType.NUMERIC, SemanticType.BOOLEAN}:
-        return _Eligibility.SUPPORTED
-    if left is SemanticType.CATEGORICAL and right is SemanticType.CATEGORICAL:
-        return _Eligibility.SUPPORTED
-    family = _UNIMPLEMENTED_FAMILIES.get(frozenset((left, right)))
-    if family is None:
-        return _Eligibility.INELIGIBLE
-    return family
+    if classified.coverage is SelectedPairCoverage.UNIMPLEMENTED:
+        family = classified.unimplemented_family
+        if family is None:
+            raise ValueError("an unimplemented pair names its recognized family")
+        return family
+    return _Eligibility.INELIGIBLE
 
 
 def _require_recorded_pairs(

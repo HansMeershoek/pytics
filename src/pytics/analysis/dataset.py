@@ -5,8 +5,9 @@ dataset dimensions, the column analyses, missing-cell totals derived from
 basic evidence already retained, the exact missingness aggregates
 collected from one DataFrame pass, the exact duplicate-row groups
 collected from a separate pass, and the heterogeneous relationship
-records collected from selected semantic types. It does not keep the
-DataFrame.
+records collected from selected semantic types, and, when the
+caller names one, the target projection of those facts. It does not
+keep the DataFrame.
 """
 
 from __future__ import annotations
@@ -28,6 +29,10 @@ from pytics.analysis.missing import collect_missing_analysis
 from pytics.analysis.relationship import RelationshipAnalysis
 from pytics.analysis.relationship import _require_relationship_attachment
 from pytics.analysis.relationship import collect_relationship_analysis
+from pytics.analysis.target import TargetAnalysis
+from pytics.analysis.target import _require_target_attachment
+from pytics.analysis.target import project_target_analysis
+from pytics.analysis.target import resolve_target_position
 
 
 @dataclass(frozen=True)
@@ -51,6 +56,11 @@ class DatasetAnalysis:
     cross-column, so they are not derived from one column record. The
     missingness mask, the row values, and the paired arrays are not
     stored. The three passes do not call each other.
+
+    ``target_analysis`` is ``None`` when the caller did not name a
+    target. When it is present, it is a projection of the selected
+    column and of the relationship records already stored here. It is
+    not a second statistical pass.
     """
 
     n_rows: int
@@ -60,6 +70,7 @@ class DatasetAnalysis:
     missing_analysis: MissingAnalysis
     duplicate_analysis: DuplicateAnalysis
     relationship_analysis: RelationshipAnalysis
+    target_analysis: Optional[TargetAnalysis] = None
 
     def __post_init__(self) -> None:
         _require_count(self.n_rows, "n_rows")
@@ -97,6 +108,12 @@ class DatasetAnalysis:
             self.columns,
             n_rows=self.n_rows,
         )
+        _require_target_attachment(
+            self.target_analysis,
+            self.columns,
+            self.relationship_analysis.relationships,
+            n_rows=self.n_rows,
+        )
 
     @property
     def n_missing_cells(self) -> int:
@@ -124,7 +141,11 @@ class DatasetAnalysis:
         return self.n_missing_cells / self.n_cells
 
 
-def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
+def analyze_dataframe(
+    frame: pd.DataFrame,
+    *,
+    target: object = None,
+) -> DatasetAnalysis:
     """Analyze each physical column of a DataFrame once.
 
     The argument must already be a pandas DataFrame. Other inputs are not
@@ -135,9 +156,19 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
     pairs of each calculated relationship family. Those passes do not
     call each other. The DataFrame is not copied and is not modified, and
     it is not stored on the result.
+
+    ``target`` requests one column. ``None`` requests no target analysis.
+    A label must match exactly one column. ``TargetPosition`` selects a
+    physical position when labels are duplicated. A missing or ambiguous
+    target raises. It does not guess a column, and it does not return a
+    dataset with target analysis disabled. The target projection runs
+    after the relationship records exist and does not calculate them again.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("analyze_dataframe expects a pandas DataFrame")
+    target_position = None
+    if target is not None:
+        target_position = resolve_target_position(frame.columns, target)
     n_rows = frame.shape[0]
     n_columns = frame.shape[1]
     columns = tuple(
@@ -148,6 +179,15 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
         )
         for position in range(n_columns)
     )
+    relationship_analysis = collect_relationship_analysis(frame, columns)
+    target_analysis = None
+    if target_position is not None:
+        target_analysis = project_target_analysis(
+            columns,
+            relationship_analysis.relationships,
+            position=target_position,
+            n_rows=n_rows,
+        )
     return DatasetAnalysis(
         n_rows=n_rows,
         n_columns=n_columns,
@@ -155,7 +195,8 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
         columns=columns,
         missing_analysis=collect_missing_analysis(frame),
         duplicate_analysis=collect_duplicate_analysis(frame),
-        relationship_analysis=collect_relationship_analysis(frame, columns),
+        relationship_analysis=relationship_analysis,
+        target_analysis=target_analysis,
     )
 
 

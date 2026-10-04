@@ -132,6 +132,8 @@ Do not implement it. Schema and API are [OPEN-039](DECISIONS.md#open-questions).
 
 Target associations reuse this relationship layer (`REQ-T-05`, [DEC-059](DECISIONS.md#dec-059)).
 
+TSK-032 does that reuse by projection ([DEC-103](DECISIONS.md#dec-103)). An explicit target keeps the relationship records that already involve it, including their dataset-level Benjamini–Hochberg adjusted p-values. It does not calculate those statistics again and it does not adjust them for a target-only family. Numeric × Boolean stays True minus False. Boolean × Boolean stays conditioned on the left column. No problem type, ranking, or diagnostic model is added.
+
 One lightweight untuned diagnostic model is allowed, for understanding (`REQ-L-04`). Validation is holdout or cross-validation, not training-set evaluation (`REQ-L-05`). Held-out permutation importance is the primary importance direction. Report spread across permutations where applicable. Warn that correlated predictors can share or obscure that importance. Do not present it as causal importance (`REQ-L-07`).
 
 The estimator family is not selected ([OPEN-013](DECISIONS.md#open-questions)).

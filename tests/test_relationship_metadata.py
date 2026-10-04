@@ -152,7 +152,9 @@ def test_dataset_container_keeps_coverage_and_not_one_method() -> None:
         "missing_analysis",
         "duplicate_analysis",
         "relationship_analysis",
+        "target_analysis",
     ]
+    assert analysis.target_analysis is None
     _assert_no_dataset_claims(retained)
     _assert_no_dataset_claims(summary)
     assert tuple(RelationshipFamily) == (

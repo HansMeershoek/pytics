@@ -173,6 +173,8 @@ Potential internal sections, **Proposed / not yet finalized** as a fixed interna
 | --- | --- | --- |
 | REQ-IA-12 | Show Target only when target analysis exists. | Accepted |
 
+`DatasetAnalysis.target_analysis` is `None` when the caller did not name a target, and a `TargetSummary` is absent in that same case ([DEC-103](DECISIONS.md#dec-103)). That is the analytical condition for showing Target. The view is not rendered. The result does not rank other columns and does not contain a diagnostic model.
+
 ### Time Series
 
 Shown only when genuine time structure is inferred or explicitly configured (`REQ-E-03`, `REQ-E-04`).

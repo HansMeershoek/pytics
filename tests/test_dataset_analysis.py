@@ -418,7 +418,9 @@ def test_dataset_facts_for_a_rectangular_frame():
         "missing_analysis",
         "duplicate_analysis",
         "relationship_analysis",
+        "target_analysis",
     }
+    assert analyzed.target_analysis is None
     assert isinstance(analyzed.missing_analysis, MissingAnalysis)
     assert isinstance(analyzed.columns, tuple)
 
