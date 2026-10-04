@@ -99,9 +99,10 @@ class PredictorDecision(Enum):
     ``IDENTIFIER``, ``EMPTY``, ``CONSTANT``, ``UNRESOLVED``, and
     ``UNSUPPORTED_TYPE`` follow the selected semantic state. Datetime,
     Timedelta, and Text are ``UNSUPPORTED_TYPE``. ``IDENTICAL_TO_TARGET``
-    means the column equals the target on every modeling row. It is a
-    duplicate guard, not leakage detection. The remaining exclusions are
-    read from the training rows only.
+    means leakage evidence recorded an exact duplicate on every
+    applicable target row. The diagnostic excludes that column and does
+    not compare it again. The decision is not itself a leakage verdict.
+    The remaining exclusions are read from the training rows only.
     """
 
     INCLUDED = "included"
@@ -293,7 +294,9 @@ class DiagnosticPopulation:
             _require_count(self.n_training, "n_training")
             _require_count(self.n_validation, "n_validation")
             if self.n_training + self.n_validation != self.n_modeling:
-                raise ValueError("training and validation rows must be the modeling rows")
+                raise ValueError(
+                    "training and validation rows must be the modeling rows"
+                )
         if not isinstance(self.classes, tuple):
             raise TypeError("classes must be a tuple")
         if not self.classes:
@@ -343,7 +346,9 @@ class DiagnosticPredictor:
         if (self.resolution_status is ResolutionStatus.RESOLVED) != (
             self.selected_type is not None
         ):
-            raise ValueError("a selected type exists exactly when resolution selected one")
+            raise ValueError(
+                "a selected type exists exactly when resolution selected one"
+            )
         forced = _expected_semantic_decision(self.selected_type)
         if forced is not None:
             if self.decision is not forced:
@@ -625,7 +630,9 @@ def _require_diagnostic_attachment(
         raise ValueError("the diagnostic task must follow the target's semantic type")
     _require_population_attachment(diagnostic.population, target)
     if diagnostic.predictors:
-        others = tuple(column for column in columns if column.position != target.position)
+        others = tuple(
+            column for column in columns if column.position != target.position
+        )
         if len(diagnostic.predictors) != len(others):
             raise ValueError("diagnostic predictors must list every other column")
         for item, column in zip(diagnostic.predictors, others):
@@ -670,7 +677,9 @@ def _require_population_attachment(
         if not _same_value(item.value, value):
             raise ValueError("diagnostic classes must be the observed target classes")
         if item.n_modeling != count:
-            raise ValueError("diagnostic class counts must be the observed class counts")
+            raise ValueError(
+                "diagnostic class counts must be the observed class counts"
+            )
 
 
 def _target_class_counts(target: object) -> Tuple[Tuple[object, int], ...]:

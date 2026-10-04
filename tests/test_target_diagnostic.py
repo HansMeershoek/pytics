@@ -269,17 +269,24 @@ def test_repeated_runs_are_identical_and_seed_is_retained() -> None:
     second = analyze_dataframe(frame, target="y")
     assert first.target_diagnostic == second.target_diagnostic
     reseeded = analyze_target_diagnostic(
-        frame, first.columns, first.target_analysis, seed=7
+        frame, first.columns, first.target_analysis, first.target_leakage, seed=7
     )
     assert reseeded.design.random_seed == 7
-    assert reseeded.population.classes != first.target_diagnostic.population.classes or (
-        reseeded.evaluation != first.target_diagnostic.evaluation
+    assert (
+        reseeded.population.classes != first.target_diagnostic.population.classes
+        or (reseeded.evaluation != first.target_diagnostic.evaluation)
     )
     with pytest.raises(ValueError, match="seed"):
-        analyze_target_diagnostic(frame, first.columns, first.target_analysis, seed=-1)
+        analyze_target_diagnostic(
+            frame, first.columns, first.target_analysis, first.target_leakage, seed=-1
+        )
     with pytest.raises(ValueError, match="seed"):
         analyze_target_diagnostic(
-            frame, first.columns, first.target_analysis, seed=True  # type: ignore[arg-type]
+            frame,
+            first.columns,
+            first.target_analysis,
+            first.target_leakage,
+            seed=True,  # type: ignore[arg-type]
         )
 
 
@@ -350,7 +357,9 @@ def test_target_side_statuses_are_decided_before_any_split() -> None:
     many = pd.DataFrame(
         {
             "x": np.arange(202, dtype=np.float64),
-            "y": pd.Series([f"k{index // 2}" for index in range(202)], dtype="category"),
+            "y": pd.Series(
+                [f"k{index // 2}" for index in range(202)], dtype="category"
+            ),
         }
     )
     assert _diagnostic(many, "y").status is DiagnosticStatus.TOO_MANY_TARGET_CLASSES
@@ -387,12 +396,17 @@ def test_one_observed_class_declines_without_fitting(
         ),
     )
     monkeypatch.setattr(Pipeline, "fit", _fail)
-    diagnostic = analyze_target_diagnostic(frame, analysis.columns, one_class)
+    diagnostic = analyze_target_diagnostic(
+        frame, analysis.columns, one_class, analysis.target_leakage
+    )
     assert diagnostic.status is DiagnosticStatus.INSUFFICIENT_TARGET_CLASSES
     assert diagnostic.task is None and diagnostic.design is None
     assert diagnostic.population.n_modeling == 300
     declined = analyze_target_diagnostic(
-        _multiclass_frame(), categorical.columns, single_level
+        _multiclass_frame(),
+        categorical.columns,
+        single_level,
+        categorical.target_leakage,
     )
     assert declined.status is DiagnosticStatus.INSUFFICIENT_TARGET_CLASSES
 
@@ -574,7 +588,9 @@ def test_wide_and_unscalable_predictors_are_excluded_with_a_reason() -> None:
         {
             "y": signal + rng.normal(size=n),
             "signal": signal,
-            "wide": pd.Series([f"k{index // 2}" for index in range(n)], dtype="category"),
+            "wide": pd.Series(
+                [f"k{index // 2}" for index in range(n)], dtype="category"
+            ),
             "huge": np.where(rng.random(n) < 0.5, -1e300, 1e300),
         }
     )
@@ -654,7 +670,9 @@ def _design_frame(
             values = series.cat.codes.to_numpy().astype(np.int64)
         elif pd.api.types.is_bool_dtype(series.dtype):
             values = np.where(
-                series.notna().to_numpy(), series.fillna(False).to_numpy().astype(int), -1
+                series.notna().to_numpy(),
+                series.fillna(False).to_numpy().astype(int),
+                -1,
             ).astype(np.int64)
         else:
             values = series.to_numpy(dtype=np.float64, na_value=np.nan)
@@ -816,7 +834,9 @@ def test_diagnostic_does_not_change_target_or_relationship_truth() -> None:
         DiagnosticStatus.INSUFFICIENT_TARGET_POPULATION
     )
     assert small.target_analysis.status is TargetStatus.SUPPORTED
-    assert small.target_analysis.categorical_facts is small.columns[3].categorical_analysis
+    assert (
+        small.target_analysis.categorical_facts is small.columns[3].categorical_analysis
+    )
 
 
 def test_dataset_attachment_rejects_an_inconsistent_diagnostic() -> None:
@@ -834,7 +854,10 @@ def test_dataset_attachment_rejects_an_inconsistent_diagnostic() -> None:
         DatasetAnalysis(**{**fields, "target_diagnostic": "model"})
     with pytest.raises(ValueError, match="name the analyzed target"):
         DatasetAnalysis(
-            **{**fields, "target_diagnostic": dataclasses.replace(diagnostic, target_position=2)}
+            **{
+                **fields,
+                "target_diagnostic": dataclasses.replace(diagnostic, target_position=2),
+            }
         )
     with pytest.raises(ValueError, match="task must follow"):
         DatasetAnalysis(
@@ -1081,17 +1104,36 @@ def test_inputs_must_be_the_analysis_of_the_frame() -> None:
     frame = _binary_frame()
     analysis = analyze_dataframe(frame, target="y")
     with pytest.raises(TypeError, match="DataFrame"):
-        analyze_target_diagnostic(frame.to_dict(), analysis.columns, analysis.target_analysis)  # type: ignore[arg-type]
+        analyze_target_diagnostic(
+            frame.to_dict(),  # type: ignore[arg-type]
+            analysis.columns,
+            analysis.target_analysis,
+            analysis.target_leakage,
+        )
     with pytest.raises(ValueError, match="frame shape"):
-        analyze_target_diagnostic(frame.iloc[:-1], analysis.columns, analysis.target_analysis)
+        analyze_target_diagnostic(
+            frame.iloc[:-1],
+            analysis.columns,
+            analysis.target_analysis,
+            analysis.target_leakage,
+        )
     with pytest.raises(TypeError, match="TargetAnalysis"):
-        analyze_target_diagnostic(frame, analysis.columns, "y")  # type: ignore[arg-type]
+        analyze_target_diagnostic(
+            frame, analysis.columns, "y", analysis.target_leakage  # type: ignore[arg-type]
+        )
     with pytest.raises(TypeError, match="tuple"):
-        analyze_target_diagnostic(frame, list(analysis.columns), analysis.target_analysis)  # type: ignore[arg-type]
+        analyze_target_diagnostic(
+            frame,
+            list(analysis.columns),  # type: ignore[arg-type]
+            analysis.target_analysis,
+            analysis.target_leakage,
+        )
     edited = frame.copy()
     edited.loc[:5, "y"] = pd.NA
     with pytest.raises(ValueError, match="do not match the target analysis"):
-        analyze_target_diagnostic(edited, analysis.columns, analysis.target_analysis)
+        analyze_target_diagnostic(
+            edited, analysis.columns, analysis.target_analysis, analysis.target_leakage
+        )
 
 
 def test_training_rows_decide_variation_for_numeric_and_one_hot_columns() -> None:
@@ -1127,7 +1169,9 @@ def test_non_finite_probabilities_or_importance_are_numerical_failures(
         return np.full((X.shape[0], 2), np.nan)
 
     with monkeypatch.context() as patched:
-        patched.setattr(fit_module.LogisticRegression, "predict_proba", nan_probabilities)
+        patched.setattr(
+            fit_module.LogisticRegression, "predict_proba", nan_probabilities
+        )
         failed = _diagnostic(frame, "y")
     assert failed.status is DiagnosticStatus.NUMERICAL_FAILURE
     assert failed.evaluation is None
@@ -1156,11 +1200,20 @@ def test_fit_inputs_are_checked_before_reading_values() -> None:
     columns = analysis.columns
     target = analysis.target_analysis
     with pytest.raises(TypeError, match="ColumnAnalysis"):
-        analyze_target_diagnostic(frame, ("column",), target)  # type: ignore[arg-type]
+        analyze_target_diagnostic(
+            frame, ("column",), target, analysis.target_leakage  # type: ignore[arg-type]
+        )
     with pytest.raises(ValueError, match="column position"):
-        analyze_target_diagnostic(frame, (columns[1], columns[0]) + columns[2:], target)
+        analyze_target_diagnostic(
+            frame,
+            (columns[1], columns[0]) + columns[2:],
+            target,
+            analysis.target_leakage,
+        )
     with pytest.raises(ValueError, match="outside the column axis"):
-        analyze_target_diagnostic(frame.iloc[:, :2], columns[:2], target)
+        analyze_target_diagnostic(
+            frame.iloc[:, :2], columns[:2], target, analysis.target_leakage
+        )
 
 
 def test_diagnostic_records_reject_every_inconsistent_shape() -> None:
@@ -1170,7 +1223,9 @@ def test_diagnostic_records_reject_every_inconsistent_shape() -> None:
     small = _diagnostic(_binary_frame(n=12), "y")
     small_regression = _diagnostic(_regression_frame(n=10), "y")
     undefined = _diagnostic(
-        pd.DataFrame({"y": [0.0] * 23 + [1.0], "x": np.arange(24, dtype=np.float64) % 5}),
+        pd.DataFrame(
+            {"y": [0.0] * 23 + [1.0], "x": np.arange(24, dtype=np.float64) % 5}
+        ),
         "y",
     )
     design = available.design
@@ -1234,7 +1289,9 @@ def test_diagnostic_records_reject_every_inconsistent_shape() -> None:
             "exactly when resolution",
         ),
         (
-            lambda: dataclasses.replace(numeric, encoding=PredictorEncoding.STANDARDIZED),
+            lambda: dataclasses.replace(
+                numeric, encoding=PredictorEncoding.STANDARDIZED
+            ),
             "only an included",
         ),
         (
@@ -1263,7 +1320,9 @@ def test_diagnostic_records_reject_every_inconsistent_shape() -> None:
         ),
         (lambda: dataclasses.replace(evaluation, solver_converged=1), "bool"),
         (
-            lambda: dataclasses.replace(evaluation, balanced_accuracy=evaluation.log_loss),
+            lambda: dataclasses.replace(
+                evaluation, balanced_accuracy=evaluation.log_loss
+            ),
             "must hold",
         ),
         (lambda: PermutationImportance(DiagnosticMetric.R2, 5, ()), "non-empty"),
@@ -1339,7 +1398,9 @@ def test_diagnostic_records_reject_every_inconsistent_shape() -> None:
             "belong to a split classification",
         ),
         (
-            lambda: dataclasses.replace(available, predictors=list(available.predictors)),
+            lambda: dataclasses.replace(
+                available, predictors=list(available.predictors)
+            ),
             "predictors must be a tuple",
         ),
         (
@@ -1631,7 +1692,9 @@ class _ImportanceSpy:
         monkeypatch.setattr(fit_module, "_permutation_importance", wrapped)
 
 
-def _source_permuted(x_valid: pd.DataFrame, key: str, order: np.ndarray) -> pd.DataFrame:
+def _source_permuted(
+    x_valid: pd.DataFrame, key: str, order: np.ndarray
+) -> pd.DataFrame:
     permuted = x_valid.copy()
     permuted[key] = x_valid[key].to_numpy()[order]
     return permuted
@@ -1667,9 +1730,11 @@ def test_block_permutation_equals_source_column_permutation(
         assert not np.all(np.isfinite(frame["amount"]))
     if name in ("categorical", "mixed_binary"):
         position = list(frame.columns).index("group")
-        index = [item.position for item in included if item.encoding is (
-            PredictorEncoding.ONE_HOT
-        )].index(position)
+        index = [
+            item.position
+            for item in included
+            if item.encoding is (PredictorEncoding.ONE_HOT)
+        ].index(position)
         vocabulary = set(preprocess.named_transformers_["levels"].categories_[index])
         observed = set(x_valid[f"column_{position}"].tolist())
         assert -1 in vocabulary
@@ -1725,7 +1790,7 @@ def test_controlled_order_moves_every_owned_column_with_its_input(
     (pipeline, included, x_valid, *_rest), _result = spy.calls[0]
     preprocess = pipeline.named_steps["preprocess"]
     encoded = preprocess.transform(x_valid)
-    calls = scored[-(1 + len(included) * 5):]
+    calls = scored[-(1 + len(included) * 5) :]
     assert (calls[0] != encoded).nnz == 0
     block_sizes = {}
     for index, item in enumerate(included):

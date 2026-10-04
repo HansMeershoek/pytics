@@ -142,10 +142,17 @@ def test_no_target_leaves_dataset_analysis_unchanged() -> None:
     assert plain == same
     assert build_target_summary(plain) is None
     targeted = analyze_dataframe(frame, target="amount")
+    assert plain.target_leakage is None
     assert plain.target_diagnostic is None
+    assert targeted.target_leakage is not None
     assert targeted.target_diagnostic is not None
     assert (
-        dataclasses.replace(targeted, target_analysis=None, target_diagnostic=None)
+        dataclasses.replace(
+            targeted,
+            target_analysis=None,
+            target_leakage=None,
+            target_diagnostic=None,
+        )
         == plain
     )
     assert targeted.columns == plain.columns

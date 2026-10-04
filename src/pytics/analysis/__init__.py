@@ -16,7 +16,9 @@ and Numeric × Categorical relationships are collected in this package
 from the DataFrame. They are
 not semantic evidence. The relationship implementation lives in
 ``relationships``. ``relationship`` re-exports it. For an explicit
-target, ``target_diagnostic_fit`` fits one untuned diagnostic model and
-is the only scikit-learn user. ``target_diagnostic`` holds its frozen
-result.
+target, ``target_leakage`` records exact-duplicate and deterministic
+mapping evidence and does not score leakage. ``target_diagnostic_fit``
+then fits one untuned diagnostic model and is the only scikit-learn
+user. ``target_diagnostic`` holds its frozen result. An exact duplicate
+recorded by leakage evidence is excluded from that model.
 """

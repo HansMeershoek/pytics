@@ -74,6 +74,8 @@ from pytics.analysis.target_diagnostic import ValidationStrategy
 from pytics.analysis.target_diagnostic import _target_class_counts
 from pytics.analysis.target_diagnostic import predictive_task_for
 from pytics.analysis.target_diagnostic import semantic_predictor_decision
+from pytics.analysis.target_leakage import TargetLeakageAnalysis
+from pytics.analysis.target_leakage import exact_duplicate_positions
 from pytics.semantics.interpretation import SemanticType
 
 DEFAULT_RANDOM_SEED = 0
@@ -111,16 +113,19 @@ def analyze_target_diagnostic(
     frame: pd.DataFrame,
     columns: Tuple[ColumnAnalysis, ...],
     target: TargetAnalysis,
+    leakage: TargetLeakageAnalysis,
     *,
     seed: int = DEFAULT_RANDOM_SEED,
 ) -> TargetDiagnosticAnalysis:
     """Fit and score the diagnostic model for an analyzed target.
 
-    ``columns`` and ``target`` are the analysis of ``frame``. The frame is
+    ``columns`` and ``target`` are the analysis of ``frame``. ``leakage``
+    is the leakage evidence for that same target. An exact duplicate
+    named there is excluded and is not compared again. The frame is
     read, not modified, and not retained. A reason the model cannot be
     evaluated is returned as a status. Inconsistent arguments raise.
     """
-    _require_inputs(frame, columns, target, seed)
+    _require_inputs(frame, columns, target, leakage, seed)
     position = target.position
     if target.status is not TargetStatus.SUPPORTED:
         return TargetDiagnosticAnalysis(
@@ -150,7 +155,11 @@ def analyze_target_diagnostic(
     if rows.size != population.n_modeling:
         raise ValueError("frame target values do not match the target analysis")
     screened, images = _screen_semantics(
-        frame, columns, position, task, rows, y, class_values
+        frame,
+        columns,
+        position,
+        rows,
+        exact_duplicate_positions(leakage),
     )
     if not images:
         return TargetDiagnosticAnalysis(
@@ -207,6 +216,7 @@ def _require_inputs(
     frame: object,
     columns: object,
     target: object,
+    leakage: object,
     seed: object,
 ) -> None:
     if not isinstance(frame, pd.DataFrame):
@@ -220,6 +230,10 @@ def _require_inputs(
             raise ValueError("column position must match column order")
     if not isinstance(target, TargetAnalysis):
         raise TypeError("target must be a TargetAnalysis")
+    if not isinstance(leakage, TargetLeakageAnalysis):
+        raise TypeError("leakage must be a TargetLeakageAnalysis")
+    if leakage.target_position != target.position:
+        raise ValueError("the leakage result must name the analyzed target")
     if frame.shape != (target.population.n_total_rows, len(columns)):
         raise ValueError("frame shape must match the analyzed columns")
     if target.position >= len(columns):
@@ -327,18 +341,17 @@ def _screen_semantics(
     frame: pd.DataFrame,
     columns: Tuple[ColumnAnalysis, ...],
     target_position: int,
-    task: PredictiveTask,
     rows: np.ndarray,
-    y: np.ndarray,
-    class_values: Tuple[object, ...],
+    duplicates: frozenset,
 ) -> Tuple[Tuple[Tuple[ColumnAnalysis, Optional[PredictorDecision]], ...], dict]:
     """Apply the semantic and duplicate exclusions to every other column.
 
     Returns each other column with its exclusion, or ``None`` for a
-    candidate, and the modeling-row image of each candidate. Candidates
-    are decided later from the training rows.
+    candidate, and the modeling-row image of each candidate that is not
+    an exact duplicate. Exact duplicates are the positions leakage
+    evidence already recorded. Candidates are decided later from the
+    training rows.
     """
-    target_type = columns[target_position].inferred.selected_type
     screened: List[Tuple[ColumnAnalysis, Optional[PredictorDecision]]] = []
     images: dict = {}
     for column in columns:
@@ -347,57 +360,26 @@ def _screen_semantics(
         selected = column.inferred.selected_type
         decision = semantic_predictor_decision(selected)
         if decision is None:
-            image, vocabulary = _read_predictor(frame.iloc[:, column.position], selected)
-            image = image[rows]
-            if selected is target_type and _identical_to_target(
-                image, vocabulary, task, y, class_values
-            ):
+            if column.position in duplicates:
                 decision = PredictorDecision.IDENTICAL_TO_TARGET
             else:
-                images[column.position] = image
+                image = _read_predictor(frame.iloc[:, column.position], selected)
+                images[column.position] = image[rows]
         screened.append((column, decision))
     return tuple(screened), images
 
 
-def _read_predictor(
-    series: pd.Series,
-    selected: SemanticType,
-) -> Tuple[_Image, Tuple[object, ...]]:
+def _read_predictor(series: pd.Series, selected: SemanticType) -> _Image:
     if selected is SemanticType.NUMERIC:
         values, finite = _read_numeric_column(series)
         image = np.full(values.shape, np.nan, dtype=np.float64)
         image[finite] = values[finite].astype(np.float64)
-        return image, ()
+        return image
     if selected is SemanticType.CATEGORICAL:
-        codes, categories = _read_categorical_column(series)
-        return codes.astype(np.int64), categories
+        codes, _categories = _read_categorical_column(series)
+        return codes.astype(np.int64)
     observed, is_true = _read_boolean_column(series)
-    return np.where(observed, is_true.astype(np.int64), np.int64(-1)), ()
-
-
-def _identical_to_target(
-    image: _Image,
-    vocabulary: Tuple[object, ...],
-    task: PredictiveTask,
-    y: np.ndarray,
-    class_values: Tuple[object, ...],
-) -> bool:
-    """Return whether a same-type column equals the target on every modeling row.
-
-    A missing or non-finite predictor value on any modeling row means the
-    column is not a copy. A relabeled or partial copy is not detected.
-    """
-    if task is PredictiveTask.REGRESSION:
-        return bool(np.all(np.isfinite(image)) and np.array_equal(image, y))
-    if np.any(image < 0):
-        return False
-    if not vocabulary:
-        return bool(np.array_equal(image, y))
-    predictor_values = np.empty(len(vocabulary), dtype=object)
-    predictor_values[:] = list(vocabulary)
-    target_values = np.empty(len(class_values), dtype=object)
-    target_values[:] = list(class_values)
-    return bool(np.all(predictor_values[image] == target_values[y]))
+    return np.where(observed, is_true.astype(np.int64), np.int64(-1))
 
 
 def _predictor_record(
@@ -612,9 +594,7 @@ def _preprocessor(included: Tuple[DiagnosticPredictor, ...]) -> ColumnTransforme
             )
         )
     if one_hot:
-        transformers.append(
-            ("levels", OneHotEncoder(handle_unknown="ignore"), one_hot)
-        )
+        transformers.append(("levels", OneHotEncoder(handle_unknown="ignore"), one_hot))
     return ColumnTransformer(transformers, remainder="drop", sparse_threshold=1.0)
 
 
