@@ -12,6 +12,7 @@ import pytest
 
 import pytics
 import pytics.analysis.boolean as boolean_descriptive
+import pytics.analysis.categorical as categorical_descriptive
 import pytics.analysis.column as column_module
 import pytics.analysis.dataset as dataset_module
 import pytics.analysis.numeric as numeric_descriptive
@@ -869,6 +870,7 @@ def test_builder_does_not_rescan_after_analysis(monkeypatch: pytest.MonkeyPatch)
         (numeric_evidence, "collect_numeric_structure_evidence"),
         (numeric_descriptive, "collect_numeric_descriptive_analysis"),
         (boolean_descriptive, "collect_boolean_descriptive_analysis"),
+        (categorical_descriptive, "collect_categorical_descriptive_analysis"),
         (string_evidence, "collect_string_structure_evidence"),
         (pattern_evidence, "collect_pattern_evidence"),
         (string_content_evidence, "collect_string_content_evidence"),
@@ -902,6 +904,13 @@ def test_builder_does_not_rescan_after_analysis(monkeypatch: pytest.MonkeyPatch)
     assert detail.descriptive.minimum == -1.0
     assert detail.descriptive.maximum == 2.0
     assert detail.descriptive.mean == pytest.approx((-1.0 + 0.0 + 2.0) / 3.0)
+    categorical = summary.variables[1].detail
+    assert isinstance(categorical, CategoricalVariableDetail)
+    assert categorical.descriptive is not None
+    assert categorical.descriptive is not analysis.columns[1].categorical_analysis
+    assert categorical.descriptive.n_non_missing == 3
+    assert [level.value for level in categorical.descriptive.levels] == ["blue", "red"]
+    assert [level.count for level in categorical.descriptive.levels] == [1, 2]
 
 
 def test_frequency_is_collected_only_for_nonstructural_categoricals(
@@ -957,6 +966,7 @@ def test_variables_module_does_not_import_pandas_or_collectors():
         "collect_frequency_evidence",
         "collect_numeric_structure_evidence",
         "collect_numeric_descriptive_analysis",
+        "collect_categorical_descriptive_analysis",
         "collect_string_structure_evidence",
         "collect_pattern_evidence",
         "collect_string_content_evidence",

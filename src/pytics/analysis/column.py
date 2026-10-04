@@ -20,6 +20,13 @@ column whose selected semantic type is Boolean is counted as ``True`` and
 ``False``. Constant, Empty, and every other selected type do not take that
 pass. ``{0, 1}`` stays Numeric and is not counted as Boolean.
 
+Categorical descriptive counts are the same kind of fact. After resolution,
+a column whose selected semantic type is Categorical receives its observed
+level distribution. That collection does not depend on target selection.
+Constant, Empty, and every other selected type do not take that pass.
+Frequency evidence remains the aggregate observation. It is not the level
+table.
+
 Each result is retained on the column analysis, not on the evidence bundle
 and not on the inferred semantic result. The two results stay separate
 fields. This path does not register analyses by semantic type.
@@ -36,6 +43,8 @@ import pandas as pd
 
 from pytics.analysis.boolean import BooleanDescriptiveAnalysis
 from pytics.analysis.boolean import collect_boolean_descriptive_analysis
+from pytics.analysis.categorical import CategoricalDescriptiveAnalysis
+from pytics.analysis.categorical import collect_categorical_descriptive_analysis
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.numeric import collect_numeric_descriptive_analysis
 from pytics.semantics.candidate import CandidateAssessment
@@ -164,7 +173,13 @@ class ColumnAnalysis:
     for every other outcome, including a physical Boolean column that
     resolved as Constant or Empty, and including numeric ``{0, 1}``.
 
-    Neither profile is stored on ``evidence``.
+    ``categorical_analysis`` is the observed level distribution collected
+    after resolution when the selected semantic type is Categorical. It
+    is absent for every other outcome, including a physical categorical
+    column that resolved as Constant or Empty. Target selection does not
+    decide whether it is collected.
+
+    None of these profiles is stored on ``evidence``.
     """
 
     position: int
@@ -174,6 +189,7 @@ class ColumnAnalysis:
     inferred: InferredSemanticResult
     numeric_analysis: Optional[NumericDescriptiveAnalysis] = None
     boolean_analysis: Optional[BooleanDescriptiveAnalysis] = None
+    categorical_analysis: Optional[CategoricalDescriptiveAnalysis] = None
 
     def __post_init__(self) -> None:
         if type(self.position) is not int or self.position < 0:
@@ -185,6 +201,7 @@ class ColumnAnalysis:
             raise ValueError("inferred.physical must be this column's physical")
         _require_numeric_analysis(self)
         _require_boolean_analysis(self)
+        _require_categorical_analysis(self)
 
 
 def analyze_series(
@@ -204,8 +221,10 @@ def analyze_series(
     Only after that resolution does this function collect a type-specific
     description. A selected Numeric column receives numeric descriptive
     statistics. A selected Boolean column receives true/false counts.
+    A selected Categorical column receives its observed level distribution.
     A column that resolves as Constant, Empty, or any other type is not
-    given either result. Physical storage alone does not choose the pass.
+    given any of those results. Physical storage alone does not choose
+    the pass. Target selection does not choose it either.
     """
     if not isinstance(series, pd.Series):
         raise TypeError("analyze_series expects a pandas Series")
@@ -238,6 +257,7 @@ def analyze_series(
     inferred = build_inferred_semantic_result(physical, resolution)
     numeric_analysis = _descriptive_after_resolution(series, inferred)
     boolean_analysis = _boolean_descriptive_after_resolution(series, inferred)
+    categorical_analysis = _categorical_descriptive_after_resolution(series, inferred)
     evidence = ColumnEvidence(
         basic=basic,
         numeric_structure=numeric_structure,
@@ -253,6 +273,7 @@ def analyze_series(
         inferred=inferred,
         numeric_analysis=numeric_analysis,
         boolean_analysis=boolean_analysis,
+        categorical_analysis=categorical_analysis,
     )
 
 
@@ -287,6 +308,23 @@ def _boolean_descriptive_after_resolution(
     return collect_boolean_descriptive_analysis(series)
 
 
+def _categorical_descriptive_after_resolution(
+    series: pd.Series,
+    inferred: InferredSemanticResult,
+) -> Optional[CategoricalDescriptiveAnalysis]:
+    """Collect the observed level distribution only after a Categorical selection.
+
+    Physical categorical storage is not enough. Constant and Empty
+    categorical columns have already resolved, and this function does not
+    describe them. Numeric, Boolean, and unresolved columns are not
+    described. Whether the column is later named as a target is not an
+    argument.
+    """
+    if inferred.selected_type is not SemanticType.CATEGORICAL:
+        return None
+    return collect_categorical_descriptive_analysis(series)
+
+
 def _require_numeric_analysis(analysis: ColumnAnalysis) -> None:
     """Keep descriptive statistics on a selected Numeric column only."""
     descriptive = analysis.numeric_analysis
@@ -319,6 +357,43 @@ def _require_boolean_analysis(analysis: ColumnAnalysis) -> None:
         )
     if described.n_non_missing != analysis.evidence.basic.n_non_missing:
         raise ValueError("boolean true and false counts must equal n_non_missing")
+
+
+def _require_categorical_analysis(analysis: ColumnAnalysis) -> None:
+    """Keep the observed distribution on a selected Categorical column only."""
+    described = analysis.categorical_analysis
+    if described is None:
+        return
+    _require(described, CategoricalDescriptiveAnalysis, "categorical_analysis")
+    if analysis.inferred.selected_type is not SemanticType.CATEGORICAL:
+        raise ValueError(
+            "categorical descriptive analysis applies only when the selected "
+            "semantic type is Categorical"
+        )
+    basic = analysis.evidence.basic
+    if described.n_non_missing != basic.n_non_missing:
+        raise ValueError(
+            "categorical descriptive n_non_missing must match basic evidence"
+        )
+    if described.n_observed != basic.n_unique_non_missing:
+        raise ValueError(
+            "categorical descriptive n_observed must match n_unique_non_missing"
+        )
+    frequency = analysis.evidence.frequency
+    if frequency is None:
+        raise ValueError(
+            "categorical descriptive analysis requires the retained frequency evidence"
+        )
+    if described.most_frequent_count != frequency.most_frequent_count:
+        raise ValueError(
+            "categorical most_frequent_count must match frequency evidence"
+        )
+    if described.singleton_count != frequency.singleton_count:
+        raise ValueError("categorical singleton_count must match frequency evidence")
+    if described.ordered is not analysis.physical.categorical_ordered:
+        raise ValueError(
+            "categorical ordered flag must match the physical categorical dtype"
+        )
 
 
 def _evidence_for_candidates(

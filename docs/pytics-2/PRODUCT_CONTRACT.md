@@ -19,7 +19,7 @@ Primary purpose:
 - compare two datasets;
 - understand changes and drift between datasets.
 
-Pytics is about understanding. It is not about optimizing predictive performance. Where a target is supplied, TSK-032 records that column's semantic state, its own missingness, and the relationships already calculated with the other columns ([DEC-103](DECISIONS.md#dec-103)). It does not infer a target and it does not fit a diagnostic model. The public `profile` call is not yet that analysis.
+Pytics is about understanding. It is not about optimizing predictive performance. Where a target is supplied, TSK-032 records that column's semantic state, its own missingness, and the relationships already calculated with the other columns ([DEC-103](DECISIONS.md#dec-103)). TSK-033 adds the exact observed distribution of a Categorical target from the shared descriptive layer ([DEC-104](DECISIONS.md#dec-104)). It does not infer a target, a problem type, or an imbalance verdict, and it does not fit a diagnostic model. The public `profile` call is not yet that analysis.
 
 | ID | Requirement | Status |
 | --- | --- | --- |

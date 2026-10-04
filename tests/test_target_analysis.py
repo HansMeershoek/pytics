@@ -24,7 +24,8 @@ from pytics.analysis.relationships.models.coverage import (
     UnimplementedRelationshipFamily,
 )
 from pytics.analysis.relationships.models.coverage import classify_selected_pair
-from pytics.analysis.target import CategoricalTargetFacts
+from pytics.analysis.categorical import CategoricalDescriptiveAnalysis
+from pytics.analysis.categorical import ObservedCategoryCount
 from pytics.analysis.target import TargetPhysicalSide
 from pytics.analysis.target import TargetPopulation
 from pytics.analysis.target import TargetPosition
@@ -121,8 +122,7 @@ def test_target_status_matrix_is_explicit() -> None:
         is TargetStatus.UNRESOLVED
     )
     assert (
-        status_for_target(None, ResolutionStatus.AMBIGUOUS)
-        is TargetStatus.UNRESOLVED
+        status_for_target(None, ResolutionStatus.AMBIGUOUS) is TargetStatus.UNRESOLVED
     )
     with pytest.raises(ValueError, match="no selected semantic type"):
         status_for_target(SemanticType.NUMERIC, ResolutionStatus.AMBIGUOUS)
@@ -278,30 +278,40 @@ def test_boolean_and_categorical_facts_match_retained_descriptions() -> None:
     assert boolean.boolean_facts.true_count == 2
     assert boolean.boolean_facts.false_count == 1
     assert boolean.boolean_facts.n_non_missing == 3
+    assert boolean.boolean_facts.n_observed_classes == 2
+    assert boolean.boolean_facts.largest_class_count == 2
+    assert boolean.boolean_facts.smallest_class_count == 1
+    assert boolean.boolean_facts.largest_class_values == (True,)
+    assert boolean.boolean_facts.smallest_class_values == (False,)
+    assert boolean.boolean_facts.largest_class_proportion == pytest.approx(2 / 3)
+    assert boolean.boolean_facts.smallest_class_proportion == pytest.approx(1 / 3)
 
-    categorical = analyze_dataframe(frame, target="city").target_analysis
+    without_target = analyze_dataframe(frame)
+    targeted = analyze_dataframe(frame, target="city")
+    categorical = targeted.target_analysis
     assert categorical is not None
-    column = analyze_dataframe(frame).columns[1]
-    frequency = column.evidence.frequency
-    assert frequency is not None
-    assert categorical.categorical_facts == CategoricalTargetFacts(
-        n_non_missing=frequency.basic.n_non_missing,
-        n_unique_non_missing=frequency.basic.n_unique_non_missing,
-        most_frequent_count=frequency.most_frequent_count,
-        singleton_count=frequency.singleton_count,
-    )
-    detail = build_variables_summary(analyze_dataframe(frame)).variables[1].detail
+    column = targeted.columns[1]
+    assert without_target.columns[1].categorical_analysis is not None
+    assert column.categorical_analysis == without_target.columns[1].categorical_analysis
+    assert categorical.categorical_facts is column.categorical_analysis
     assert categorical.categorical_facts is not None
+    assert [level.value for level in categorical.categorical_facts.levels] == ["a", "b"]
+    assert [level.count for level in categorical.categorical_facts.levels] == [2, 1]
+    detail = build_variables_summary(without_target).variables[1].detail
     assert detail is not None
-    assert categorical.categorical_facts.most_frequent_count == detail.most_frequent_count
+    assert (
+        categorical.categorical_facts.most_frequent_count == detail.most_frequent_count
+    )
     assert categorical.categorical_facts.singleton_count == detail.singleton_count
-    assert categorical.categorical_facts.most_frequent_ratio == (
+    assert categorical.categorical_facts.most_frequent_proportion == (
         detail.most_frequent_ratio
     )
     assert (
         categorical.categorical_facts.n_non_missing
         == categorical.population.n_target_non_missing
     )
+    assert "problem_type" not in categorical.__dataclass_fields__
+    assert not any("balance" in name for name in categorical.__dataclass_fields__)
 
 
 def test_zero_one_numeric_is_not_a_boolean_target() -> None:
@@ -694,21 +704,6 @@ def test_target_projection_rejects_inconsistent_records() -> None:
     assert target is not None
     with pytest.raises(ValueError, match="must reconcile"):
         TargetPopulation(3, 2, 2)
-    with pytest.raises(ValueError, match="empty categorical"):
-        CategoricalTargetFacts(0, 0, 1, 0)
-    empty_facts = CategoricalTargetFacts(0, 0, 0, 0)
-    assert empty_facts.most_frequent_ratio is None
-    assert empty_facts.singleton_ratio is None
-    present = CategoricalTargetFacts(3, 2, 2, 1)
-    assert present.singleton_ratio == pytest.approx(0.5)
-    with pytest.raises(ValueError, match="cannot exceed n_non_missing"):
-        CategoricalTargetFacts(1, 2, 1, 0)
-    with pytest.raises(ValueError, match="most_frequent_count cannot exceed"):
-        CategoricalTargetFacts(1, 1, 2, 0)
-    with pytest.raises(ValueError, match="singleton_count cannot exceed"):
-        CategoricalTargetFacts(2, 1, 2, 2)
-    with pytest.raises(ValueError, match="has a frequency"):
-        CategoricalTargetFacts(1, 0, 0, 0)
     with pytest.raises(ValueError, match="outside the column axis"):
         project_target_analysis(
             analysis.columns,
@@ -791,7 +786,9 @@ def test_target_projection_rejects_inconsistent_records() -> None:
 def test_supported_target_requires_its_retained_facts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(column_module, "collect_numeric_descriptive_analysis", _fail_none)
+    monkeypatch.setattr(
+        column_module, "collect_numeric_descriptive_analysis", _fail_none
+    )
     with pytest.raises(ValueError, match="retained numeric description"):
         analyze_dataframe(pd.DataFrame({"y": [1, 2, 3]}), target="y")
 
@@ -909,6 +906,7 @@ def test_label_resolution_rejects_ambiguous_equality() -> None:
         resolve_target_position((np.True_,), False)
     with pytest.raises(ValueError, match="not found"):
         resolve_target_position((np.array([1, 2]),), np.array([1, 2]))
+
     class _Odd:
         def __eq__(self, other: object) -> str:
             return "neither"
@@ -975,7 +973,9 @@ def test_attachment_and_record_guards() -> None:
     with pytest.raises(TypeError, match="TargetAnalysis"):
         DatasetAnalysis(**fields, target_analysis="y")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="must match the selected column"):
-        DatasetAnalysis(**fields, target_analysis=dataclasses.replace(target, label="z"))
+        DatasetAnalysis(
+            **fields, target_analysis=dataclasses.replace(target, label="z")
+        )
     copied_boolean = analyze_dataframe(
         pd.DataFrame(
             {
@@ -1117,11 +1117,10 @@ def test_attachment_and_record_guards() -> None:
     with pytest.raises(ValueError, match="target population"):
         dataclasses.replace(
             categorical,
-            categorical_facts=CategoricalTargetFacts(
+            categorical_facts=CategoricalDescriptiveAnalysis(
                 n_non_missing=1,
-                n_unique_non_missing=1,
-                most_frequent_count=1,
-                singleton_count=1,
+                ordered=False,
+                levels=(ObservedCategoryCount(value="a", count=1),),
             ),
         )
     calculated = target.relationships[0]
@@ -1219,8 +1218,6 @@ def test_attachment_and_record_guards() -> None:
             calculated,
             other_selected_type="numeric",  # type: ignore[arg-type]
         )
-    with pytest.raises(ValueError, match="non-negative"):
-        CategoricalTargetFacts(-1, 0, 0, 0)
     with pytest.raises(TypeError, match="coverage"):
         SelectedPairClass(coverage="calculated")  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="SemanticType"):

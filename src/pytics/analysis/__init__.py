@@ -7,9 +7,10 @@ broader column and dataset records, the DataFrame traversal, the dataset
 overview, the variables summary, the missingness summary, the
 duplicate-row summary, the relationships summary, and the target
 summary aggregated from an existing dataset analysis. Numeric
-descriptive statistics for a selected Numeric column, and Boolean
-true/false counts for a selected Boolean
-column, are collected in this package after semantic resolution. Dataset
+descriptive statistics for a selected Numeric column, Boolean
+true/false counts for a selected Boolean column, and the observed
+level distribution for a selected Categorical column, are collected
+in this package after semantic resolution. Dataset
 missingness patterns, exact duplicate-row groups, and Numeric × Numeric
 and Numeric × Categorical relationships are collected in this package
 from the DataFrame. They are

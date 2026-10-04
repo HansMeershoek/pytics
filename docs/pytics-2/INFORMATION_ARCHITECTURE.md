@@ -123,7 +123,7 @@ Start with a searchable, sortable, professional variable table. Variable detail 
 | --- | --- | --- |
 | REQ-IA-07 | Variables begin as a searchable, sortable table, with type-aware detail under progressive disclosure. | Accepted |
 
-An internal variables summary now exposes one ordered row per physical column, with universal counts and type-specific detail for Numeric, Categorical, Identifier, and Boolean ([DEC-090](DECISIONS.md#dec-090), [DEC-092](DECISIONS.md#dec-092)). A selected Numeric row also carries finite-population descriptive statistics ([DEC-091](DECISIONS.md#dec-091)). A selected Boolean row carries true and false counts. The summary does not render the table, add sort controls, or disclose Datetime, Timedelta, Text, Empty, or Constant statistics beyond the common facts and the selected type.
+An internal variables summary now exposes one ordered row per physical column, with universal counts and type-specific detail for Numeric, Categorical, Identifier, and Boolean ([DEC-090](DECISIONS.md#dec-090), [DEC-092](DECISIONS.md#dec-092)). A selected Numeric row also carries finite-population descriptive statistics ([DEC-091](DECISIONS.md#dec-091)). A selected Boolean row carries true and false counts. A selected Categorical row also carries the exact observed distribution ([DEC-104](DECISIONS.md#dec-104)). The summary does not render the table, add sort controls, or disclose Datetime, Timedelta, Text, Empty, or Constant statistics beyond the common facts and the selected type.
 
 ### Missing
 
@@ -173,7 +173,7 @@ Potential internal sections, **Proposed / not yet finalized** as a fixed interna
 | --- | --- | --- |
 | REQ-IA-12 | Show Target only when target analysis exists. | Accepted |
 
-`DatasetAnalysis.target_analysis` is `None` when the caller did not name a target, and a `TargetSummary` is absent in that same case ([DEC-103](DECISIONS.md#dec-103)). That is the analytical condition for showing Target. The view is not rendered. The result does not rank other columns and does not contain a diagnostic model.
+`DatasetAnalysis.target_analysis` is `None` when the caller did not name a target, and a `TargetSummary` is absent in that same case ([DEC-103](DECISIONS.md#dec-103)). That is the analytical condition for showing Target. The view is not rendered. A Categorical target carries the exact observed class distribution from the descriptive layer ([DEC-104](DECISIONS.md#dec-104)). The result does not rank other columns, label the target balanced or imbalanced, infer a problem type, or contain a diagnostic model.
 
 ### Time Series
 

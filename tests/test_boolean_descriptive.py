@@ -474,6 +474,36 @@ def test_collector_rejects_non_boolean_storage():
             collect_boolean_descriptive_analysis(value)  # type: ignore[arg-type]
 
 
+def test_boolean_class_structure_keeps_false_and_true_identity():
+    tied = BooleanDescriptiveAnalysis(true_count=2, false_count=2)
+    assert tied.n_observed_classes == 2
+    assert tied.largest_class_count == tied.smallest_class_count == 2
+    assert tied.largest_class_values == (False, True)
+    assert tied.smallest_class_values == (False, True)
+    assert tied.largest_class_proportion == 0.5
+    assert tied.smallest_class_proportion == 0.5
+    empty = BooleanDescriptiveAnalysis(true_count=0, false_count=0)
+    assert empty.n_observed_classes == 0
+    assert empty.largest_class_count is None
+    assert empty.smallest_class_count is None
+    assert empty.largest_class_proportion is None
+    assert empty.smallest_class_proportion is None
+    assert empty.largest_class_values == ()
+    assert empty.smallest_class_values == ()
+    only_true = BooleanDescriptiveAnalysis(true_count=3, false_count=0)
+    assert only_true.n_observed_classes == 1
+    assert only_true.largest_class_values == (True,)
+    assert only_true.smallest_class_values == (True,)
+    assert only_true.smallest_class_count == 3
+    selected = _counts(pd.Series([True, False, True], dtype="boolean"))
+    assert selected.n_observed_classes == 2
+    assert selected.largest_class_values == (True,)
+    assert selected.smallest_class_values == (False,)
+    assert not any(
+        "balance" in name for name in BooleanDescriptiveAnalysis.__dataclass_fields__
+    )
+
+
 def test_collector_rejects_a_non_boolean_array(monkeypatch: pytest.MonkeyPatch):
     def _object(*_args: object, **_kwargs: object) -> np.ndarray:
         return np.array([True, False], dtype=object)

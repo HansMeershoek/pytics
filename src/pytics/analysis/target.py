@@ -10,7 +10,10 @@ already involve that column.
 The target population is the target column's own missingness. It is not
 the pairwise population of any feature-target relationship. Adjusted
 p-values on those records are the dataset-level relationship screen.
-They are not recomputed for the target.
+They are not recomputed for the target. A supported target reuses the
+descriptive object that column analysis already stored. This module
+does not assign a classification or regression problem type, and it
+does not label a target balanced or imbalanced.
 """
 
 from __future__ import annotations
@@ -25,6 +28,8 @@ from typing import Union
 import numpy as np
 
 from pytics.analysis.boolean import BooleanDescriptiveAnalysis
+from pytics.analysis.categorical import CategoricalDescriptiveAnalysis
+from pytics.analysis.categorical import copy_categorical_descriptive_analysis
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.relationships.models.boolean_boolean import (
@@ -36,7 +41,9 @@ from pytics.analysis.relationships.models.categorical_categorical import (
 from pytics.analysis.relationships.models.coverage import RelationshipRecord
 from pytics.analysis.relationships.models.coverage import SelectedPairClass
 from pytics.analysis.relationships.models.coverage import SelectedPairCoverage
-from pytics.analysis.relationships.models.coverage import UnimplementedRelationshipFamily
+from pytics.analysis.relationships.models.coverage import (
+    UnimplementedRelationshipFamily,
+)
 from pytics.analysis.relationships.models.coverage import classify_selected_pair
 from pytics.analysis.relationships.models.numeric_boolean import (
     NumericBooleanRelationship,
@@ -170,70 +177,8 @@ class TargetPopulation:
         _require_count(self.n_total_rows, "n_total_rows")
         _require_count(self.n_target_non_missing, "n_target_non_missing")
         _require_count(self.n_target_missing, "n_target_missing")
-        if (
-            self.n_target_non_missing + self.n_target_missing
-            != self.n_total_rows
-        ):
+        if self.n_target_non_missing + self.n_target_missing != self.n_total_rows:
             raise ValueError("target population counts must reconcile")
-
-
-@dataclass(frozen=True)
-class CategoricalTargetFacts:
-    """Categorical frequency facts already retained for the target.
-
-    These are the same counts as a categorical variable detail. They are
-    not a second frequency table. The mode value and the per-level
-    counts are not retained by that evidence, and this record does not
-    collect them. There is no balanced or imbalanced verdict.
-    """
-
-    n_non_missing: int
-    n_unique_non_missing: int
-    most_frequent_count: int
-    singleton_count: int
-
-    def __post_init__(self) -> None:
-        _require_count(self.n_non_missing, "n_non_missing")
-        _require_count(self.n_unique_non_missing, "n_unique_non_missing")
-        _require_count(self.most_frequent_count, "most_frequent_count")
-        _require_count(self.singleton_count, "singleton_count")
-        if self.n_non_missing == 0:
-            if (
-                self.n_unique_non_missing != 0
-                or self.most_frequent_count != 0
-                or self.singleton_count != 0
-            ):
-                raise ValueError("an empty categorical target has no frequency counts")
-            return
-        if self.n_unique_non_missing > self.n_non_missing:
-            raise ValueError("n_unique_non_missing cannot exceed n_non_missing")
-        if self.most_frequent_count > self.n_non_missing:
-            raise ValueError("most_frequent_count cannot exceed n_non_missing")
-        if self.singleton_count > self.n_unique_non_missing:
-            raise ValueError("singleton_count cannot exceed n_unique_non_missing")
-        if self.n_unique_non_missing < 1 or self.most_frequent_count < 1:
-            raise ValueError("a non-empty categorical target has a frequency")
-
-    @property
-    def most_frequent_ratio(self) -> Optional[float]:
-        """Largest non-missing count divided by non-missing target values.
-
-        ``None`` when the target has no non-missing value. This is not
-        an imbalance threshold.
-        """
-        if self.n_non_missing == 0:
-            return None
-        return self.most_frequent_count / self.n_non_missing
-
-    @property
-    def singleton_ratio(self) -> Optional[float]:
-        """Share of distinct non-missing values that occur once.
-
-        ``None`` when there is no distinct non-missing value.
-        """
-        if self.n_unique_non_missing == 0:
-            return None
-        return self.singleton_count / self.n_unique_non_missing
 
 
 @dataclass(frozen=True)
@@ -303,11 +248,11 @@ class TargetAnalysis:
     classification or regression problem type.
 
     ``numeric_facts``, ``boolean_facts``, and ``categorical_facts`` are
-    set only for a supported target of that type. Numeric and Boolean
-    facts are the objects column analysis already stored. Categorical
-    facts copy the retained frequency counts. ``relationships`` follows
-    physical column order, skipping the target. It is not sorted by an
-    effect or a p-value.
+    set only for a supported target of that type. Each one is the
+    descriptive object column analysis already stored. This record does
+    not recount categorical levels. ``relationships`` follows physical
+    column order, skipping the target. It is not sorted by an effect or
+    a p-value.
     """
 
     position: int
@@ -320,7 +265,7 @@ class TargetAnalysis:
     population: TargetPopulation
     numeric_facts: Optional[NumericDescriptiveAnalysis]
     boolean_facts: Optional[BooleanDescriptiveAnalysis]
-    categorical_facts: Optional[CategoricalTargetFacts]
+    categorical_facts: Optional[CategoricalDescriptiveAnalysis]
     relationships: Tuple[TargetRelationship, ...]
 
     def __post_init__(self) -> None:
@@ -370,7 +315,7 @@ class TargetSummary:
     population: TargetPopulation
     numeric_facts: Optional[NumericDescriptiveAnalysis]
     boolean_facts: Optional[BooleanDescriptiveAnalysis]
-    categorical_facts: Optional[CategoricalTargetFacts]
+    categorical_facts: Optional[CategoricalDescriptiveAnalysis]
     relationships: Tuple[TargetRelationship, ...]
 
     def __post_init__(self) -> None:
@@ -447,11 +392,7 @@ def resolve_target_position(labels: Sequence[object], target: object) -> int:
         if target.position >= count:
             raise ValueError("target position is outside the column axis")
         return target.position
-    matches = [
-        index
-        for index in range(count)
-        if _labels_equal(labels[index], target)
-    ]
+    matches = [index for index in range(count) if _labels_equal(labels[index], target)]
     if not matches:
         raise ValueError("target column was not found")
     if len(matches) > 1:
@@ -591,6 +532,10 @@ def _require_target_attachment(
         raise ValueError(
             "boolean target facts must be the retained descriptive analysis"
         )
+    if target.categorical_facts is not column.categorical_analysis:
+        raise ValueError(
+            "categorical target facts must be the retained descriptive analysis"
+        )
     for link, expected_link in zip(target.relationships, expected.relationships):
         if link.relationship is not expected_link.relationship:
             raise ValueError(
@@ -658,7 +603,7 @@ def _require_facts(target: Union[TargetAnalysis, TargetSummary]) -> None:
     if boolean is not None:
         _require_type(boolean, BooleanDescriptiveAnalysis, "boolean_facts")
     if categorical is not None:
-        _require_type(categorical, CategoricalTargetFacts, "categorical_facts")
+        _require_type(categorical, CategoricalDescriptiveAnalysis, "categorical_facts")
     if target.status is not TargetStatus.SUPPORTED:
         if numeric is not None or boolean is not None or categorical is not None:
             raise ValueError("only a supported target keeps descriptive facts")
@@ -723,7 +668,7 @@ def _target_facts(
 ) -> Tuple[
     Optional[NumericDescriptiveAnalysis],
     Optional[BooleanDescriptiveAnalysis],
-    Optional[CategoricalTargetFacts],
+    Optional[CategoricalDescriptiveAnalysis],
 ]:
     if status is not TargetStatus.SUPPORTED:
         return None, None, None
@@ -741,22 +686,11 @@ def _target_facts(
             )
         return None, column.boolean_analysis, None
     if selected is SemanticType.CATEGORICAL:
-        frequency = column.evidence.frequency
-        if frequency is None:
+        if column.categorical_analysis is None:
             raise ValueError(
-                "a categorical target requires the retained frequency evidence"
+                "a categorical target requires the retained categorical description"
             )
-        basic = frequency.basic
-        return (
-            None,
-            None,
-            CategoricalTargetFacts(
-                n_non_missing=basic.n_non_missing,
-                n_unique_non_missing=basic.n_unique_non_missing,
-                most_frequent_count=frequency.most_frequent_count,
-                singleton_count=frequency.singleton_count,
-            ),
-        )
+        return None, None, column.categorical_analysis
     raise ValueError("a supported target is numeric, categorical, or boolean")
 
 
@@ -774,7 +708,9 @@ def _link_for_column(
         left, right = sorted((target_position, other.position))
         relationship = retained.get((left, right))
         if relationship is None:
-            raise ValueError("a calculated target pair requires its relationship record")
+            raise ValueError(
+                "a calculated target pair requires its relationship record"
+            )
         role = _record_role(relationship, target_position)
     side = (
         TargetPhysicalSide.LEFT
@@ -849,7 +785,9 @@ def _require_relationship_record(relationship: object) -> None:
         raise TypeError("relationships must contain calculated relationship records")
 
 
-def _copy_link(link: TargetRelationship, copy_relationship: object) -> TargetRelationship:
+def _copy_link(
+    link: TargetRelationship, copy_relationship: object
+) -> TargetRelationship:
     relationship = link.relationship
     copied = None if relationship is None else copy_relationship(relationship)
     return TargetRelationship(
@@ -894,16 +832,11 @@ def _copy_boolean_facts(
 
 
 def _copy_categorical_facts(
-    facts: Optional[CategoricalTargetFacts],
-) -> Optional[CategoricalTargetFacts]:
+    facts: Optional[CategoricalDescriptiveAnalysis],
+) -> Optional[CategoricalDescriptiveAnalysis]:
     if facts is None:
         return None
-    return CategoricalTargetFacts(
-        n_non_missing=facts.n_non_missing,
-        n_unique_non_missing=facts.n_unique_non_missing,
-        most_frequent_count=facts.most_frequent_count,
-        singleton_count=facts.singleton_count,
-    )
+    return copy_categorical_descriptive_analysis(facts)
 
 
 def _require_column_tuple(columns: Tuple[ColumnAnalysis, ...], n_rows: int) -> None:

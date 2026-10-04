@@ -10,7 +10,8 @@ attached only for the semantic type resolution selected, and only when
 the retained evidence for that detail is present. Numeric detail copies
 numeric-structure counts and, when that column analysis retained one,
 the finite-population descriptive statistics. Categorical detail copies
-frequency counts. Identifier detail copies pattern counts. Those counts
+frequency counts and, when that column analysis retained one, the
+observed level distribution. Identifier detail copies pattern counts. Those counts
 may overlap and are not scores. Boolean detail copies retained true and
 false counts. Empty, Constant, Datetime, Timedelta, Text, insufficient
 evidence, and ambiguity have no specialized detail.
@@ -26,6 +27,8 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+from pytics.analysis.categorical import CategoricalDescriptiveAnalysis
+from pytics.analysis.categorical import copy_categorical_descriptive_analysis
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
@@ -169,15 +172,20 @@ class CategoricalVariableDetail:
     variable summary requires them to equal the universal counts.
 
     ``most_frequent_ratio`` divides by non-missing values.
-    ``singleton_ratio`` divides by distinct non-missing values. The most
-    frequent value itself is not retained, and neither is the frequency
-    table. Unobserved categorical levels are not counts.
+    ``singleton_ratio`` divides by distinct non-missing values. Those two
+    aggregate fields do not themselves store the level table.
+
+    ``descriptive`` is the retained observed distribution when column
+    analysis collected one. It is a separate frozen value. Unobserved
+    categorical levels are not counts there either. This detail does not
+    recount the Series.
     """
 
     n_non_missing: int
     n_unique_non_missing: int
     most_frequent_count: int
     singleton_count: int
+    descriptive: Optional[CategoricalDescriptiveAnalysis] = None
 
     def __post_init__(self) -> None:
         _require_count(self.n_non_missing, "n_non_missing")
@@ -192,6 +200,7 @@ class CategoricalVariableDetail:
             self.most_frequent_count,
             self.singleton_count,
         )
+        _require_categorical_descriptive(self)
 
     @property
     def most_frequent_ratio(self) -> Optional[float]:
@@ -575,7 +584,35 @@ def _categorical_detail(
         n_unique_non_missing=basic.n_unique_non_missing,
         most_frequent_count=evidence.most_frequent_count,
         singleton_count=evidence.singleton_count,
+        descriptive=_copied_categorical(column.categorical_analysis),
     )
+
+
+def _copied_categorical(
+    descriptive: Optional[CategoricalDescriptiveAnalysis],
+) -> Optional[CategoricalDescriptiveAnalysis]:
+    """Copy the retained level distribution without counting it again."""
+    if descriptive is None:
+        return None
+    return copy_categorical_descriptive_analysis(descriptive)
+
+
+def _require_categorical_descriptive(detail: CategoricalVariableDetail) -> None:
+    described = detail.descriptive
+    if described is None:
+        return
+    if not isinstance(described, CategoricalDescriptiveAnalysis):
+        raise TypeError("descriptive must be a CategoricalDescriptiveAnalysis")
+    if described.n_non_missing != detail.n_non_missing:
+        raise ValueError("descriptive n_non_missing must match categorical detail")
+    if described.n_observed != detail.n_unique_non_missing:
+        raise ValueError("descriptive n_observed must match categorical detail")
+    if described.most_frequent_count != detail.most_frequent_count:
+        raise ValueError(
+            "descriptive most_frequent_count must match categorical detail"
+        )
+    if described.singleton_count != detail.singleton_count:
+        raise ValueError("descriptive singleton_count must match categorical detail")
 
 
 def _boolean_detail(column: ColumnAnalysis) -> Optional[BooleanVariableDetail]:

@@ -485,8 +485,11 @@ def test_variables_copy_descriptive_facts_and_keep_structure():
     assert detail.descriptive.minimum == -2.0
     assert detail.descriptive.maximum == 4.0
     assert detail.descriptive.mean == pytest.approx((-2.0 - 1.5 + 4.0) / 4.0)
-    assert isinstance(summary.variables[1].detail, CategoricalVariableDetail)
-    assert not hasattr(summary.variables[1].detail, "descriptive")
+    group = summary.variables[1].detail
+    assert isinstance(group, CategoricalVariableDetail)
+    assert group.descriptive is not None
+    assert group.descriptive == analysis.columns[1].categorical_analysis
+    assert group.descriptive is not analysis.columns[1].categorical_analysis
     assert isinstance(summary.variables[2].detail, IdentifierVariableDetail)
     assert summary.variables[2].detail.uuid_count == 5
     assert summary.variables[3].selected_type is SemanticType.BOOLEAN

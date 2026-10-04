@@ -6,13 +6,17 @@ evidence. They do not select Boolean, and they do not read a semantic type.
 
 ``True`` and ``False`` are the only non-missing values. Missing values
 are excluded. The ratios use that non-missing count as the denominator.
-The source Series is not retained.
+A zero count is not an observed class. Missing values are not a class.
+The largest and smallest class facts are read from these two counts.
+A tie keeps both ``False`` and ``True``. There is no balanced or
+imbalanced label. The source Series is not retained.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -60,6 +64,90 @@ class BooleanDescriptiveAnalysis:
         not the row count.
         """
         return _ratio(self.false_count, self.n_non_missing)
+
+    @property
+    def n_observed_classes(self) -> int:
+        """How many of ``False`` and ``True`` occur at least once."""
+        return int(self.false_count > 0) + int(self.true_count > 0)
+
+    @property
+    def largest_class_count(self) -> Optional[int]:
+        """Larger of the two class counts.
+
+        ``None`` when both counts are zero. This is not an imbalance
+        threshold. A tie is the shared count.
+        """
+        if self.n_non_missing == 0:
+            return None
+        return max(self.false_count, self.true_count)
+
+    @property
+    def smallest_class_count(self) -> Optional[int]:
+        """Smaller count among classes that occur at least once.
+
+        ``None`` when both counts are zero. A class with count zero is
+        not observed, so it is not the smallest class.
+        """
+        observed = [count for count in (self.false_count, self.true_count) if count > 0]
+        if not observed:
+            return None
+        return min(observed)
+
+    @property
+    def largest_class_proportion(self) -> Optional[float]:
+        """Largest class count divided by non-missing values.
+
+        ``None`` when there is no non-missing value. The denominator is
+        not the row count.
+        """
+        count = self.largest_class_count
+        if count is None:
+            return None
+        return _ratio(count, self.n_non_missing)
+
+    @property
+    def smallest_class_proportion(self) -> Optional[float]:
+        """Smallest observed class count divided by non-missing values.
+
+        ``None`` when there is no non-missing value. The denominator is
+        not the row count.
+        """
+        count = self.smallest_class_count
+        if count is None:
+            return None
+        return _ratio(count, self.n_non_missing)
+
+    @property
+    def largest_class_values(self) -> Tuple[bool, ...]:
+        """``False`` and ``True`` values that share the largest count.
+
+        ``False`` precedes ``True`` when both share that count. The
+        sequence is empty when both counts are zero.
+        """
+        return _class_values(self, self.largest_class_count)
+
+    @property
+    def smallest_class_values(self) -> Tuple[bool, ...]:
+        """``False`` and ``True`` values that share the smallest observed count.
+
+        ``False`` precedes ``True`` when both share that count. The
+        sequence is empty when both counts are zero.
+        """
+        return _class_values(self, self.smallest_class_count)
+
+
+def _class_values(
+    analysis: BooleanDescriptiveAnalysis,
+    count: Optional[int],
+) -> Tuple[bool, ...]:
+    if count is None:
+        return ()
+    values = []
+    if analysis.false_count == count:
+        values.append(False)
+    if analysis.true_count == count:
+        values.append(True)
+    return tuple(values)
 
 
 def collect_boolean_descriptive_analysis(
