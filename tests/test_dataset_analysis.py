@@ -19,6 +19,7 @@ from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
+from pytics.analysis.missing import MissingAnalysis
 from pytics.semantics.column_evidence import collect_basic_column_evidence
 from pytics.semantics.frequency_evidence import collect_frequency_evidence
 from pytics.semantics.inferred import InferredSemanticResult
@@ -39,6 +40,7 @@ from pytics.semantics.string_structure_evidence import (
 
 _UUID_A = "550e8400-e29b-41d4-a716-446655440000"
 _UUID_B = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+_NO_OBSERVED_ROWS = MissingAnalysis(row_distribution=(), patterns=())
 
 
 def _numeric_column() -> ColumnAnalysis:
@@ -298,27 +300,70 @@ def test_structural_columns_keep_basic_evidence_only():
 def test_dataset_analysis_rejects_inconsistent_records():
     column = _numeric_column()
     with pytest.raises(ValueError, match="n_rows"):
-        DatasetAnalysis(n_rows=True, n_columns=0, n_cells=0, columns=())  # type: ignore[arg-type]
+        DatasetAnalysis(
+            n_rows=True,  # type: ignore[arg-type]
+            n_columns=0,
+            n_cells=0,
+            columns=(),
+            missing_analysis=_NO_OBSERVED_ROWS,
+        )
     with pytest.raises(ValueError, match="n_cells"):
-        DatasetAnalysis(n_rows=3, n_columns=1, n_cells=2, columns=(column,))
+        DatasetAnalysis(
+            n_rows=3,
+            n_columns=1,
+            n_cells=2,
+            columns=(column,),
+            missing_analysis=_NO_OBSERVED_ROWS,
+        )
     with pytest.raises(TypeError, match="tuple"):
         DatasetAnalysis(
             n_rows=3,
             n_columns=1,
             n_cells=3,
             columns=[column],  # type: ignore[arg-type]
+            missing_analysis=_NO_OBSERVED_ROWS,
         )
     with pytest.raises(ValueError, match="one record"):
-        DatasetAnalysis(n_rows=3, n_columns=0, n_cells=0, columns=(column,))
+        DatasetAnalysis(
+            n_rows=3,
+            n_columns=0,
+            n_cells=0,
+            columns=(column,),
+            missing_analysis=_NO_OBSERVED_ROWS,
+        )
     with pytest.raises(TypeError, match="ColumnAnalysis"):
-        DatasetAnalysis(n_rows=0, n_columns=1, n_cells=0, columns=("column",))  # type: ignore[arg-type]
+        DatasetAnalysis(
+            n_rows=0,
+            n_columns=1,
+            n_cells=0,
+            columns=("column",),  # type: ignore[arg-type]
+            missing_analysis=_NO_OBSERVED_ROWS,
+        )
     shifted = analyze_series(pd.Series([1, 2, 3]), position=1, label="amount")
     with pytest.raises(ValueError, match="column position"):
-        DatasetAnalysis(n_rows=3, n_columns=1, n_cells=3, columns=(shifted,))
+        DatasetAnalysis(
+            n_rows=3,
+            n_columns=1,
+            n_cells=3,
+            columns=(shifted,),
+            missing_analysis=_NO_OBSERVED_ROWS,
+        )
     with pytest.raises(ValueError, match="n_total"):
-        DatasetAnalysis(n_rows=2, n_columns=1, n_cells=2, columns=(column,))
+        DatasetAnalysis(
+            n_rows=2,
+            n_columns=1,
+            n_cells=2,
+            columns=(column,),
+            missing_analysis=_NO_OBSERVED_ROWS,
+        )
     with pytest.raises(dataclasses.FrozenInstanceError):
-        DatasetAnalysis(n_rows=0, n_columns=0, n_cells=0, columns=()).n_rows = 1  # type: ignore[misc]
+        DatasetAnalysis(
+            n_rows=0,
+            n_columns=0,
+            n_cells=0,
+            columns=(),
+            missing_analysis=_NO_OBSERVED_ROWS,
+        ).n_rows = 1  # type: ignore[misc]
 
 
 def test_dataset_facts_for_a_rectangular_frame():
@@ -336,7 +381,14 @@ def test_dataset_facts_for_a_rectangular_frame():
     assert analyzed.n_non_missing_cells == 4
     assert analyzed.missing_ratio == pytest.approx(2 / 6)
     stored = {field.name for field in dataclasses.fields(analyzed)}
-    assert stored == {"n_rows", "n_columns", "n_cells", "columns"}
+    assert stored == {
+        "n_rows",
+        "n_columns",
+        "n_cells",
+        "columns",
+        "missing_analysis",
+    }
+    assert isinstance(analyzed.missing_analysis, MissingAnalysis)
     assert isinstance(analyzed.columns, tuple)
 
 
@@ -635,6 +687,12 @@ def test_analysis_does_not_retain_source_values():
             column.boolean_analysis,
         ):
             assert not isinstance(value, (pd.DataFrame, pd.Series, np.ndarray))
+    assert not isinstance(
+        analyzed.missing_analysis,
+        (pd.DataFrame, pd.Series, np.ndarray),
+    )
+    for pattern in analyzed.missing_analysis.patterns:
+        assert not isinstance(pattern.positions, (pd.Index, np.ndarray))
     assert not any(
         isinstance(value, NumericStructureEvidence) and hasattr(value, "values")
         for value in (column.evidence.numeric_structure for column in analyzed.columns)

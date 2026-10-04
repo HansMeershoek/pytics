@@ -1,8 +1,9 @@
 """Internal analysis of one pandas DataFrame.
 
 Each physical column is analyzed once, in source order. The result keeps
-dataset dimensions, the column analyses, and missing-cell totals derived
-from basic evidence already retained. It does not keep the DataFrame.
+dataset dimensions, the column analyses, missing-cell totals derived from
+basic evidence already retained, and the exact missingness aggregates
+collected from one DataFrame pass. It does not keep the DataFrame.
 """
 
 from __future__ import annotations
@@ -15,6 +16,9 @@ import pandas as pd
 
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import analyze_series
+from pytics.analysis.missing import MissingAnalysis
+from pytics.analysis.missing import _require_missing_attachment
+from pytics.analysis.missing import collect_missing_analysis
 
 
 @dataclass(frozen=True)
@@ -29,12 +33,17 @@ class DatasetAnalysis:
     are read from those dimensions and from each column's basic evidence.
     They are not stored. ``missing_ratio`` is ``None`` when ``n_cells``
     is zero.
+
+    ``missing_analysis`` is the retained row distribution and exact
+    missingness patterns. Those facts are cross-column, so they are not
+    derived from the column records. The boolean mask is not stored.
     """
 
     n_rows: int
     n_columns: int
     n_cells: int
     columns: Tuple[ColumnAnalysis, ...]
+    missing_analysis: MissingAnalysis
 
     def __post_init__(self) -> None:
         _require_count(self.n_rows, "n_rows")
@@ -53,6 +62,15 @@ class DatasetAnalysis:
                 raise ValueError("column position must match dataset column order")
             if column.evidence.basic.n_total != self.n_rows:
                 raise ValueError("column n_total must equal n_rows")
+        _require_missing_attachment(
+            self.missing_analysis,
+            n_rows=self.n_rows,
+            n_columns=self.n_columns,
+            n_missing_cells=self.n_missing_cells,
+            missing_counts=tuple(
+                column.evidence.basic.n_missing for column in self.columns
+            ),
+        )
 
     @property
     def n_missing_cells(self) -> int:
@@ -85,8 +103,9 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
 
     The argument must already be a pandas DataFrame. Other inputs are not
     converted. Column order is the DataFrame's column order. Duplicate
-    labels stay distinct records. The DataFrame is not copied and is not
-    modified, and it is not stored on the result.
+    labels stay distinct records. After the column analyses, one
+    missingness pass counts exact row patterns. The DataFrame is not
+    copied and is not modified, and it is not stored on the result.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("analyze_dataframe expects a pandas DataFrame")
@@ -105,6 +124,7 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
         n_columns=n_columns,
         n_cells=n_rows * n_columns,
         columns=columns,
+        missing_analysis=collect_missing_analysis(frame),
     )
 
 

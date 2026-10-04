@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, and TSK-021 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. TSK-016 connects those components for one Series and does not invent that confidence. TSK-017 retains that column analysis for one DataFrame and does not invent that confidence. TSK-018 summarizes that analysis as a dataset overview and does not invent that confidence. TSK-019 summarizes each column of that analysis as a variable and does not invent that confidence. TSK-020 adds finite-population descriptive statistics after a Numeric selection and does not change that confidence. TSK-021 adds true and false counts after a Boolean selection and does not change inference or that confidence. It does not select the next slice.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, and TSK-022 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. TSK-016 connects those components for one Series and does not invent that confidence. TSK-017 retains that column analysis for one DataFrame and does not invent that confidence. TSK-018 summarizes that analysis as a dataset overview and does not invent that confidence. TSK-019 summarizes each column of that analysis as a variable and does not invent that confidence. TSK-020 adds finite-population descriptive statistics after a Numeric selection and does not change that confidence. TSK-021 adds true and false counts after a Boolean selection and does not change inference or that confidence. TSK-022 records exact missingness structure and does not infer a missingness mechanism. It does not select the next slice.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, Slice 015, Slice 016, Slice 017, Slice 018, Slice 019, Slice 020, and Slice 021. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, Slice 015, Slice 016, Slice 017, Slice 018, Slice 019, Slice 020, Slice 021, and Slice 022. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, and TSK-021 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, and TSK-022 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, and TSK-021 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, REQ-H-04, REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-04, REQ-A-05, REQ-A-06, REQ-IA-05, REQ-B-01, or REQ-B-02.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, and TSK-022 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, REQ-H-01, REQ-H-02, REQ-H-04, REQ-H-05, REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-04, REQ-A-05, REQ-A-06, REQ-IA-05, REQ-IA-08, REQ-B-01, or REQ-B-02.
 
 ## Reuse of 1.1.5
 
@@ -1309,4 +1309,51 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 12 p
 
 ## After TSK-021
 
-TSK-021 adds true and false counts for a column whose selected semantic type is Boolean. The counts are analysis facts, collected after resolution, and copied onto a Boolean variable detail. Empty and Constant still precede Boolean. `{0, 1}` and `{0.0, 1.0}` stay Numeric. No semantic rule changed. [DEC-092](DECISIONS.md#dec-092) records the contract, including the non-missing denominator and the unresolved Boolean/Binary boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-021 adds true and false counts for a column whose selected semantic type is Boolean. The counts are analysis facts, collected after resolution, and copied onto a Boolean variable detail. Empty and Constant still precede Boolean. `{0, 1}` and `{0.0, 1.0}` stay Numeric. No semantic rule changed. [DEC-092](DECISIONS.md#dec-092) records the contract, including the non-missing denominator and the unresolved Boolean/Binary boundary. At that point the next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-022 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-022
+
+Slice 022, missing-data analysis foundation. Approved 2026-10-04 after TSK-021. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-H-01 for dataset, column, and row missingness facts only. REQ-H-02 for exact missingness patterns only, not co-missingness coefficients. REQ-A-03 for complete and incomplete rows on the Missing summary only. REQ-IA-08 for that analytical surface only. REQ-H-04 is respected because missing-like literals stay observed. REQ-H-05 is respected because no mechanism is classified. None of those requirement rows is completed. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Add `MissingAnalysis`, `collect_missing_analysis`, `MissingSummary`, and `build_missing_summary` in `src/pytics/analysis/missing.py`.
+- Retain `missing_analysis` on `DatasetAnalysis`. Collect it inside `analyze_dataframe` after the per-column analyses, from one `DataFrame.isna` pass. Do not retain the DataFrame or the mask.
+- Dataset cell facts and column missing counts come from retained analysis. Do not rescan columns to reproduce them.
+- Row distribution is an ordered tuple of buckets. Exact patterns use physical positions, include the empty complete-row pattern when complete rows exist, and use the documented order: descending row count, then ascending positions.
+- Zero-row frames have no buckets and no patterns. A frame with rows and no columns has one empty pattern. Cell ratios stay `None` when there are no cells. Row ratios are `None` only when there are no rows.
+- The product builder consumes `DatasetAnalysis` only. It does not scan the DataFrame and does not depend on the overview or variables builders.
+- No semantic-rule change. No sampling and no pattern cutoff. `profile` and `compare` are unchanged.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows the analysis package in [DEC-088](DECISIONS.md#dec-088). The missingness contract is [DEC-093](DECISIONS.md#dec-093). It narrows [OPEN-010](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), and [OPEN-045](DECISIONS.md#open-questions) only as that decision says. It does not close the missing-like literal list.
+
+### Exclusions
+
+Do not add missing-like literal detection beyond the existing decision to leave those literals observed. Do not impute, clean, or recommend fills. Do not classify MCAR, MAR, or MNAR. Do not add Little's MCAR test, a pairwise co-missingness coefficient, a correlation matrix, clustering, a heatmap, a Finding, or a chart. Do not add target-conditioned missingness, compare or drift missingness, or a sampling mode. Do not put dataset-level missingness in `pytics.semantics`. Do not change Numeric descriptive behavior, including the float64 standard-deviation limits recorded with TSK-020. Do not change Boolean counting. Do not grow the variables or overview builders with this surface. Do not add a registry. Do not route `pytics.profile` or `pytics.compare` through this result. Do not export it from top-level `pytics`. Do not add a dependency.
+
+Do not resolve [OPEN-004](DECISIONS.md#open-questions), [OPEN-009](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049). [OPEN-010](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), and [OPEN-045](DECISIONS.md#open-questions) record the narrowings in [DEC-093](DECISIONS.md#dec-093) and stay open.
+
+Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. `MissingAnalysis` is retained on `DatasetAnalysis`. It stores the row distribution and exact patterns. It does not store the DataFrame, a row index, or the boolean mask.
+2. `build_missing_summary` accepts only a `DatasetAnalysis`. It copies cell facts and basic-evidence column counts. It does not call pandas missingness or the collector.
+3. Column records keep source order, original labels, duplicate labels, and physical position as pattern identity. A zero-row column has counts of zero and `missing_ratio` `None`.
+4. Patterns include `()` when complete rows exist. Order is descending row count, then ascending positions. The row distribution omits empty buckets and matches pattern widths.
+5. Pandas missingness is the rule. `""`, whitespace, and `"NA"` stay observed. `None`, `NaN`, `pd.NA`, and `NaT` are missing where pandas already says so.
+6. `0 × 0` and `0 × N` have no buckets, no patterns, and undefined cell and row ratios. `N × 0` has N complete rows, one empty pattern, undefined cell ratios, and row ratios `1.0` and `0.0`.
+7. The cross-layer count invariants hold, including pattern margins against column `n_missing` and pattern width times row count against `n_missing_cells`.
+8. The overview and the variables summary are not rewritten. They agree with the Missing summary on the shared cell and column missing counts, and neither product calls the other.
+9. The source DataFrame is unchanged. After analysis exists, the summary builder still succeeds when collection and pandas missingness are patched to fail. No mechanism label, coefficient, imputation, Finding, or chart was added.
+10. The pass is exact. There is no undocumented pattern cutoff. `pytics.profile`, `pytics.compare`, and `pytics.__all__` are unchanged. No dependency was added.
+11. Focused TSK-022 tests pass. The full suite adds only the new tests, with the known PDF failure unchanged. Numeric and Boolean behavior is unchanged.
+12. [OPEN-010](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), and [OPEN-045](DECISIONS.md#open-questions) record the narrowings in this slice and stay open. The two float64 limits of TSK-020 remain recorded.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 12 passed for TSK-022.
+
+## After TSK-022
+
+TSK-022 records where values are missing and which physical positions are missing together. It does not say why they are missing. Complete and incomplete rows live on the Missing summary. The dataset overview still reports cell completeness only. Pairwise co-missingness coefficients, missing-like literal diagnostics, and mechanism classification are not delivered. [DEC-093](DECISIONS.md#dec-093) records the contract, including positional pattern identity, the empty complete-row pattern, and the exact full-frame pass. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

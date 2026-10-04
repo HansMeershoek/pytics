@@ -133,6 +133,8 @@ Dedicated analysis for missingness, patterns, co-missingness, and related diagno
 | --- | --- | --- |
 | REQ-IA-08 | Missing is its own view for the missing-data contract. | Accepted |
 
+An internal missingness summary now exposes dataset cell facts, one column missingness record per physical column, the row missingness distribution, and exact patterns of physical positions ([DEC-093](DECISIONS.md#dec-093)). It is separate from the dataset overview and from the variables summary. It does not render this view, classify a missingness mechanism, or recommend an imputation.
+
 ### Duplicates
 
 Dedicated exact, identifier, partial, and conflict analysis (`REQ-I-01` through `REQ-I-06`).

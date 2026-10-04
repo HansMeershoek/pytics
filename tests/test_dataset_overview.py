@@ -27,6 +27,7 @@ from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
+from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.overview import ColumnRef
 from pytics.analysis.overview import DatasetOverview
 from pytics.analysis.overview import SemanticTypeCount
@@ -257,6 +258,10 @@ def _manual_analysis(
         n_columns=n_columns,
         n_cells=n_rows * n_columns,
         columns=columns,
+        missing_analysis=missing_analysis_for_margins(
+            n_rows,
+            tuple(column.evidence.basic.n_missing for column in columns),
+        ),
     )
 
 

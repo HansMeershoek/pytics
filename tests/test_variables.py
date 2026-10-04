@@ -31,6 +31,7 @@ from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
+from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.variables import BooleanVariableDetail
 from pytics.analysis.variables import CategoricalVariableDetail
@@ -178,6 +179,10 @@ def _analysis_of(column: ColumnAnalysis) -> DatasetAnalysis:
         n_columns=1,
         n_cells=n_rows,
         columns=(column,),
+        missing_analysis=missing_analysis_for_margins(
+            n_rows,
+            (column.evidence.basic.n_missing,),
+        ),
     )
 
 

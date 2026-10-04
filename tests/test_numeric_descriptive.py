@@ -21,6 +21,7 @@ from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
+from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.numeric import _on_segment
 from pytics.analysis.numeric import collect_numeric_descriptive_analysis
@@ -735,7 +736,16 @@ def test_numeric_detail_may_omit_descriptive_analysis():
         inferred=analyzed.inferred,
     )
     summary = build_variables_summary(
-        DatasetAnalysis(n_rows=3, n_columns=1, n_cells=3, columns=(column,))
+        DatasetAnalysis(
+            n_rows=3,
+            n_columns=1,
+            n_cells=3,
+            columns=(column,),
+            missing_analysis=missing_analysis_for_margins(
+                3,
+                (column.evidence.basic.n_missing,),
+            ),
+        )
     )
     detail = summary.variables[0].detail
     assert isinstance(detail, NumericVariableDetail)
@@ -821,7 +831,16 @@ def test_ambiguous_column_without_descriptive_analysis_has_no_detail():
     )
     assert column.numeric_analysis is None
     summary = build_variables_summary(
-        DatasetAnalysis(n_rows=3, n_columns=1, n_cells=3, columns=(column,))
+        DatasetAnalysis(
+            n_rows=3,
+            n_columns=1,
+            n_cells=3,
+            columns=(column,),
+            missing_analysis=missing_analysis_for_margins(
+                3,
+                (column.evidence.basic.n_missing,),
+            ),
+        )
     )
     assert summary.variables[0].resolution_status is ResolutionStatus.AMBIGUOUS
     assert summary.variables[0].detail is None

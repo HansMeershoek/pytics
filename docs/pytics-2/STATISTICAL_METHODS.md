@@ -20,7 +20,7 @@ These are product rules. The contract detail sits in [PRODUCT_CONTRACT.md](PRODU
 | Multiple testing | False-discovery-rate control is the preferred direction for broad relationship screening. Benjamini-Hochberg is the leading candidate. It is not a universal rule. | Accepted as direction. The test family is [OPEN-007](DECISIONS.md#open-questions). |
 | Assumptions | Assumptions are diagnostic context. A significant normality test does not by itself invalidate a method. Method selection stays explainable (`REQ-K-05`). | Accepted |
 | Distributional claims | Normality and other distribution diagnostics are signals, not declarations (`REQ-B-05`). | Accepted |
-| Missingness mechanisms | Do not claim definitive MAR or MNAR without support from the observed data (`REQ-H-05`). | Accepted |
+| Missingness mechanisms | Do not claim definitive MAR or MNAR without support from the observed data (`REQ-H-05`). TSK-022 records observed missingness structure and does not add a mechanism test ([DEC-093](DECISIONS.md#dec-093)). | Accepted |
 | One statistical layer | Relationships, target analysis, missingness relationships, compare, and drift share one layer wherever analytically appropriate (`REQ-T-05`). | Accepted. API is [OPEN-038](DECISIONS.md#open-questions). |
 | Bayesian role | Selective, lightweight, and for understanding. Not predictive optimization. Not promised for every analysis (`REQ-P-11`, [DEC-057](DECISIONS.md#dec-057)). | Accepted |
 | Bayesian transparency | State method, prior, posterior, credible interval, relevant probability statements, approximation or sampling where applicable, and limitations. | Accepted |

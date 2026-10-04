@@ -21,6 +21,7 @@ from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
+from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.variables import BooleanVariableDetail
 from pytics.analysis.variables import NumericVariableDetail
@@ -355,7 +356,16 @@ def test_boolean_selection_without_retained_counts_omits_detail():
     )
     assert column.boolean_analysis is None
     summary = build_variables_summary(
-        DatasetAnalysis(n_rows=2, n_columns=1, n_cells=2, columns=(column,))
+        DatasetAnalysis(
+            n_rows=2,
+            n_columns=1,
+            n_cells=2,
+            columns=(column,),
+            missing_analysis=missing_analysis_for_margins(
+                2,
+                (column.evidence.basic.n_missing,),
+            ),
+        )
     )
     assert summary.variables[0].selected_type is SemanticType.BOOLEAN
     assert summary.variables[0].detail is None
