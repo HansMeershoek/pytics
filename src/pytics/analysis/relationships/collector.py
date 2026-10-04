@@ -1,10 +1,11 @@
 """Dataset relationship collection and product projection.
 
-Eligibility uses the selected semantic type. The only calculated family
-is selected Numeric × Numeric. Other recognized directions are counted.
-Ineligible pairs are counted and not read. Temporary numeric arrays are
-discarded before the collector returns. The summary builder copies the
-retained records and does not calculate a correlation.
+Eligibility uses the selected semantic type. The calculated families are
+selected Numeric × Numeric and selected Numeric × Categorical. Other
+recognized directions are counted. Ineligible pairs are counted and not
+read. Each needed source column is prepared once. Those temporary arrays
+are discarded before the collector returns. The summary builder copies
+the retained records and does not calculate a statistic.
 """
 
 from __future__ import annotations
@@ -20,16 +21,25 @@ import numpy as np
 import pandas as pd
 
 from pytics.analysis.column import ColumnAnalysis
+from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.relationships.models import AssociationResult
+from pytics.analysis.relationships.models import CategoricalGroupSummary
 from pytics.analysis.relationships.models import CorrelationEstimate
 from pytics.analysis.relationships.models import CorrelationInterval
 from pytics.analysis.relationships.models import FrequentistEvidence
+from pytics.analysis.relationships.models import GroupEffectEstimate
+from pytics.analysis.relationships.models import NumericCategoricalRelationship
 from pytics.analysis.relationships.models import NumericNumericRelationship
+from pytics.analysis.relationships.models import OmnibusAnovaResult
 from pytics.analysis.relationships.models import RelationshipAnalysis
 from pytics.analysis.relationships.models import RelationshipsSummary
 from pytics.analysis.relationships.models import UnimplementedFamilyCount
 from pytics.analysis.relationships.models import UnimplementedRelationshipFamily
 from pytics.analysis.relationships.models import _require_nonnegative
+from pytics.analysis.relationships.numeric_categorical import _read_categorical_column
+from pytics.analysis.relationships.numeric_categorical import (
+    analyze as _analyze_numeric_categorical,
+)
 from pytics.analysis.relationships.numeric_numeric import _association_methods
 from pytics.analysis.relationships.numeric_numeric import _read_numeric_column
 from pytics.semantics.interpretation import SemanticType
@@ -49,9 +59,6 @@ _PairClass = Union[UnimplementedRelationshipFamily, _Eligibility]
 _UNIMPLEMENTED_FAMILIES = {
     frozenset((SemanticType.NUMERIC, SemanticType.BOOLEAN)): (
         UnimplementedRelationshipFamily.NUMERIC_BOOLEAN
-    ),
-    frozenset((SemanticType.NUMERIC, SemanticType.CATEGORICAL)): (
-        UnimplementedRelationshipFamily.NUMERIC_CATEGORICAL
     ),
     frozenset((SemanticType.BOOLEAN,)): UnimplementedRelationshipFamily.BOOLEAN_BOOLEAN,
     frozenset((SemanticType.CATEGORICAL,)): (
@@ -79,17 +86,19 @@ def collect_relationship_analysis(
     frame: pd.DataFrame,
     columns: Tuple[ColumnAnalysis, ...],
 ) -> RelationshipAnalysis:
-    """Describe eligible Numeric × Numeric pairs in one DataFrame.
+    """Describe eligible relationship pairs in one DataFrame.
 
     ``columns`` are the column analyses already produced for ``frame``.
     Selected semantic types decide eligibility before any pair is read.
-    Each selected Numeric column is converted once. Unsupported pairs do
-    not read raw values. Temporary arrays are discarded before return.
-    The DataFrame is not modified.
+    Each Numeric column that belongs to a supported pair is converted
+    once. Each Categorical column that belongs to a Numeric × Categorical
+    pair is read once. Unsupported pairs do not read raw values.
+    Temporary arrays are discarded before return. The DataFrame is not
+    modified.
 
-    A method that cannot produce a finite estimate is recorded as
+    A component that cannot produce a finite result is recorded as
     unavailable. That state does not raise, and it does not discard the
-    other method on the same pair.
+    pair or the other component.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("collect_relationship_analysis expects a pandas DataFrame")
@@ -107,13 +116,16 @@ def relationship_analysis_for_columns(
     columns: Tuple[ColumnAnalysis, ...],
     *,
     n_rows: int,
-    relationships: Tuple[NumericNumericRelationship, ...] = (),
+    relationships: Tuple[
+        Union[NumericNumericRelationship, NumericCategoricalRelationship],
+        ...,
+    ] = (),
 ) -> RelationshipAnalysis:
     """Attach relationship records to the selected-type pair counts.
 
-    This does not read values and does not calculate correlations.
-    ``relationships`` must already be the selected Numeric pairs, in
-    ascending position order. A supported pair with no record is invalid.
+    This does not read values and does not calculate statistics.
+    ``relationships`` must already be the supported pairs, in ascending
+    position order. A supported pair with no record is invalid.
     """
     _require_nonnegative(n_rows, "n_rows")
     _require_column_tuple(columns, n_rows)
@@ -136,7 +148,7 @@ def build_relationships_summary(analysis: object) -> RelationshipsSummary:
     """Project retained relationship facts into a product summary.
 
     The argument must already be a ``DatasetAnalysis``. A DataFrame is
-    not accepted and is not analyzed. Correlations are not recomputed.
+    not accepted and is not analyzed. Statistics are not recomputed.
     """
     # Local import: dataset analysis retains RelationshipAnalysis, so this
     # module cannot import DatasetAnalysis at load time.
@@ -187,47 +199,146 @@ def _relationships_for_frame(
     frame: pd.DataFrame,
     columns: Tuple[ColumnAnalysis, ...],
     n_rows: int,
-) -> Tuple[NumericNumericRelationship, ...]:
-    """Calculate one record per selected Numeric pair.
+) -> Tuple[Union[NumericNumericRelationship, NumericCategoricalRelationship], ...]:
+    """Calculate one record per supported pair.
 
-    Numeric columns are read once. The reads are local to this function.
+    A Numeric column is read once even when it pairs with several other
+    columns. A Categorical column is read once even when it pairs with
+    several Numeric columns. Both preparations are local to this function.
     """
     classification = _classify_columns(columns)
     if not classification.supported_pairs:
         return ()
-    populations = {
+    numeric_positions, categorical_positions = _preparation_positions(
+        columns,
+        classification.supported_pairs,
+    )
+    numeric_columns = {
         position: _read_numeric_column(frame.iloc[:, position])
-        for position in _numeric_positions(columns)
+        for position in numeric_positions
     }
-    records: List[NumericNumericRelationship] = []
+    categorical_columns = {
+        position: _read_categorical_column(frame.iloc[:, position])
+        for position in categorical_positions
+    }
+    records: List[Union[NumericNumericRelationship, NumericCategoricalRelationship]] = (
+        []
+    )
     for left, right in classification.supported_pairs:
-        left_values, left_finite = populations[left]
-        right_values, right_finite = populations[right]
-        paired_rows = np.flatnonzero(left_finite & right_finite)
-        methods = _association_methods(
-            left_values[paired_rows],
-            right_values[paired_rows],
-        )
-        records.append(
-            NumericNumericRelationship(
-                left_position=left,
-                left_label=columns[left].label,
-                right_position=right,
-                right_label=columns[right].label,
-                n_total_rows=n_rows,
-                n_paired=int(paired_rows.size),
-                methods=methods,
+        left_type = columns[left].inferred.selected_type
+        right_type = columns[right].inferred.selected_type
+        if left_type is SemanticType.NUMERIC and right_type is SemanticType.NUMERIC:
+            records.append(
+                _numeric_numeric_record(
+                    columns,
+                    numeric_columns,
+                    left,
+                    right,
+                    n_rows,
+                )
             )
-        )
+        else:
+            records.append(
+                _numeric_categorical_record(
+                    columns,
+                    numeric_columns,
+                    categorical_columns,
+                    left,
+                    right,
+                    n_rows,
+                )
+            )
     return tuple(records)
 
 
-def _numeric_positions(columns: Tuple[ColumnAnalysis, ...]) -> Tuple[int, ...]:
-    return tuple(
-        column.position
-        for column in columns
-        if column.inferred.selected_type is SemanticType.NUMERIC
+def _preparation_positions(
+    columns: Tuple[ColumnAnalysis, ...],
+    pairs: Tuple[Tuple[int, int], ...],
+) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
+    """Columns that a supported pair actually reads, in pair order."""
+    numeric: List[int] = []
+    categorical: List[int] = []
+    seen_numeric = set()
+    seen_categorical = set()
+    for left, right in pairs:
+        for position in (left, right):
+            semantic = columns[position].inferred.selected_type
+            if semantic is SemanticType.NUMERIC and position not in seen_numeric:
+                seen_numeric.add(position)
+                numeric.append(position)
+            elif (
+                semantic is SemanticType.CATEGORICAL
+                and position not in seen_categorical
+            ):
+                seen_categorical.add(position)
+                categorical.append(position)
+    return tuple(numeric), tuple(categorical)
+
+
+def _numeric_numeric_record(
+    columns: Tuple[ColumnAnalysis, ...],
+    numeric_columns: dict,
+    left: int,
+    right: int,
+    n_rows: int,
+) -> NumericNumericRelationship:
+    left_values, left_finite = numeric_columns[left]
+    right_values, right_finite = numeric_columns[right]
+    paired_rows = np.flatnonzero(left_finite & right_finite)
+    methods = _association_methods(
+        left_values[paired_rows],
+        right_values[paired_rows],
     )
+    return NumericNumericRelationship(
+        left_position=left,
+        left_label=columns[left].label,
+        right_position=right,
+        right_label=columns[right].label,
+        n_total_rows=n_rows,
+        n_paired=int(paired_rows.size),
+        methods=methods,
+    )
+
+
+def _numeric_categorical_record(
+    columns: Tuple[ColumnAnalysis, ...],
+    numeric_columns: dict,
+    categorical_columns: dict,
+    left: int,
+    right: int,
+    n_rows: int,
+) -> NumericCategoricalRelationship:
+    numeric_position, categorical_position = _role_positions(
+        left,
+        right,
+        columns[left].inferred.selected_type,
+    )
+    numeric_values, numeric_finite = numeric_columns[numeric_position]
+    category_codes, categories = categorical_columns[categorical_position]
+    return _analyze_numeric_categorical(
+        numeric_values,
+        numeric_finite,
+        category_codes,
+        categories,
+        left_position=left,
+        left_label=columns[left].label,
+        right_position=right,
+        right_label=columns[right].label,
+        numeric_position=numeric_position,
+        categorical_position=categorical_position,
+        n_total_rows=n_rows,
+    )
+
+
+def _role_positions(
+    left: int,
+    right: int,
+    left_type: object,
+) -> Tuple[int, int]:
+    """Return ``(numeric_position, categorical_position)``."""
+    if left_type is SemanticType.CATEGORICAL:
+        return right, left
+    return left, right
 
 
 def _classify_columns(columns: Tuple[ColumnAnalysis, ...]) -> _Classification:
@@ -270,6 +381,8 @@ def _pair_class(
         return _Eligibility.INELIGIBLE
     if left is SemanticType.NUMERIC and right is SemanticType.NUMERIC:
         return _Eligibility.SUPPORTED
+    if {left, right} == {SemanticType.NUMERIC, SemanticType.CATEGORICAL}:
+        return _Eligibility.SUPPORTED
     family = _UNIMPLEMENTED_FAMILIES.get(frozenset((left, right)))
     if family is None:
         return _Eligibility.INELIGIBLE
@@ -278,23 +391,29 @@ def _pair_class(
 
 def _require_recorded_pairs(
     classification: _Classification,
-    relationships: Tuple[NumericNumericRelationship, ...],
+    relationships: Tuple[
+        Union[NumericNumericRelationship, NumericCategoricalRelationship],
+        ...,
+    ],
     columns: Tuple[ColumnAnalysis, ...],
     n_rows: int,
 ) -> None:
     if not isinstance(relationships, tuple):
         raise TypeError("relationships must be a tuple")
     if len(relationships) != len(classification.supported_pairs):
-        raise ValueError("relationship records must be the selected Numeric pairs")
+        raise ValueError("relationship records must be the selected supported pairs")
     for relationship, pair in zip(relationships, classification.supported_pairs):
-        if not isinstance(relationship, NumericNumericRelationship):
+        if not isinstance(
+            relationship,
+            (NumericNumericRelationship, NumericCategoricalRelationship),
+        ):
             raise TypeError(
-                "relationships must contain NumericNumericRelationship values"
+                "relationships must contain calculated relationship records"
             )
         left, right = pair
         if (relationship.left_position, relationship.right_position) != (left, right):
             raise ValueError(
-                "relationship positions must follow selected Numeric pairs"
+                "relationship positions must follow selected supported pairs"
             )
         if relationship.n_total_rows != n_rows:
             raise ValueError("n_total_rows must equal the dataset row count")
@@ -302,6 +421,7 @@ def _require_recorded_pairs(
             raise ValueError("relationship label must be the source column label")
         if not _labels_match(relationship.right_label, columns[right].label):
             raise ValueError("relationship label must be the source column label")
+        _require_record_family(relationship, columns, left, right)
 
 
 def _require_aligned_columns(
@@ -328,7 +448,38 @@ def _require_column_tuple(columns: Tuple[ColumnAnalysis, ...], n_rows: int) -> N
             raise ValueError("column n_total must equal n_rows")
 
 
+def _require_record_family(
+    relationship: object,
+    columns: Tuple[ColumnAnalysis, ...],
+    left: int,
+    right: int,
+) -> None:
+    left_type = columns[left].inferred.selected_type
+    right_type = columns[right].inferred.selected_type
+    if left_type is SemanticType.NUMERIC and right_type is SemanticType.NUMERIC:
+        if not isinstance(relationship, NumericNumericRelationship):
+            raise TypeError("a numeric pair requires a NumericNumericRelationship")
+        return
+    if not isinstance(relationship, NumericCategoricalRelationship):
+        raise TypeError("a numeric-categorical pair requires that relationship record")
+    numeric_position, categorical_position = _role_positions(left, right, left_type)
+    if relationship.numeric_position != numeric_position:
+        raise ValueError("numeric role must follow the selected numeric column")
+    if relationship.categorical_position != categorical_position:
+        raise ValueError("categorical role must follow the selected categorical column")
+
+
 def _copy_relationship(
+    relationship: Union[NumericNumericRelationship, NumericCategoricalRelationship],
+) -> Union[NumericNumericRelationship, NumericCategoricalRelationship]:
+    if isinstance(relationship, NumericNumericRelationship):
+        return _copy_numeric_numeric(relationship)
+    if isinstance(relationship, NumericCategoricalRelationship):
+        return _copy_numeric_categorical(relationship)
+    raise TypeError("relationship records must be calculated relationship values")
+
+
+def _copy_numeric_numeric(
     relationship: NumericNumericRelationship,
 ) -> NumericNumericRelationship:
     return NumericNumericRelationship(
@@ -369,6 +520,67 @@ def _copy_method(method: AssociationResult) -> AssociationResult:
             lower=interval.lower,
             upper=interval.upper,
             reason=interval.reason,
+        ),
+    )
+
+
+def _copy_numeric_categorical(
+    relationship: NumericCategoricalRelationship,
+) -> NumericCategoricalRelationship:
+    return NumericCategoricalRelationship(
+        left_position=relationship.left_position,
+        left_label=relationship.left_label,
+        right_position=relationship.right_position,
+        right_label=relationship.right_label,
+        numeric_position=relationship.numeric_position,
+        categorical_position=relationship.categorical_position,
+        n_total_rows=relationship.n_total_rows,
+        n_paired=relationship.n_paired,
+        groups=tuple(_copy_group(group) for group in relationship.groups),
+        effect=_copy_effect(relationship.effect),
+        omnibus=_copy_omnibus(relationship.omnibus),
+    )
+
+
+def _copy_group(group: CategoricalGroupSummary) -> CategoricalGroupSummary:
+    descriptive = group.descriptive
+    return CategoricalGroupSummary(
+        category=group.category,
+        descriptive=NumericDescriptiveAnalysis(
+            finite_count=descriptive.finite_count,
+            minimum=descriptive.minimum,
+            maximum=descriptive.maximum,
+            mean=descriptive.mean,
+            median=descriptive.median,
+            standard_deviation=descriptive.standard_deviation,
+            q1=descriptive.q1,
+            q3=descriptive.q3,
+        ),
+    )
+
+
+def _copy_effect(effect: GroupEffectEstimate) -> GroupEffectEstimate:
+    return GroupEffectEstimate(
+        method=effect.method,
+        availability=effect.availability,
+        value=effect.value,
+        reason=effect.reason,
+    )
+
+
+def _copy_omnibus(omnibus: OmnibusAnovaResult) -> OmnibusAnovaResult:
+    frequentist = omnibus.frequentist
+    return OmnibusAnovaResult(
+        method=omnibus.method,
+        statistic_availability=omnibus.statistic_availability,
+        statistic=omnibus.statistic,
+        statistic_reason=omnibus.statistic_reason,
+        frequentist=FrequentistEvidence(
+            availability=frequentist.availability,
+            p_value=frequentist.p_value,
+            adjusted_p_value=frequentist.adjusted_p_value,
+            adjustment=frequentist.adjustment,
+            reason=frequentist.reason,
         ),
     )
 

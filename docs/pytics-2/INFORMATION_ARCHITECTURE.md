@@ -161,7 +161,7 @@ Professional relationship exploration. A table-oriented view is important. A mat
 | --- | --- | --- |
 | REQ-IA-11 | Relationships are explored primarily as a table, with detail for statistics, uncertainty, inference, visualization, and methods as appropriate. A matrix is an additional view, not a replacement for the table. | Accepted. "May" for the matrix is preserved: the matrix is allowed, not mandated. |
 
-An internal relationships summary now exposes Numeric × Numeric associations and the counts of physical pairs, supported pairs, and analyzed pairs ([DEC-095](DECISIONS.md#dec-095)). Spearman is the primary descriptive association. Pearson is complementary. The summary does not render this view, draw a matrix or a chart, or mark a result significant. Other relationship families are not calculated.
+An internal relationships summary now exposes Numeric × Numeric associations, Numeric × Categorical group effects, and the counts of physical pairs, supported pairs, and analyzed pairs ([DEC-095](DECISIONS.md#dec-095), [DEC-097](DECISIONS.md#dec-097)). Spearman is the primary descriptive association for Numeric × Numeric. Pearson is complementary. Eta squared is the overall Numeric × Categorical effect, with a raw one-way ANOVA p-value beside it. The summary does not render this view, draw a matrix or a chart, or mark a result significant. Other relationship families are not calculated.
 
 ### Target
 

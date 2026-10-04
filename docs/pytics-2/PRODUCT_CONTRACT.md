@@ -133,7 +133,7 @@ Where appropriate, analyses should consider:
 | --- | --- | --- |
 | REQ-P-10 | Lead inferential presentation with effect size, uncertainty, and context. Do not lead with the p-value, use significance stars, or treat a tiny p-value as inherent importance. Where correction applies, distinguish raw and adjusted p-values. | Accepted |
 
-"Where appropriate" is unresolved at the level of individual methods ([OPEN-006](DECISIONS.md#open-questions)). False-discovery-rate control is the preferred screening direction, with Benjamini-Hochberg as the leading candidate. The test family is not defined ([OPEN-007](DECISIONS.md#open-questions), [DEC-056](DECISIONS.md#dec-056)). TSK-024 stores a Numeric × Numeric estimate before its raw p-value and does not adjust that p-value ([DEC-095](DECISIONS.md#dec-095)). TSK-025 does not change that presentation ([DEC-096](DECISIONS.md#dec-096)).
+"Where appropriate" is unresolved at the level of individual methods ([OPEN-006](DECISIONS.md#open-questions)). False-discovery-rate control is the preferred screening direction, with Benjamini-Hochberg as the leading candidate. The test family is not defined ([OPEN-007](DECISIONS.md#open-questions), [DEC-056](DECISIONS.md#dec-056)). TSK-024 stores a Numeric × Numeric estimate before its raw p-value and does not adjust that p-value ([DEC-095](DECISIONS.md#dec-095)). TSK-025 does not change that presentation ([DEC-096](DECISIONS.md#dec-096)). TSK-026 stores eta squared before the raw one-way ANOVA p-value for a Numeric × Categorical pair and does not adjust that p-value ([DEC-097](DECISIONS.md#dec-097)).
 
 ## Bayesian inference
 

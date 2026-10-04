@@ -30,6 +30,7 @@ from pytics.analysis.relationship import CorrelationIntervalMethod
 from pytics.analysis.relationship import EffectDirection
 from pytics.analysis.relationship import FrequentistEvidence
 from pytics.analysis.relationship import MultipleTestingAdjustment
+from pytics.analysis.relationship import NumericCategoricalRelationship
 from pytics.analysis.relationship import NumericComputation
 from pytics.analysis.relationship import NumericNumericRelationship
 from pytics.analysis.relationship import PairPopulation
@@ -112,30 +113,44 @@ def _assert_counts(summary: RelationshipsSummary) -> None:
     assert summary.computation is NumericComputation.FLOAT64
     assert summary.confidence_level == 0.95
     assert summary.multiple_testing is MultipleTestingAdjustment.NOT_APPLIED
-    assert summary.implemented_family is RelationshipFamily.NUMERIC_NUMERIC
+    assert summary.implemented_families == (
+        RelationshipFamily.NUMERIC_NUMERIC,
+        RelationshipFamily.NUMERIC_CATEGORICAL,
+    )
     for relationship in summary.relationships:
-        assert relationship.family is RelationshipFamily.NUMERIC_NUMERIC
-        assert relationship.population is PairPopulation.PAIRWISE_FINITE
         assert relationship.left_position < relationship.right_position
         assert (
             relationship.n_excluded == relationship.n_total_rows - relationship.n_paired
         )
-        assert relationship.spearman.method is AssociationMethod.SPEARMAN
-        assert relationship.pearson.method is AssociationMethod.PEARSON
-        assert relationship.spearman.n_observations == relationship.n_paired
-        assert relationship.pearson.n_observations == relationship.n_paired
-        for method in relationship.methods:
+        assert not hasattr(relationship, "is_significant")
+        if isinstance(relationship, NumericNumericRelationship):
+            assert relationship.family is RelationshipFamily.NUMERIC_NUMERIC
+            assert relationship.population is PairPopulation.PAIRWISE_FINITE
+            assert relationship.spearman.method is AssociationMethod.SPEARMAN
+            assert relationship.pearson.method is AssociationMethod.PEARSON
+            assert relationship.spearman.n_observations == relationship.n_paired
+            assert relationship.pearson.n_observations == relationship.n_paired
+            for method in relationship.methods:
+                assert (
+                    method.frequentist.adjustment
+                    is MultipleTestingAdjustment.NOT_APPLIED
+                )
+                assert method.frequentist.adjusted_p_value is None
+                if method.estimate.availability is ResultAvailability.AVAILABLE:
+                    assert method.estimate.value is not None
+                    assert math.isfinite(method.estimate.value)
+                    assert type(method.estimate.value) is float
+                else:
+                    assert method.estimate.value is None
+                assert not hasattr(method, "is_significant")
+        else:
+            assert isinstance(relationship, NumericCategoricalRelationship)
+            assert relationship.family is RelationshipFamily.NUMERIC_CATEGORICAL
+            assert relationship.omnibus.frequentist.adjusted_p_value is None
             assert (
-                method.frequentist.adjustment is MultipleTestingAdjustment.NOT_APPLIED
+                relationship.omnibus.frequentist.adjustment
+                is MultipleTestingAdjustment.NOT_APPLIED
             )
-            assert method.frequentist.adjusted_p_value is None
-            if method.estimate.availability is ResultAvailability.AVAILABLE:
-                assert method.estimate.value is not None
-                assert math.isfinite(method.estimate.value)
-                assert type(method.estimate.value) is float
-            else:
-                assert method.estimate.value is None
-            assert not hasattr(method, "is_significant")
 
 
 def test_one_numeric_pair_keeps_spearman_and_pearson() -> None:
@@ -175,7 +190,10 @@ def test_one_numeric_pair_keeps_spearman_and_pearson() -> None:
     assert retained.computation is NumericComputation.FLOAT64
     assert retained.confidence_level == 0.95
     assert retained.multiple_testing is MultipleTestingAdjustment.NOT_APPLIED
-    assert retained.implemented_family is RelationshipFamily.NUMERIC_NUMERIC
+    assert retained.implemented_families == (
+        RelationshipFamily.NUMERIC_NUMERIC,
+        RelationshipFamily.NUMERIC_CATEGORICAL,
+    )
     assert retained.n_unsupported_pairs == 0
     assert summary.relationships[0] is not retained.relationships[0]
     assert summary.relationships == analysis.relationship_analysis.relationships
@@ -240,22 +258,33 @@ def test_unsupported_semantic_pairs_are_not_numeric_relationships(
             "note": pd.Series(["alpha", "beta", "gamma", "delta"], dtype="string"),
         }
     )
+    read_calls: list[str] = []
+    original_numeric = collector_module._read_numeric_column
+    original_categorical = collector_module._read_categorical_column
 
-    def _fail(*args: object, **kwargs: object) -> None:
-        raise AssertionError("an unsupported pair must not read numeric values")
+    def _spy_numeric(series: pd.Series) -> tuple[np.ndarray, np.ndarray]:
+        read_calls.append(str(series.name))
+        return original_numeric(series)
 
-    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
+    def _spy_categorical(series: pd.Series) -> tuple[np.ndarray, tuple[object, ...]]:
+        read_calls.append(str(series.name))
+        return original_categorical(series)
+
+    monkeypatch.setattr(collector_module, "_read_numeric_column", _spy_numeric)
+    monkeypatch.setattr(collector_module, "_read_categorical_column", _spy_categorical)
     analysis = analyze_dataframe(frame)
     summary = build_relationships_summary(analysis)
     _assert_counts(summary)
-    assert summary.n_supported_pairs == 0
-    assert summary.relationships == ()
-    assert summary.n_unimplemented_family_pairs == 4
+    assert read_calls == ["amount", "group"]
+    assert summary.n_supported_pairs == 1
+    relationship = summary.relationships[0]
+    assert isinstance(relationship, NumericCategoricalRelationship)
+    assert (relationship.left_position, relationship.right_position) == (0, 2)
+    assert relationship.numeric_position == 0
+    assert relationship.categorical_position == 2
+    assert summary.n_unimplemented_family_pairs == 3
     assert summary.unimplemented_family_counts == (
         UnimplementedFamilyCount(UnimplementedRelationshipFamily.NUMERIC_BOOLEAN, 1),
-        UnimplementedFamilyCount(
-            UnimplementedRelationshipFamily.NUMERIC_CATEGORICAL, 1
-        ),
         UnimplementedFamilyCount(UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1),
         UnimplementedFamilyCount(
             UnimplementedRelationshipFamily.DATETIME_CATEGORICAL, 1
@@ -296,11 +325,24 @@ def test_recognized_families_are_counted_without_raw_scans(
     _assert_counts(summary)
     assert read_positions == [0, 1]
     assert summary.n_total_pairs == 21
-    assert summary.n_supported_pairs == 1
+    assert summary.n_supported_pairs == 5
+    assert (
+        sum(
+            isinstance(item, NumericNumericRelationship)
+            for item in summary.relationships
+        )
+        == 1
+    )
+    assert (
+        sum(
+            isinstance(item, NumericCategoricalRelationship)
+            for item in summary.relationships
+        )
+        == 4
+    )
     counts = {item.family: item.n_pairs for item in summary.unimplemented_family_counts}
     assert counts == {
         UnimplementedRelationshipFamily.NUMERIC_BOOLEAN: 4,
-        UnimplementedRelationshipFamily.NUMERIC_CATEGORICAL: 4,
         UnimplementedRelationshipFamily.BOOLEAN_BOOLEAN: 1,
         UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL: 1,
         UnimplementedRelationshipFamily.DATETIME_NUMERIC: 2,
@@ -653,7 +695,7 @@ def test_models_are_frozen_and_reject_inconsistent_results() -> None:
         collect_relationship_analysis(pd.Series([1, 2]), ())  # type: ignore[arg-type]
     left = analyze_series(pd.Series([1, 2, 3]), position=0, label="a")
     right = analyze_series(pd.Series([1, 2, 4]), position=1, label="b")
-    with pytest.raises(ValueError, match="selected Numeric pairs"):
+    with pytest.raises(ValueError, match="selected supported pairs"):
         relationship_analysis_for_columns((left, right), n_rows=3)
 
 
@@ -1352,7 +1394,7 @@ def test_remaining_model_and_pair_rejections(monkeypatch: pytest.MonkeyPatch) ->
             n_rows=4,
             relationships=[recorded],  # type: ignore[arg-type]
         )
-    with pytest.raises(TypeError, match="NumericNumericRelationship"):
+    with pytest.raises(TypeError, match="calculated relationship records"):
         relationship_analysis_for_columns(
             columns,
             n_rows=4,
@@ -1440,7 +1482,7 @@ def test_remaining_model_and_pair_rejections(monkeypatch: pytest.MonkeyPatch) ->
             unimplemented_family_counts=(),
             relationships=(),
         )
-    with pytest.raises(TypeError, match="NumericNumericRelationship"):
+    with pytest.raises(TypeError, match="calculated relationship records"):
         RelationshipAnalysis(
             n_rows=4,
             n_total_pairs=1,
@@ -1561,6 +1603,7 @@ def _imported_modules(tree: ast.AST) -> set[str]:
 def test_relationship_module_does_not_gate_methods_on_normality() -> None:
     import pytics.analysis.relationships as relationships_package
     import pytics.analysis.relationships.models as models_module
+    import pytics.analysis.relationships.numeric_categorical as numeric_categorical_module
 
     source = "\n".join(
         inspect.getsource(module)
@@ -1569,6 +1612,7 @@ def test_relationship_module_does_not_gate_methods_on_normality() -> None:
             relationships_package,
             models_module,
             numeric_numeric_module,
+            numeric_categorical_module,
             collector_module,
         )
     )
@@ -1581,14 +1625,20 @@ def test_relationship_module_does_not_gate_methods_on_normality() -> None:
     assert "MethodRegistry" not in source
     model_tree = ast.parse(inspect.getsource(models_module))
     numeric_tree = ast.parse(inspect.getsource(numeric_numeric_module))
+    categorical_tree = ast.parse(inspect.getsource(numeric_categorical_module))
     model_imports = _imported_modules(model_tree)
     numeric_imports = _imported_modules(numeric_tree)
+    categorical_imports = _imported_modules(categorical_tree)
     assert "scipy" not in model_imports
     assert "pandas" not in model_imports
     assert "numpy" not in model_imports
     assert not any("collector" in name for name in numeric_imports)
+    assert not any("collector" in name for name in categorical_imports)
+    assert "scipy.stats" in categorical_imports
     assert not any(name.endswith("relationship") for name in numeric_imports)
-    assert relationship_module.RelationshipAnalysis is models_module.RelationshipAnalysis
+    assert (
+        relationship_module.RelationshipAnalysis is models_module.RelationshipAnalysis
+    )
     assert (
         relationship_module.collect_relationship_analysis
         is collector_module.collect_relationship_analysis
