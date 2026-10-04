@@ -1,7 +1,7 @@
 """Internal relationship analysis.
 
-``models`` holds records that more than one family can share.
-``numeric_numeric`` calculates Numeric × Numeric.
+``models`` holds shared records and the heterogeneous dataset
+container. ``numeric_numeric`` calculates Numeric × Numeric.
 ``numeric_categorical`` calculates Numeric × Categorical.
 ``collector`` chooses pairs and projects the product summary.
 Importing this package is not a frozen public API.
@@ -31,6 +31,7 @@ from pytics.analysis.relationships.models import OmnibusTestMethod
 from pytics.analysis.relationships.models import PairPopulation
 from pytics.analysis.relationships.models import RelationshipAnalysis
 from pytics.analysis.relationships.models import RelationshipFamily
+from pytics.analysis.relationships.models import RelationshipRecord
 from pytics.analysis.relationships.models import RelationshipsSummary
 from pytics.analysis.relationships.models import ResultAvailability
 from pytics.analysis.relationships.models import UnavailabilityReason

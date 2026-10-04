@@ -1,10 +1,11 @@
-"""Relationship result models shared by relationship families.
+"""Relationship result models.
 
-These values describe pair identity, component availability, and the
-dataset relationship record. They do not calculate a statistic and
-they do not import a statistical library. Family-specific calculations
-live with that family. Numeric descriptive facts reused for category
-groups come from the Numeric descriptive model.
+Shared records describe availability, pair coverage, and the dataset
+container. Family records describe that family's population rule and
+statistical components. The dataset container does not claim one method
+for every pair. These models do not calculate a statistic and they do
+not import a statistical library. Numeric descriptive facts reused for
+category groups come from the Numeric descriptive model.
 """
 
 from __future__ import annotations
@@ -12,20 +13,24 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from enum import Enum
+from typing import FrozenSet
 from typing import Optional
 from typing import Tuple
 from typing import Union
 
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 
-# Two-sided 95% interval. The level is not configurable in this slice.
+# Fisher-z level for an available Pearson interval. The level is stored on
+# that interval. It is not a dataset-wide confidence level, and it is not
+# configurable in this slice.
 _CONFIDENCE_LEVEL = 0.95
 
 
 class AssociationMethod(Enum):
-    """Machine-readable association method.
+    """Numeric × Numeric association method.
 
-    Display names are not this identity.
+    This is not a catalog of every relationship method. Display names
+    are not this identity.
     """
 
     SPEARMAN = "spearman"
@@ -33,9 +38,12 @@ class AssociationMethod(Enum):
 
 
 class RelationshipFamily(Enum):
-    """Implemented relationship family.
+    """Relationship family this version calculates.
 
-    Further families are not members of this enum until a method exists.
+    A member means the family is implemented. It does not mean one
+    dataset contains a pair of that family. Families present in a
+    dataset are the retained relationship records. Further families are
+    not members until a calculation exists.
     """
 
     NUMERIC_NUMERIC = "numeric_numeric"
@@ -82,6 +90,36 @@ class UnavailabilityReason(Enum):
     ZERO_WITHIN_GROUP_VARIATION = "zero_within_group_variation"
 
 
+# Correlation components may share numerical reasons. Interval-only
+# reasons stay off the estimate and the test. Group-analysis reasons
+# stay off correlation components.
+_CORRELATION_COMPONENT_REASONS = frozenset(
+    {
+        UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS,
+        UnavailabilityReason.CONSTANT_PAIRED_VALUES,
+        UnavailabilityReason.PRECISION_COLLAPSED,
+        UnavailabilityReason.NON_FINITE_RESULT,
+    }
+)
+_CORRELATION_INTERVAL_REASONS = _CORRELATION_COMPONENT_REASONS | {
+    UnavailabilityReason.BOUNDARY_CORRELATION,
+    UnavailabilityReason.INTERVAL_NOT_DEFINED_FOR_METHOD,
+}
+_GROUP_EFFECT_REASONS = frozenset(
+    {
+        UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS,
+        UnavailabilityReason.INSUFFICIENT_GROUPS,
+        UnavailabilityReason.ZERO_TOTAL_VARIATION,
+        UnavailabilityReason.PRECISION_COLLAPSED,
+        UnavailabilityReason.NON_FINITE_RESULT,
+    }
+)
+_ANOVA_COMPONENT_REASONS = _GROUP_EFFECT_REASONS | {
+    UnavailabilityReason.INSUFFICIENT_WITHIN_GROUP_DEGREES_OF_FREEDOM,
+    UnavailabilityReason.ZERO_WITHIN_GROUP_VARIATION,
+}
+
+
 class EffectDirection(Enum):
     """Sign of a correlation estimate.
 
@@ -116,8 +154,10 @@ class PairPopulation(Enum):
 
 
 class NumericComputation(Enum):
-    """Computational representation passed to the correlation routines.
+    """Float64 image passed to Spearman and Pearson.
 
+    This is not an exact-versus-sampled execution mode, not the pairwise
+    filter, and not the Numeric × Categorical centered-integer image.
     ``FLOAT64`` does not claim exact integer correlation above ``2**53``.
     """
 
@@ -167,16 +207,17 @@ class CorrelationEstimate:
             return
         if self.value is not None or self.direction is not None:
             raise ValueError("an unavailable estimate has no value or direction")
-        _require_enum(self.reason, UnavailabilityReason, "reason")
+        _require_reason(self.reason, _CORRELATION_COMPONENT_REASONS, "reason")
 
 
 @dataclass(frozen=True)
 class FrequentistEvidence:
-    """Raw frequentist evidence attached to one estimate.
+    """Raw frequentist evidence for one inferential result.
 
-    ``p_value`` is the two-sided SciPy p-value when the test is available.
-    ``adjusted_p_value`` stays ``None`` while adjustment is not applied.
-    The p-value is not a significance flag.
+    A correlation test and a one-way ANOVA p-value both use this record.
+    ``adjustment`` belongs to this result. It is not a dataset-wide
+    correction status. ``adjusted_p_value`` stays ``None`` while
+    adjustment is not applied. The p-value is not a significance flag.
     """
 
     availability: ResultAvailability
@@ -204,9 +245,10 @@ class FrequentistEvidence:
 class CorrelationInterval:
     """Uncertainty interval for one correlation estimate.
 
-    An available interval records its level and method. Spearman has no
+    An available interval records its own level and method. That level
+    is the confidence metadata for this interval. Spearman has no
     interval in this slice, so its interval stays unavailable even when
-    the estimate exists.
+    the estimate exists. A Numeric × Categorical record has no interval.
     """
 
     availability: ResultAvailability
@@ -237,7 +279,7 @@ class CorrelationInterval:
             or self.upper is not None
         ):
             raise ValueError("an unavailable interval has no bounds")
-        _require_enum(self.reason, UnavailabilityReason, "reason")
+        _require_reason(self.reason, _CORRELATION_INTERVAL_REASONS, "reason")
 
 
 @dataclass(frozen=True)
@@ -266,6 +308,11 @@ class AssociationResult:
             CorrelationInterval,
             "confidence_interval",
         )
+        if (
+            self.frequentist.reason is not None
+            and self.frequentist.reason not in _CORRELATION_COMPONENT_REASONS
+        ):
+            raise ValueError("frequentist reason is not a correlation-test reason")
         _require_component_consistency(self)
 
 
@@ -278,8 +325,16 @@ class NumericNumericRelationship:
     finite. ``n_excluded`` is every other row, including rows where either
     value is missing or infinite. The paired arrays are not stored.
 
-    ``methods`` is Spearman, then Pearson. Both records exist when a
-    method is unavailable.
+    ``methods`` is Spearman, then Pearson. Spearman is the primary
+    descriptive association of this family because this record exposes
+    it as the Spearman component. Pearson is complementary. There is no
+    separate primary-method field. Both records exist when a method is
+    unavailable.
+
+    ``population`` is the pairwise finite eligibility rule. ``n_total_rows``,
+    ``n_paired``, and ``n_excluded`` are the pair counts for that rule.
+    ``computation`` is the float64 correlation image shared by both
+    methods on this pair.
     """
 
     left_position: int
@@ -291,16 +346,8 @@ class NumericNumericRelationship:
     methods: Tuple[AssociationResult, ...]
 
     def __post_init__(self) -> None:
-        _require_position(self.left_position, "left_position")
-        _require_position(self.right_position, "right_position")
-        if self.left_position >= self.right_position:
-            raise ValueError("left_position must be less than right_position")
-        if type(self.n_total_rows) is not int or self.n_total_rows < 0:
-            raise ValueError("n_total_rows must be a non-negative int")
-        if type(self.n_paired) is not int or self.n_paired < 0:
-            raise ValueError("n_paired must be a non-negative int")
-        if self.n_paired > self.n_total_rows:
-            raise ValueError("n_paired cannot exceed n_total_rows")
+        _require_canonical_positions(self.left_position, self.right_position)
+        _require_population_counts(self.n_total_rows, self.n_paired)
         if not isinstance(self.methods, tuple):
             raise TypeError("methods must be a tuple")
         if len(self.methods) != 2:
@@ -329,6 +376,14 @@ class NumericNumericRelationship:
         return PairPopulation.PAIRWISE_FINITE
 
     @property
+    def computation(self) -> NumericComputation:
+        """Float64 image used by Spearman and Pearson on this pair.
+
+        Not an exact integer claim. Not a dataset execution mode.
+        """
+        return NumericComputation.FLOAT64
+
+    @property
     def n_excluded(self) -> int:
         """Rows that are not in the pairwise finite population.
 
@@ -338,7 +393,7 @@ class NumericNumericRelationship:
 
     @property
     def spearman(self) -> AssociationResult:
-        """Spearman result. This is the primary descriptive association."""
+        """Spearman result. The primary descriptive association of this pair."""
         return self.methods[0]
 
     @property
@@ -412,7 +467,7 @@ class GroupEffectEstimate:
             return
         if self.value is not None:
             raise ValueError("an unavailable effect has no value")
-        _require_enum(self.reason, UnavailabilityReason, "reason")
+        _require_reason(self.reason, _GROUP_EFFECT_REASONS, "reason")
 
 
 @dataclass(frozen=True)
@@ -443,6 +498,11 @@ class OmnibusAnovaResult:
         _require_type(self.frequentist, FrequentistEvidence, "frequentist")
         if self.frequentist.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
             raise ValueError("multiple-testing adjustment is not applied")
+        if (
+            self.frequentist.reason is not None
+            and self.frequentist.reason not in _ANOVA_COMPONENT_REASONS
+        ):
+            raise ValueError("omnibus p-value reason is not an ANOVA reason")
         if self.statistic_availability is ResultAvailability.AVAILABLE:
             _require_nonnegative_float(self.statistic, "F statistic")
             if self.statistic_reason is not None:
@@ -452,7 +512,11 @@ class OmnibusAnovaResult:
             return
         if self.statistic is not None:
             raise ValueError("an unavailable F statistic has no value")
-        _require_enum(self.statistic_reason, UnavailabilityReason, "statistic_reason")
+        _require_reason(
+            self.statistic_reason,
+            _ANOVA_COMPONENT_REASONS,
+            "statistic_reason",
+        )
 
 
 @dataclass(frozen=True)
@@ -496,7 +560,14 @@ class NumericCategoricalRelationship:
     stored.
 
     ``effect`` is eta squared. ``omnibus`` is classical one-way ANOVA.
-    Either component can be unavailable without discarding the record.
+    Those are separate components. This record has no correlation method,
+    no confidence interval, and no primary-method field. Either component
+    can be unavailable without discarding the record.
+
+    ``population`` is the finite-numeric, observed-category rule.
+    ``n_total_rows``, ``n_paired``, and ``n_excluded`` are the pair counts
+    for that rule. The count fields use the same shape as a Numeric ×
+    Numeric record. The eligibility rule does not.
     """
 
     left_position: int
@@ -512,21 +583,13 @@ class NumericCategoricalRelationship:
     omnibus: OmnibusAnovaResult
 
     def __post_init__(self) -> None:
-        _require_position(self.left_position, "left_position")
-        _require_position(self.right_position, "right_position")
+        _require_canonical_positions(self.left_position, self.right_position)
         _require_position(self.numeric_position, "numeric_position")
         _require_position(self.categorical_position, "categorical_position")
-        if self.left_position >= self.right_position:
-            raise ValueError("left_position must be less than right_position")
         roles = {self.numeric_position, self.categorical_position}
         if roles != {self.left_position, self.right_position}:
             raise ValueError("roles must be the two physical pair positions")
-        if type(self.n_total_rows) is not int or self.n_total_rows < 0:
-            raise ValueError("n_total_rows must be a non-negative int")
-        if type(self.n_paired) is not int or self.n_paired < 0:
-            raise ValueError("n_paired must be a non-negative int")
-        if self.n_paired > self.n_total_rows:
-            raise ValueError("n_paired cannot exceed n_total_rows")
+        _require_population_counts(self.n_total_rows, self.n_paired)
         if not isinstance(self.groups, tuple):
             raise TypeError("groups must be a tuple")
         counted = 0
@@ -565,21 +628,28 @@ class NumericCategoricalRelationship:
         return len(self.groups)
 
 
+RelationshipRecord = Union[
+    NumericNumericRelationship,
+    NumericCategoricalRelationship,
+]
+
+
 @dataclass(frozen=True)
 class RelationshipAnalysis:
-    """Retained relationship facts for one dataset.
+    """Coverage and retained relationship records for one dataset.
 
-    Supported Numeric × Numeric and Numeric × Categorical pairs are
-    stored as records, in ascending physical position order. Unimplemented
-    recognized families and ineligible pairs are counts.
-    ``n_analyzed_pairs`` is the number of retained records, including
-    records whose statistical components are unavailable. It is not a
-    count of significant tests.
+    This container answers which relationship analyses were performed
+    and how pair coverage was counted. It does not name one statistical
+    method, one population rule, one computational image, or one
+    confidence level for every record.
 
-    ``primary_method``, ``population``, ``computation``, and
-    ``confidence_level`` describe the Numeric × Numeric conventions.
-    They are not a ranking across families. A Numeric × Categorical
-    record carries its own population, effect, and omnibus test.
+    Supported pairs are family-specific records, in ascending physical
+    position order. ``RelationshipFamily`` names the families this
+    version can calculate. Records name the families present in this
+    dataset. Unimplemented recognized families and ineligible pairs are
+    counts, because those pairs have no record. ``n_analyzed_pairs`` is
+    the number of retained records, including records whose statistical
+    components are unavailable. It is not a count of significant tests.
     """
 
     n_rows: int
@@ -589,10 +659,7 @@ class RelationshipAnalysis:
     n_unimplemented_family_pairs: int
     n_ineligible_pairs: int
     unimplemented_family_counts: Tuple[UnimplementedFamilyCount, ...]
-    relationships: Tuple[
-        Union[NumericNumericRelationship, NumericCategoricalRelationship],
-        ...,
-    ]
+    relationships: Tuple[RelationshipRecord, ...]
 
     def __post_init__(self) -> None:
         _require_nonnegative(self.n_rows, "n_rows")
@@ -628,56 +695,20 @@ class RelationshipAnalysis:
         """
         return self.n_unimplemented_family_pairs + self.n_ineligible_pairs
 
-    @property
-    def primary_method(self) -> AssociationMethod:
-        """Spearman, the primary Numeric × Numeric association.
-
-        Numeric × Categorical records do not use this method.
-        """
-        return AssociationMethod.SPEARMAN
-
-    @property
-    def population(self) -> PairPopulation:
-        """Pairwise finite source values for Numeric × Numeric.
-
-        Numeric × Categorical records use their own population.
-        """
-        return PairPopulation.PAIRWISE_FINITE
-
-    @property
-    def computation(self) -> NumericComputation:
-        """Float64 image used for Numeric × Numeric SciPy calls.
-
-        Not an exact integer claim. Numeric × Categorical centers large
-        integers before its own float64 image.
-        """
-        return NumericComputation.FLOAT64
-
-    @property
-    def confidence_level(self) -> float:
-        """Level used when a Pearson interval is available."""
-        return _CONFIDENCE_LEVEL
-
-    @property
-    def multiple_testing(self) -> MultipleTestingAdjustment:
-        """Adjustment is not applied. Raw p-values stay raw."""
-        return MultipleTestingAdjustment.NOT_APPLIED
-
-    @property
-    def implemented_families(self) -> Tuple[RelationshipFamily, ...]:
-        """Families this analysis calculates, in definition order."""
-        return (
-            RelationshipFamily.NUMERIC_NUMERIC,
-            RelationshipFamily.NUMERIC_CATEGORICAL,
-        )
-
 
 @dataclass(frozen=True)
 class RelationshipsSummary:
     """Product projection of a retained relationship analysis.
 
-    The builder copies counts and relationship records. It does not read
-    a DataFrame and does not calculate a statistic.
+    The summary is not a second statistical analysis. It copies coverage
+    counts and family records so a later Relationships view can read them
+    without the rest of ``DatasetAnalysis``. ``n_columns`` is copied so
+    the unordered-pair total can be checked against the schema.
+
+    The builder does not read a DataFrame, infer a family, or calculate
+    a statistic. It does not restate a method, a population rule, a
+    computational image, or a confidence level that is not already on
+    the copied record.
     """
 
     n_rows: int
@@ -688,10 +719,7 @@ class RelationshipsSummary:
     n_unimplemented_family_pairs: int
     n_ineligible_pairs: int
     unimplemented_family_counts: Tuple[UnimplementedFamilyCount, ...]
-    relationships: Tuple[
-        Union[NumericNumericRelationship, NumericCategoricalRelationship],
-        ...,
-    ]
+    relationships: Tuple[RelationshipRecord, ...]
 
     def __post_init__(self) -> None:
         _require_nonnegative(self.n_rows, "n_rows")
@@ -726,49 +754,6 @@ class RelationshipsSummary:
         """Pairs that were not analyzed."""
         return self.n_unimplemented_family_pairs + self.n_ineligible_pairs
 
-    @property
-    def primary_method(self) -> AssociationMethod:
-        """Spearman, the primary Numeric × Numeric association.
-
-        Numeric × Categorical records do not use this method.
-        """
-        return AssociationMethod.SPEARMAN
-
-    @property
-    def population(self) -> PairPopulation:
-        """Pairwise finite source values for Numeric × Numeric.
-
-        Numeric × Categorical records use their own population.
-        """
-        return PairPopulation.PAIRWISE_FINITE
-
-    @property
-    def computation(self) -> NumericComputation:
-        """Float64 image used for Numeric × Numeric SciPy calls.
-
-        Not an exact integer claim. Numeric × Categorical centers large
-        integers before its own float64 image.
-        """
-        return NumericComputation.FLOAT64
-
-    @property
-    def confidence_level(self) -> float:
-        """Level used when a Pearson interval is available."""
-        return _CONFIDENCE_LEVEL
-
-    @property
-    def multiple_testing(self) -> MultipleTestingAdjustment:
-        """Adjustment is not applied. Raw p-values stay raw."""
-        return MultipleTestingAdjustment.NOT_APPLIED
-
-    @property
-    def implemented_families(self) -> Tuple[RelationshipFamily, ...]:
-        """Families this summary can project, in definition order."""
-        return (
-            RelationshipFamily.NUMERIC_NUMERIC,
-            RelationshipFamily.NUMERIC_CATEGORICAL,
-        )
-
 
 def _direction(value: float) -> EffectDirection:
     if value < 0.0:
@@ -799,10 +784,7 @@ def _require_component_consistency(result: AssociationResult) -> None:
 
 
 def _require_relationships(
-    relationships: Tuple[
-        Union[NumericNumericRelationship, NumericCategoricalRelationship],
-        ...,
-    ],
+    relationships: Tuple[RelationshipRecord, ...],
     n_rows: int,
     n_analyzed: int,
 ) -> None:
@@ -880,6 +862,33 @@ def _require_type(value: object, expected: type, field: str) -> None:
 def _require_position(value: object, field: str) -> None:
     if type(value) is not int or value < 0:
         raise ValueError(f"{field} must be a non-negative int")
+
+
+def _require_canonical_positions(left: object, right: object) -> None:
+    _require_position(left, "left_position")
+    _require_position(right, "right_position")
+    if left >= right:  # type: ignore[operator]
+        raise ValueError("left_position must be less than right_position")
+
+
+def _require_population_counts(n_total_rows: object, n_paired: object) -> None:
+    """Shared pair-count shape. The eligibility rule stays on the record."""
+    if type(n_total_rows) is not int or n_total_rows < 0:
+        raise ValueError("n_total_rows must be a non-negative int")
+    if type(n_paired) is not int or n_paired < 0:
+        raise ValueError("n_paired must be a non-negative int")
+    if n_paired > n_total_rows:
+        raise ValueError("n_paired cannot exceed n_total_rows")
+
+
+def _require_reason(
+    reason: object,
+    allowed: FrozenSet[UnavailabilityReason],
+    field: str,
+) -> None:
+    _require_enum(reason, UnavailabilityReason, field)
+    if reason not in allowed:
+        raise ValueError(f"{field} is not a reason for this component")
 
 
 def _require_nonnegative(value: object, field: str) -> None:

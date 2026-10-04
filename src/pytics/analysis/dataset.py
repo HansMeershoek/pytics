@@ -4,9 +4,9 @@ Each physical column is analyzed once, in source order. The result keeps
 dataset dimensions, the column analyses, missing-cell totals derived from
 basic evidence already retained, the exact missingness aggregates
 collected from one DataFrame pass, the exact duplicate-row groups
-collected from a separate pass, and the Numeric × Numeric and
-Numeric × Categorical relationships collected from selected semantic
-types. It does not keep the DataFrame.
+collected from a separate pass, and the heterogeneous relationship
+records collected from selected semantic types. It does not keep the
+DataFrame.
 """
 
 from __future__ import annotations
@@ -45,8 +45,9 @@ class DatasetAnalysis:
 
     ``missing_analysis`` is the retained row distribution and exact
     missingness patterns. ``duplicate_analysis`` is the retained exact
-    duplicate groups.     ``relationship_analysis`` is the retained Numeric × Numeric and
-    Numeric × Categorical associations and the pair-coverage counts. All three are
+    duplicate groups. ``relationship_analysis`` is the retained
+    heterogeneous relationship records and the pair-coverage counts.
+    It does not name one method for every pair. All three are
     cross-column, so they are not derived from one column record. The
     missingness mask, the row values, and the paired arrays are not
     stored. The three passes do not call each other.

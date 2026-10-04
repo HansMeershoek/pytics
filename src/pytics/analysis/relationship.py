@@ -2,8 +2,9 @@
 
 The implementation lives in ``pytics.analysis.relationships``. This
 module re-exports the records and collectors that dataset analysis and
-the current tests import. It is not a frozen public schema, and it is
-not a method registry.
+the current tests import. Those names are an internal compatibility
+surface. They are not the public ``profile`` or ``compare`` result, and
+they are not a method registry.
 """
 
 from pytics.analysis.relationships.collector import _labels_match
@@ -32,6 +33,7 @@ from pytics.analysis.relationships.models import OmnibusTestMethod
 from pytics.analysis.relationships.models import PairPopulation
 from pytics.analysis.relationships.models import RelationshipAnalysis
 from pytics.analysis.relationships.models import RelationshipFamily
+from pytics.analysis.relationships.models import RelationshipRecord
 from pytics.analysis.relationships.models import RelationshipsSummary
 from pytics.analysis.relationships.models import ResultAvailability
 from pytics.analysis.relationships.models import UnavailabilityReason

@@ -32,6 +32,7 @@ from pytics.analysis.relationships.models import NumericCategoricalRelationship
 from pytics.analysis.relationships.models import NumericNumericRelationship
 from pytics.analysis.relationships.models import OmnibusAnovaResult
 from pytics.analysis.relationships.models import RelationshipAnalysis
+from pytics.analysis.relationships.models import RelationshipRecord
 from pytics.analysis.relationships.models import RelationshipsSummary
 from pytics.analysis.relationships.models import UnimplementedFamilyCount
 from pytics.analysis.relationships.models import UnimplementedRelationshipFamily
@@ -117,7 +118,7 @@ def relationship_analysis_for_columns(
     *,
     n_rows: int,
     relationships: Tuple[
-        Union[NumericNumericRelationship, NumericCategoricalRelationship],
+        RelationshipRecord,
         ...,
     ] = (),
 ) -> RelationshipAnalysis:
@@ -199,7 +200,7 @@ def _relationships_for_frame(
     frame: pd.DataFrame,
     columns: Tuple[ColumnAnalysis, ...],
     n_rows: int,
-) -> Tuple[Union[NumericNumericRelationship, NumericCategoricalRelationship], ...]:
+) -> Tuple[RelationshipRecord, ...]:
     """Calculate one record per supported pair.
 
     A Numeric column is read once even when it pairs with several other
@@ -221,9 +222,7 @@ def _relationships_for_frame(
         position: _read_categorical_column(frame.iloc[:, position])
         for position in categorical_positions
     }
-    records: List[Union[NumericNumericRelationship, NumericCategoricalRelationship]] = (
-        []
-    )
+    records: List[RelationshipRecord] = []
     for left, right in classification.supported_pairs:
         left_type = columns[left].inferred.selected_type
         right_type = columns[right].inferred.selected_type
@@ -392,7 +391,7 @@ def _pair_class(
 def _require_recorded_pairs(
     classification: _Classification,
     relationships: Tuple[
-        Union[NumericNumericRelationship, NumericCategoricalRelationship],
+        RelationshipRecord,
         ...,
     ],
     columns: Tuple[ColumnAnalysis, ...],
@@ -470,8 +469,8 @@ def _require_record_family(
 
 
 def _copy_relationship(
-    relationship: Union[NumericNumericRelationship, NumericCategoricalRelationship],
-) -> Union[NumericNumericRelationship, NumericCategoricalRelationship]:
+    relationship: RelationshipRecord,
+) -> RelationshipRecord:
     if isinstance(relationship, NumericNumericRelationship):
         return _copy_numeric_numeric(relationship)
     if isinstance(relationship, NumericCategoricalRelationship):

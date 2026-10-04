@@ -91,6 +91,19 @@ def _assert_no_retained_source(value: object, seen: set[int] | None = None) -> N
             _assert_no_retained_source(item, seen)
 
 
+def _assert_no_dataset_method_claims(value: object) -> None:
+    """Dataset containers do not restate one family's statistical method."""
+    for name in (
+        "primary_method",
+        "population",
+        "computation",
+        "confidence_level",
+        "multiple_testing",
+        "implemented_families",
+    ):
+        assert not hasattr(value, name)
+
+
 def _assert_counts(summary: RelationshipsSummary) -> None:
     expected = summary.n_columns * (summary.n_columns - 1) // 2
     assert summary.n_total_pairs == expected
@@ -108,15 +121,7 @@ def _assert_counts(summary: RelationshipsSummary) -> None:
     assert sum(item.n_pairs for item in summary.unimplemented_family_counts) == (
         summary.n_unimplemented_family_pairs
     )
-    assert summary.primary_method is AssociationMethod.SPEARMAN
-    assert summary.population is PairPopulation.PAIRWISE_FINITE
-    assert summary.computation is NumericComputation.FLOAT64
-    assert summary.confidence_level == 0.95
-    assert summary.multiple_testing is MultipleTestingAdjustment.NOT_APPLIED
-    assert summary.implemented_families == (
-        RelationshipFamily.NUMERIC_NUMERIC,
-        RelationshipFamily.NUMERIC_CATEGORICAL,
-    )
+    _assert_no_dataset_method_claims(summary)
     for relationship in summary.relationships:
         assert relationship.left_position < relationship.right_position
         assert (
@@ -126,6 +131,7 @@ def _assert_counts(summary: RelationshipsSummary) -> None:
         if isinstance(relationship, NumericNumericRelationship):
             assert relationship.family is RelationshipFamily.NUMERIC_NUMERIC
             assert relationship.population is PairPopulation.PAIRWISE_FINITE
+            assert relationship.computation is NumericComputation.FLOAT64
             assert relationship.spearman.method is AssociationMethod.SPEARMAN
             assert relationship.pearson.method is AssociationMethod.PEARSON
             assert relationship.spearman.n_observations == relationship.n_paired
@@ -185,15 +191,13 @@ def test_one_numeric_pair_keeps_spearman_and_pearson() -> None:
         UnavailabilityReason.BOUNDARY_CORRELATION
     )
     retained = analysis.relationship_analysis
-    assert retained.primary_method is AssociationMethod.SPEARMAN
-    assert retained.population is PairPopulation.PAIRWISE_FINITE
-    assert retained.computation is NumericComputation.FLOAT64
-    assert retained.confidence_level == 0.95
-    assert retained.multiple_testing is MultipleTestingAdjustment.NOT_APPLIED
-    assert retained.implemented_families == (
-        RelationshipFamily.NUMERIC_NUMERIC,
-        RelationshipFamily.NUMERIC_CATEGORICAL,
-    )
+    _assert_no_dataset_method_claims(retained)
+    retained_pair = retained.relationships[0]
+    assert isinstance(retained_pair, NumericNumericRelationship)
+    assert retained_pair.population is PairPopulation.PAIRWISE_FINITE
+    assert retained_pair.computation is NumericComputation.FLOAT64
+    assert retained_pair.spearman.confidence_interval.level is None
+    assert retained_pair.pearson.confidence_interval.level is None
     assert retained.n_unsupported_pairs == 0
     assert summary.relationships[0] is not retained.relationships[0]
     assert summary.relationships == analysis.relationship_analysis.relationships

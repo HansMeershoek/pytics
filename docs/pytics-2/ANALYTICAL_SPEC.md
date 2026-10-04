@@ -513,6 +513,8 @@ TSK-024 calculates one family in `pytics.analysis` ([DEC-095](DECISIONS.md#dec-0
 
 TSK-026 calculates selected Numeric × selected Categorical in the same package ([DEC-097](DECISIONS.md#dec-097)). Physical position is still the pair identity. The numeric and categorical roles do not depend on which side is numeric. The population is a finite Numeric value paired with a non-missing category. Only observed groups are described, using the same Numeric descriptive definitions. The effect is eta squared. The omnibus test is classical one-way ANOVA. The effect and the raw p-value are separate. There is no post-hoc test, no assumption gate, no strength label, and no adjusted p-value. Other accepted pair directions are counted and not calculated. This does not complete the Relationships contract.
 
+TSK-027 does not add a family and does not change those calculations ([DEC-098](DECISIONS.md#dec-098)). The dataset relationship container stores coverage and family records. It does not store one method, one population rule, one computational image, or one confidence level for every pair. Pair counts stay on the pair. The eligibility rule stays on the family record. A 95% level is stored only on an available Pearson interval.
+
 Identifiers are excluded from ordinary correlation by default (`REQ-G-03`). Extreme high-cardinality categorical pairs are protected from meaningless or computationally explosive analysis. Datetime values are not converted to integers for ordinary correlation. A datetime column does not by itself establish a time-series context (`REQ-E-03`).
 
 ## L — Target analysis
