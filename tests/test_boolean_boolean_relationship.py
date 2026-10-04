@@ -26,6 +26,7 @@ from pytics.analysis.relationship import BooleanIndependenceMethod
 from pytics.analysis.relationship import BooleanLevel
 from pytics.analysis.relationship import CorrelationEstimate
 from pytics.analysis.relationship import MultipleTestingAdjustment
+from pytics.analysis.relationship import NumericBooleanRelationship
 from pytics.analysis.relationship import NumericNumericRelationship
 from pytics.analysis.relationship import RelationshipFamily
 from pytics.analysis.relationship import ResultAvailability
@@ -250,8 +251,15 @@ def test_boolean_with_numeric_or_categorical_is_not_this_family() -> None:
     assert not any(
         isinstance(item, BooleanBooleanRelationship) for item in summary.relationships
     )
-    families = {item.family for item in summary.unimplemented_family_counts}
-    assert UnimplementedRelationshipFamily.NUMERIC_BOOLEAN in families
+    flagged = [
+        item
+        for item in summary.relationships
+        if isinstance(item, NumericBooleanRelationship)
+    ]
+    assert [(item.numeric_position, item.boolean_position) for item in flagged] == [
+        (0, 1)
+    ]
+    assert summary.unimplemented_family_counts == ()
     assert summary.n_ineligible_pairs == 1
 
 
@@ -706,10 +714,17 @@ def test_three_boolean_columns_are_prepared_once() -> None:
     finally:
         collector_module._read_boolean_column = original
     assert boolean_reads == [4, 4, 4]
-    assert summary.n_supported_pairs == 3
+    assert summary.n_supported_pairs == 6
     assert (
         sum(
             isinstance(item, BooleanBooleanRelationship)
+            for item in summary.relationships
+        )
+        == 3
+    )
+    assert (
+        sum(
+            isinstance(item, NumericBooleanRelationship)
             for item in summary.relationships
         )
         == 3
@@ -729,9 +744,9 @@ def test_mixed_coverage_reconciles() -> None:
     )
     summary = build_relationships_summary(analyze_dataframe(frame))
     assert summary.n_total_pairs == 15
-    assert summary.n_supported_pairs == 4
-    assert summary.n_analyzed_pairs == 4
-    assert summary.n_unimplemented_family_pairs == 4
+    assert summary.n_supported_pairs == 8
+    assert summary.n_analyzed_pairs == 8
+    assert summary.n_unimplemented_family_pairs == 0
     assert summary.n_ineligible_pairs == 7
     assert (
         summary.n_supported_pairs
@@ -739,10 +754,14 @@ def test_mixed_coverage_reconciles() -> None:
         + summary.n_ineligible_pairs
         == summary.n_total_pairs
     )
-    assert summary.unimplemented_family_counts[0].family is (
-        UnimplementedRelationshipFamily.NUMERIC_BOOLEAN
+    assert summary.unimplemented_family_counts == ()
+    assert (
+        sum(
+            isinstance(item, NumericBooleanRelationship)
+            for item in summary.relationships
+        )
+        == 4
     )
-    assert summary.unimplemented_family_counts[0].n_pairs == 4
     boolean_pairs = [
         item
         for item in summary.relationships

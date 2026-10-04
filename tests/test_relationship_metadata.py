@@ -16,6 +16,7 @@ import pytics.analysis.column as column_module
 import pytics.analysis.dataset as dataset_module
 import pytics.analysis.relationships.boolean_boolean as boolean_boolean_module
 import pytics.analysis.relationships.collector as collector_module
+import pytics.analysis.relationships.numeric_boolean as numeric_boolean_module
 import pytics.analysis.relationships.numeric_categorical as numeric_categorical_module
 import pytics.analysis.relationships.numeric_numeric as numeric_numeric_module
 from pytics.analysis.dataset import DatasetAnalysis
@@ -31,6 +32,8 @@ from pytics.analysis.relationship import FrequentistEvidence
 from pytics.analysis.relationship import GroupEffectEstimate
 from pytics.analysis.relationship import GroupEffectMethod
 from pytics.analysis.relationship import MultipleTestingAdjustment
+from pytics.analysis.relationship import NumericBooleanPopulation
+from pytics.analysis.relationship import NumericBooleanRelationship
 from pytics.analysis.relationship import NumericCategoricalPopulation
 from pytics.analysis.relationship import NumericCategoricalRelationship
 from pytics.analysis.relationship import NumericComputation
@@ -155,6 +158,7 @@ def test_dataset_container_keeps_coverage_and_not_one_method() -> None:
         RelationshipFamily.NUMERIC_NUMERIC,
         RelationshipFamily.NUMERIC_CATEGORICAL,
         RelationshipFamily.BOOLEAN_BOOLEAN,
+        RelationshipFamily.NUMERIC_BOOLEAN,
     )
     assert (
         retained.n_supported_pairs
@@ -178,18 +182,29 @@ def test_mixed_dataset_records_are_self_describing() -> None:
         SemanticType.IDENTIFIER,
     ]
     assert summary.n_total_pairs == 10
-    assert summary.n_supported_pairs == 3
-    assert summary.n_analyzed_pairs == 3
-    assert summary.n_unimplemented_family_pairs == 2
+    assert summary.n_supported_pairs == 5
+    assert summary.n_analyzed_pairs == 5
+    assert summary.n_unimplemented_family_pairs == 0
     assert summary.n_ineligible_pairs == 5
-    assert summary.unimplemented_family_counts[0].family is (
-        UnimplementedRelationshipFamily.NUMERIC_BOOLEAN
-    )
-    assert summary.unimplemented_family_counts[0].n_pairs == 2
-    numeric, left_group, right_group = summary.relationships
+    assert summary.unimplemented_family_counts == ()
+    numeric, left_group, left_flag, right_group, right_flag = summary.relationships
     assert isinstance(numeric, NumericNumericRelationship)
     assert isinstance(left_group, NumericCategoricalRelationship)
     assert isinstance(right_group, NumericCategoricalRelationship)
+    for flagged, numeric_position in ((left_flag, 0), (right_flag, 1)):
+        assert isinstance(flagged, NumericBooleanRelationship)
+        assert flagged.family is RelationshipFamily.NUMERIC_BOOLEAN
+        assert flagged.population is (
+            NumericBooleanPopulation.FINITE_NUMERIC_NON_MISSING_BOOLEAN
+        )
+        assert (flagged.numeric_position, flagged.boolean_position) == (
+            numeric_position,
+            3,
+        )
+        assert flagged.mean_difference_interval.level == 0.95
+        assert not hasattr(flagged, "primary_method")
+        assert not hasattr(flagged, "computation")
+        assert not hasattr(flagged, "confidence_level")
     assert (numeric.left_position, numeric.right_position) == (0, 1)
     assert numeric.family is RelationshipFamily.NUMERIC_NUMERIC
     assert numeric.population is PairPopulation.PAIRWISE_FINITE
@@ -365,7 +380,9 @@ def test_summary_copies_records_without_source_or_recalculation(
     monkeypatch.setattr(collector_module, "_association_methods", _fail)
     monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
     monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
+    monkeypatch.setattr(collector_module, "_analyze_numeric_boolean", _fail)
     monkeypatch.setattr(boolean_boolean_module, "fisher_exact", _fail)
+    monkeypatch.setattr(numeric_boolean_module, "student_t", _fail)
     monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)
     monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
     monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)

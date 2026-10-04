@@ -16,6 +16,9 @@ from pytics.analysis.relationships.models.boolean_boolean import (
     BooleanBooleanRelationship,
 )
 from pytics.analysis.relationships.models.common import _require_nonnegative
+from pytics.analysis.relationships.models.numeric_boolean import (
+    NumericBooleanRelationship,
+)
 from pytics.analysis.relationships.models.numeric_categorical import (
     NumericCategoricalRelationship,
 )
@@ -30,7 +33,6 @@ class UnimplementedRelationshipFamily(Enum):
     A count of these pairs is not a claim that the family was analyzed.
     """
 
-    NUMERIC_BOOLEAN = "numeric_boolean"
     CATEGORICAL_CATEGORICAL = "categorical_categorical"
     DATETIME_NUMERIC = "datetime_numeric"
     DATETIME_CATEGORICAL = "datetime_categorical"
@@ -57,6 +59,7 @@ RelationshipRecord = Union[
     NumericNumericRelationship,
     NumericCategoricalRelationship,
     BooleanBooleanRelationship,
+    NumericBooleanRelationship,
 ]
 
 
@@ -198,6 +201,7 @@ def _require_relationships(
                 NumericNumericRelationship,
                 NumericCategoricalRelationship,
                 BooleanBooleanRelationship,
+                NumericBooleanRelationship,
             ),
         ):
             raise TypeError(

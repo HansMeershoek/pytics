@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+from pytics.analysis.relationships.models.common import BooleanLevel
 from pytics.analysis.relationships.models.common import FrequentistEvidence
 from pytics.analysis.relationships.models.common import MultipleTestingAdjustment
 from pytics.analysis.relationships.models.common import RelationshipFamily
@@ -25,6 +26,9 @@ from pytics.analysis.relationships.models.common import _require_population_coun
 from pytics.analysis.relationships.models.common import _require_position
 from pytics.analysis.relationships.models.common import _require_reason
 from pytics.analysis.relationships.models.common import _require_type
+from pytics.analysis.relationships.models.common import (
+    _require_unavailable_component,
+)
 from pytics.analysis.relationships.models.common import _require_unit_interval
 
 # A conditional probability is undefined when its conditioning level was
@@ -52,16 +56,6 @@ _BOOLEAN_MARGINAL_REASONS = frozenset(
         UnavailabilityReason.NON_FINITE_RESULT,
     }
 )
-
-
-class BooleanLevel(Enum):
-    """One logical Boolean value.
-
-    False precedes True. This is not a display label and not source order.
-    """
-
-    FALSE = "false"
-    TRUE = "true"
 
 
 class BooleanBooleanPopulation(Enum):
@@ -712,13 +706,3 @@ def _require_fisher_margins(
             raise ValueError(
                 "a defined independence test is unavailable only when non-finite"
             )
-
-
-def _require_unavailable_component(
-    availability: ResultAvailability,
-    reason: Optional[UnavailabilityReason],
-    expected: UnavailabilityReason,
-    field: str,
-) -> None:
-    if availability is not ResultAvailability.UNAVAILABLE or reason is not expected:
-        raise ValueError(f"{field} must be unavailable because {expected.value}")

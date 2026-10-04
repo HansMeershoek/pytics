@@ -1,9 +1,10 @@
 """Shared relationship result vocabulary.
 
-Availability, unavailability reasons, frequentist evidence, and the
-calculated-family names are used by more than one family. Coverage
-counts live beside the heterogeneous container. These models do not
-calculate a statistic and they do not import a statistical library.
+Availability, unavailability reasons, frequentist evidence, Boolean
+levels, and the calculated-family names are used by more than one
+family. Coverage counts live beside the heterogeneous container. These
+models do not calculate a statistic and they do not import a
+statistical library.
 """
 
 from __future__ import annotations
@@ -27,6 +28,17 @@ class RelationshipFamily(Enum):
     NUMERIC_NUMERIC = "numeric_numeric"
     NUMERIC_CATEGORICAL = "numeric_categorical"
     BOOLEAN_BOOLEAN = "boolean_boolean"
+    NUMERIC_BOOLEAN = "numeric_boolean"
+
+
+class BooleanLevel(Enum):
+    """One logical Boolean value.
+
+    False precedes True. This is not a display label and not source order.
+    """
+
+    FALSE = "false"
+    TRUE = "true"
 
 
 class ResultAvailability(Enum):
@@ -147,6 +159,16 @@ def _require_reason(
     _require_enum(reason, UnavailabilityReason, field)
     if reason not in allowed:
         raise ValueError(f"{field} is not a reason for this component")
+
+
+def _require_unavailable_component(
+    availability: ResultAvailability,
+    reason: Optional[UnavailabilityReason],
+    expected: UnavailabilityReason,
+    field: str,
+) -> None:
+    if availability is not ResultAvailability.UNAVAILABLE or reason is not expected:
+        raise ValueError(f"{field} must be unavailable because {expected.value}")
 
 
 def _require_nonnegative(value: object, field: str) -> None:

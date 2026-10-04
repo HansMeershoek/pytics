@@ -131,10 +131,10 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
     converted. Column order is the DataFrame's column order. Duplicate
     labels stay distinct records. After the column analyses, one
     missingness pass counts exact row patterns, then one duplicate pass
-    groups exactly equal rows, then one relationship pass describes
-    selected Numeric × Numeric and Numeric × Categorical pairs. Those passes do not call each other. The
-    DataFrame is not copied and is not modified, and it is not stored
-    on the result.
+    groups exactly equal rows, then one relationship pass describes the
+    pairs of each calculated relationship family. Those passes do not
+    call each other. The DataFrame is not copied and is not modified, and
+    it is not stored on the result.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("analyze_dataframe expects a pandas DataFrame")

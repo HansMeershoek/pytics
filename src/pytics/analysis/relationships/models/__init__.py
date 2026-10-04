@@ -1,11 +1,11 @@
 """Relationship result models.
 
-``common`` holds availability, reasons, and frequentist evidence.
-``numeric_numeric``, ``numeric_categorical``, and ``boolean_boolean``
-hold those families' retained records. ``coverage`` holds pair coverage
-and the heterogeneous collection. Importing this package re-exports
-those names. It is not a frozen public API, and it does not calculate
-a statistic.
+``common`` holds availability, reasons, Boolean levels, and frequentist
+evidence. ``numeric_numeric``, ``numeric_categorical``,
+``boolean_boolean``, and ``numeric_boolean`` hold those families'
+retained records. ``coverage`` holds pair coverage and the heterogeneous
+collection. Importing this package re-exports those names. It is not a
+frozen public API, and it does not calculate a statistic.
 """
 
 from pytics.analysis.relationships.models.boolean_boolean import (
@@ -31,10 +31,10 @@ from pytics.analysis.relationships.models.boolean_boolean import (
     BooleanIndependenceMethod,
 )
 from pytics.analysis.relationships.models.boolean_boolean import BooleanIndependenceTest
-from pytics.analysis.relationships.models.boolean_boolean import BooleanLevel
 from pytics.analysis.relationships.models.boolean_boolean import (
     ConditionalOutcomeProbability,
 )
+from pytics.analysis.relationships.models.common import BooleanLevel
 from pytics.analysis.relationships.models.common import FrequentistEvidence
 from pytics.analysis.relationships.models.common import MultipleTestingAdjustment
 from pytics.analysis.relationships.models.common import RelationshipFamily
@@ -48,6 +48,30 @@ from pytics.analysis.relationships.models.coverage import UnimplementedFamilyCou
 from pytics.analysis.relationships.models.coverage import (
     UnimplementedRelationshipFamily,
 )
+from pytics.analysis.relationships.models.numeric_boolean import BooleanGroupContrast
+from pytics.analysis.relationships.models.numeric_boolean import BooleanGroupSummary
+from pytics.analysis.relationships.models.numeric_boolean import MeanDifferenceEstimate
+from pytics.analysis.relationships.models.numeric_boolean import MeanDifferenceInterval
+from pytics.analysis.relationships.models.numeric_boolean import (
+    MeanDifferenceIntervalMethod,
+)
+from pytics.analysis.relationships.models.numeric_boolean import MeanDifferenceTest
+from pytics.analysis.relationships.models.numeric_boolean import (
+    MeanDifferenceTestMethod,
+)
+from pytics.analysis.relationships.models.numeric_boolean import (
+    NumericBooleanPopulation,
+)
+from pytics.analysis.relationships.models.numeric_boolean import (
+    NumericBooleanRelationship,
+)
+from pytics.analysis.relationships.models.numeric_boolean import (
+    StandardizedDifferenceMethod,
+)
+from pytics.analysis.relationships.models.numeric_boolean import (
+    StandardizedMeanDifference,
+)
+from pytics.analysis.relationships.models.numeric_boolean import _WELCH_INTERVAL_LEVEL
 from pytics.analysis.relationships.models.numeric_categorical import (
     CategoricalGroupSummary,
 )
@@ -88,6 +112,8 @@ __all__ = [
     "BooleanContingencyTable",
     "BooleanDirectionalEstimate",
     "BooleanDirectionalMethod",
+    "BooleanGroupContrast",
+    "BooleanGroupSummary",
     "BooleanIndependenceMethod",
     "BooleanIndependenceTest",
     "BooleanLevel",
@@ -101,7 +127,14 @@ __all__ = [
     "FrequentistEvidence",
     "GroupEffectEstimate",
     "GroupEffectMethod",
+    "MeanDifferenceEstimate",
+    "MeanDifferenceInterval",
+    "MeanDifferenceIntervalMethod",
+    "MeanDifferenceTest",
+    "MeanDifferenceTestMethod",
     "MultipleTestingAdjustment",
+    "NumericBooleanPopulation",
+    "NumericBooleanRelationship",
     "NumericCategoricalPopulation",
     "NumericCategoricalRelationship",
     "NumericComputation",
@@ -114,6 +147,8 @@ __all__ = [
     "RelationshipRecord",
     "RelationshipsSummary",
     "ResultAvailability",
+    "StandardizedDifferenceMethod",
+    "StandardizedMeanDifference",
     "UnavailabilityReason",
     "UnimplementedFamilyCount",
     "UnimplementedRelationshipFamily",

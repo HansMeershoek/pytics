@@ -4,6 +4,7 @@
 coverage container. ``numeric_numeric`` calculates Numeric × Numeric.
 ``numeric_categorical`` calculates Numeric × Categorical.
 ``boolean_boolean`` calculates Boolean × Boolean.
+``numeric_boolean`` calculates Numeric × Boolean.
 ``collector`` chooses pairs and projects the product summary.
 Importing this package is not a frozen public API.
 """
@@ -19,6 +20,8 @@ from pytics.analysis.relationships.models import BooleanBooleanRelationship
 from pytics.analysis.relationships.models import BooleanContingencyTable
 from pytics.analysis.relationships.models import BooleanDirectionalEstimate
 from pytics.analysis.relationships.models import BooleanDirectionalMethod
+from pytics.analysis.relationships.models import BooleanGroupContrast
+from pytics.analysis.relationships.models import BooleanGroupSummary
 from pytics.analysis.relationships.models import BooleanIndependenceMethod
 from pytics.analysis.relationships.models import BooleanIndependenceTest
 from pytics.analysis.relationships.models import BooleanLevel
@@ -33,7 +36,14 @@ from pytics.analysis.relationships.models import EffectDirection
 from pytics.analysis.relationships.models import FrequentistEvidence
 from pytics.analysis.relationships.models import GroupEffectEstimate
 from pytics.analysis.relationships.models import GroupEffectMethod
+from pytics.analysis.relationships.models import MeanDifferenceEstimate
+from pytics.analysis.relationships.models import MeanDifferenceInterval
+from pytics.analysis.relationships.models import MeanDifferenceIntervalMethod
+from pytics.analysis.relationships.models import MeanDifferenceTest
+from pytics.analysis.relationships.models import MeanDifferenceTestMethod
 from pytics.analysis.relationships.models import MultipleTestingAdjustment
+from pytics.analysis.relationships.models import NumericBooleanPopulation
+from pytics.analysis.relationships.models import NumericBooleanRelationship
 from pytics.analysis.relationships.models import NumericCategoricalPopulation
 from pytics.analysis.relationships.models import NumericCategoricalRelationship
 from pytics.analysis.relationships.models import NumericComputation
@@ -46,6 +56,8 @@ from pytics.analysis.relationships.models import RelationshipFamily
 from pytics.analysis.relationships.models import RelationshipRecord
 from pytics.analysis.relationships.models import RelationshipsSummary
 from pytics.analysis.relationships.models import ResultAvailability
+from pytics.analysis.relationships.models import StandardizedDifferenceMethod
+from pytics.analysis.relationships.models import StandardizedMeanDifference
 from pytics.analysis.relationships.models import UnavailabilityReason
 from pytics.analysis.relationships.models import UnimplementedFamilyCount
 from pytics.analysis.relationships.models import UnimplementedRelationshipFamily

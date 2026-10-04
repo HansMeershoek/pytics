@@ -1,12 +1,12 @@
 """Dataset relationship collection and product projection.
 
 Eligibility uses the selected semantic type. The calculated families are
-selected Numeric × Numeric, selected Numeric × Categorical, and selected
-Boolean × Boolean. Other recognized directions are counted. Ineligible
-pairs are counted and not read. Each needed source column is prepared
-once. Those temporary arrays are discarded before the collector returns.
-The summary builder copies the retained records and does not calculate
-a statistic.
+selected Numeric × Numeric, selected Numeric × Categorical, selected
+Boolean × Boolean, and selected Numeric × Boolean. Other recognized
+directions are counted. Ineligible pairs are counted and not read. Each
+needed source column is prepared once. Those temporary arrays are
+discarded before the collector returns. The summary builder copies the
+retained records and does not calculate a statistic.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ from pytics.analysis.relationships.models import BooleanAssociationEstimate
 from pytics.analysis.relationships.models import BooleanBooleanRelationship
 from pytics.analysis.relationships.models import BooleanContingencyTable
 from pytics.analysis.relationships.models import BooleanDirectionalEstimate
+from pytics.analysis.relationships.models import BooleanGroupSummary
 from pytics.analysis.relationships.models import BooleanIndependenceTest
 from pytics.analysis.relationships.models import CategoricalGroupSummary
 from pytics.analysis.relationships.models import ConditionalOutcomeProbability
@@ -37,15 +38,23 @@ from pytics.analysis.relationships.models import CorrelationEstimate
 from pytics.analysis.relationships.models import CorrelationInterval
 from pytics.analysis.relationships.models import FrequentistEvidence
 from pytics.analysis.relationships.models import GroupEffectEstimate
+from pytics.analysis.relationships.models import MeanDifferenceEstimate
+from pytics.analysis.relationships.models import MeanDifferenceInterval
+from pytics.analysis.relationships.models import MeanDifferenceTest
+from pytics.analysis.relationships.models import NumericBooleanRelationship
 from pytics.analysis.relationships.models import NumericCategoricalRelationship
 from pytics.analysis.relationships.models import NumericNumericRelationship
 from pytics.analysis.relationships.models import OmnibusAnovaResult
 from pytics.analysis.relationships.models import RelationshipAnalysis
 from pytics.analysis.relationships.models import RelationshipRecord
 from pytics.analysis.relationships.models import RelationshipsSummary
+from pytics.analysis.relationships.models import StandardizedMeanDifference
 from pytics.analysis.relationships.models import UnimplementedFamilyCount
 from pytics.analysis.relationships.models import UnimplementedRelationshipFamily
 from pytics.analysis.relationships.models import _require_nonnegative
+from pytics.analysis.relationships.numeric_boolean import (
+    analyze as _analyze_numeric_boolean,
+)
 from pytics.analysis.relationships.numeric_categorical import _read_categorical_column
 from pytics.analysis.relationships.numeric_categorical import (
     analyze as _analyze_numeric_categorical,
@@ -67,9 +76,6 @@ _PairClass = Union[UnimplementedRelationshipFamily, _Eligibility]
 
 # Recognized directions that are not implemented. Lookup ignores order.
 _UNIMPLEMENTED_FAMILIES = {
-    frozenset((SemanticType.NUMERIC, SemanticType.BOOLEAN)): (
-        UnimplementedRelationshipFamily.NUMERIC_BOOLEAN
-    ),
     frozenset((SemanticType.CATEGORICAL,)): (
         UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL
     ),
@@ -102,9 +108,9 @@ def collect_relationship_analysis(
     Each Numeric column that belongs to a supported pair is converted
     once. Each Categorical column that belongs to a Numeric × Categorical
     pair is read once. Each Boolean column that belongs to a Boolean ×
-    Boolean pair is read once. Unsupported pairs do not read raw values.
-    Temporary arrays are discarded before return. The DataFrame is not
-    modified.
+    Boolean or Numeric × Boolean pair is read once. Unsupported pairs do
+    not read raw values. Temporary arrays are discarded before return.
+    The DataFrame is not modified.
 
     A component that cannot produce a finite result is recorded as
     unavailable. That state does not raise, and it does not discard the
@@ -215,8 +221,8 @@ def _relationships_for_frame(
     A Numeric column is read once even when it pairs with several other
     columns. A Categorical column is read once even when it pairs with
     several Numeric columns. A Boolean column is read once even when it
-    pairs with several Boolean columns. Those preparations are local to
-    this function.
+    pairs with several Boolean or Numeric columns. Those preparations are
+    local to this function.
     """
     classification = _classify_columns(columns)
     if not classification.supported_pairs:
@@ -257,6 +263,17 @@ def _relationships_for_frame(
             records.append(
                 _boolean_boolean_record(
                     columns,
+                    boolean_columns,
+                    left,
+                    right,
+                    n_rows,
+                )
+            )
+        elif {left_type, right_type} == {SemanticType.NUMERIC, SemanticType.BOOLEAN}:
+            records.append(
+                _numeric_boolean_record(
+                    columns,
+                    numeric_columns,
                     boolean_columns,
                     left,
                     right,
@@ -383,15 +400,45 @@ def _boolean_boolean_record(
     )
 
 
+def _numeric_boolean_record(
+    columns: Tuple[ColumnAnalysis, ...],
+    numeric_columns: dict,
+    boolean_columns: dict,
+    left: int,
+    right: int,
+    n_rows: int,
+) -> NumericBooleanRelationship:
+    numeric_position, boolean_position = _role_positions(
+        left,
+        right,
+        columns[left].inferred.selected_type,
+    )
+    numeric_values, numeric_finite = numeric_columns[numeric_position]
+    boolean_observed, boolean_is_true = boolean_columns[boolean_position]
+    return _analyze_numeric_boolean(
+        numeric_values,
+        numeric_finite,
+        boolean_observed,
+        boolean_is_true,
+        left_position=left,
+        left_label=columns[left].label,
+        right_position=right,
+        right_label=columns[right].label,
+        numeric_position=numeric_position,
+        boolean_position=boolean_position,
+        n_total_rows=n_rows,
+    )
+
+
 def _role_positions(
     left: int,
     right: int,
     left_type: object,
 ) -> Tuple[int, int]:
-    """Return ``(numeric_position, categorical_position)``."""
-    if left_type is SemanticType.CATEGORICAL:
-        return right, left
-    return left, right
+    """Return the Numeric position, then the other role's position."""
+    if left_type is SemanticType.NUMERIC:
+        return left, right
+    return right, left
 
 
 def _classify_columns(columns: Tuple[ColumnAnalysis, ...]) -> _Classification:
@@ -438,6 +485,8 @@ def _pair_class(
         return _Eligibility.SUPPORTED
     if left is SemanticType.BOOLEAN and right is SemanticType.BOOLEAN:
         return _Eligibility.SUPPORTED
+    if {left, right} == {SemanticType.NUMERIC, SemanticType.BOOLEAN}:
+        return _Eligibility.SUPPORTED
     family = _UNIMPLEMENTED_FAMILIES.get(frozenset((left, right)))
     if family is None:
         return _Eligibility.INELIGIBLE
@@ -464,6 +513,7 @@ def _require_recorded_pairs(
                 NumericNumericRelationship,
                 NumericCategoricalRelationship,
                 BooleanBooleanRelationship,
+                NumericBooleanRelationship,
             ),
         ):
             raise TypeError(
@@ -523,9 +573,12 @@ def _require_record_family(
         if not isinstance(relationship, BooleanBooleanRelationship):
             raise TypeError("a boolean pair requires a BooleanBooleanRelationship")
         return
-    if not isinstance(relationship, NumericCategoricalRelationship):
+    if {left_type, right_type} == {SemanticType.NUMERIC, SemanticType.BOOLEAN}:
+        if not isinstance(relationship, NumericBooleanRelationship):
+            raise TypeError("a numeric-boolean pair requires that relationship record")
+    elif not isinstance(relationship, NumericCategoricalRelationship):
         raise TypeError("a numeric-categorical pair requires that relationship record")
-    numeric_position, _categorical_position = _role_positions(left, right, left_type)
+    numeric_position, _other_position = _role_positions(left, right, left_type)
     if relationship.numeric_position != numeric_position:
         raise ValueError("numeric role must follow the selected numeric column")
 
@@ -539,6 +592,8 @@ def _copy_relationship(
         return _copy_numeric_categorical(relationship)
     if isinstance(relationship, BooleanBooleanRelationship):
         return _copy_boolean_boolean(relationship)
+    if isinstance(relationship, NumericBooleanRelationship):
+        return _copy_numeric_boolean(relationship)
     raise TypeError("relationship records must be calculated relationship values")
 
 
@@ -606,19 +661,24 @@ def _copy_numeric_categorical(
 
 
 def _copy_group(group: CategoricalGroupSummary) -> CategoricalGroupSummary:
-    descriptive = group.descriptive
     return CategoricalGroupSummary(
         category=group.category,
-        descriptive=NumericDescriptiveAnalysis(
-            finite_count=descriptive.finite_count,
-            minimum=descriptive.minimum,
-            maximum=descriptive.maximum,
-            mean=descriptive.mean,
-            median=descriptive.median,
-            standard_deviation=descriptive.standard_deviation,
-            q1=descriptive.q1,
-            q3=descriptive.q3,
-        ),
+        descriptive=_copy_descriptive(group.descriptive),
+    )
+
+
+def _copy_descriptive(
+    descriptive: NumericDescriptiveAnalysis,
+) -> NumericDescriptiveAnalysis:
+    return NumericDescriptiveAnalysis(
+        finite_count=descriptive.finite_count,
+        minimum=descriptive.minimum,
+        maximum=descriptive.maximum,
+        mean=descriptive.mean,
+        median=descriptive.median,
+        standard_deviation=descriptive.standard_deviation,
+        q1=descriptive.q1,
+        q3=descriptive.q3,
     )
 
 
@@ -722,6 +782,77 @@ def _copy_independence(test: BooleanIndependenceTest) -> BooleanIndependenceTest
     frequentist = test.frequentist
     return BooleanIndependenceTest(
         method=test.method,
+        frequentist=FrequentistEvidence(
+            availability=frequentist.availability,
+            p_value=frequentist.p_value,
+            adjusted_p_value=frequentist.adjusted_p_value,
+            adjustment=frequentist.adjustment,
+            reason=frequentist.reason,
+        ),
+    )
+
+
+def _copy_numeric_boolean(
+    relationship: NumericBooleanRelationship,
+) -> NumericBooleanRelationship:
+    difference = relationship.mean_difference
+    standardized = relationship.standardized_mean_difference
+    interval = relationship.mean_difference_interval
+    return NumericBooleanRelationship(
+        left_position=relationship.left_position,
+        left_label=relationship.left_label,
+        right_position=relationship.right_position,
+        right_label=relationship.right_label,
+        numeric_position=relationship.numeric_position,
+        boolean_position=relationship.boolean_position,
+        n_total_rows=relationship.n_total_rows,
+        n_paired=relationship.n_paired,
+        false_group=_copy_boolean_group(relationship.false_group),
+        true_group=_copy_boolean_group(relationship.true_group),
+        mean_difference=MeanDifferenceEstimate(
+            availability=difference.availability,
+            value=difference.value,
+            reason=difference.reason,
+        ),
+        standardized_mean_difference=StandardizedMeanDifference(
+            method=standardized.method,
+            availability=standardized.availability,
+            value=standardized.value,
+            reason=standardized.reason,
+        ),
+        mean_difference_interval=MeanDifferenceInterval(
+            availability=interval.availability,
+            level=interval.level,
+            method=interval.method,
+            lower=interval.lower,
+            upper=interval.upper,
+            reason=interval.reason,
+        ),
+        mean_difference_test=_copy_mean_difference_test(
+            relationship.mean_difference_test
+        ),
+    )
+
+
+def _copy_boolean_group(group: BooleanGroupSummary) -> BooleanGroupSummary:
+    return BooleanGroupSummary(
+        level=group.level,
+        availability=group.availability,
+        descriptive=(
+            None if group.descriptive is None else _copy_descriptive(group.descriptive)
+        ),
+        reason=group.reason,
+    )
+
+
+def _copy_mean_difference_test(test: MeanDifferenceTest) -> MeanDifferenceTest:
+    frequentist = test.frequentist
+    return MeanDifferenceTest(
+        method=test.method,
+        statistic_availability=test.statistic_availability,
+        statistic=test.statistic,
+        degrees_of_freedom=test.degrees_of_freedom,
+        statistic_reason=test.statistic_reason,
         frequentist=FrequentistEvidence(
             availability=frequentist.availability,
             p_value=frequentist.p_value,

@@ -22,6 +22,7 @@ from pytics.analysis.relationship import FrequentistEvidence
 from pytics.analysis.relationship import GroupEffectEstimate
 from pytics.analysis.relationship import GroupEffectMethod
 from pytics.analysis.relationship import MultipleTestingAdjustment
+from pytics.analysis.relationship import NumericBooleanRelationship
 from pytics.analysis.relationship import NumericCategoricalPopulation
 from pytics.analysis.relationship import NumericCategoricalRelationship
 from pytics.analysis.relationship import NumericNumericRelationship
@@ -156,10 +157,18 @@ def test_physical_categorical_is_eligible_and_other_types_are_not() -> None:
     assert analysis.columns[5].inferred.selected_type is SemanticType.EMPTY
     assert analysis.columns[6].inferred.selected_type is SemanticType.IDENTIFIER
     assert analysis.columns[7].inferred.selected_type is None
-    assert summary.n_supported_pairs == 2
-    assert summary.n_analyzed_pairs == 2
-    assert UnimplementedRelationshipFamily.NUMERIC_BOOLEAN in {
-        item.family for item in summary.unimplemented_family_counts
+    assert summary.n_supported_pairs == 3
+    assert summary.n_analyzed_pairs == 3
+    flagged = [
+        item
+        for item in summary.relationships
+        if isinstance(item, NumericBooleanRelationship)
+    ]
+    assert [(item.numeric_position, item.boolean_position) for item in flagged] == [
+        (0, 3)
+    ]
+    assert {item.family for item in summary.unimplemented_family_counts} == {
+        UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL
     }
     assert "numeric_categorical" not in {
         item.family.value for item in summary.unimplemented_family_counts
@@ -663,9 +672,9 @@ def test_mixed_frame_coverage_counts_each_pair_once(
     monkeypatch.setattr(collector_module, "_read_categorical_column", _spy_categorical)
     summary = build_relationships_summary(analyze_dataframe(frame))
     assert summary.n_total_pairs == 15
-    assert summary.n_supported_pairs == 9
-    assert summary.n_analyzed_pairs == len(summary.relationships) == 9
-    assert summary.n_unimplemented_family_pairs == 4
+    assert summary.n_supported_pairs == 12
+    assert summary.n_analyzed_pairs == len(summary.relationships) == 12
+    assert summary.n_unimplemented_family_pairs == 1
     assert summary.n_ineligible_pairs == 2
     assert (
         summary.n_supported_pairs
@@ -685,6 +694,13 @@ def test_mixed_frame_coverage_counts_each_pair_once(
     ]
     assert len(numeric_pairs) == 3
     assert len(categorical_pairs) == 6
+    assert (
+        sum(
+            isinstance(item, NumericBooleanRelationship)
+            for item in summary.relationships
+        )
+        == 3
+    )
     assert numeric_pairs[0].methods == only_numeric.relationships[0].methods
     assert len(numeric_reads) == 3
     assert len(categorical_reads) == 2
