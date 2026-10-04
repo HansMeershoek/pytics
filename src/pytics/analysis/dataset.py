@@ -6,8 +6,8 @@ basic evidence already retained, the exact missingness aggregates
 collected from one DataFrame pass, the exact duplicate-row groups
 collected from a separate pass, and the heterogeneous relationship
 records collected from selected semantic types, and, when the
-caller names one, the target projection of those facts. It does not
-keep the DataFrame.
+caller names one, the target projection of those facts and the
+diagnostic model of that target. It does not keep the DataFrame.
 """
 
 from __future__ import annotations
@@ -33,6 +33,9 @@ from pytics.analysis.target import TargetAnalysis
 from pytics.analysis.target import _require_target_attachment
 from pytics.analysis.target import project_target_analysis
 from pytics.analysis.target import resolve_target_position
+from pytics.analysis.target_diagnostic import TargetDiagnosticAnalysis
+from pytics.analysis.target_diagnostic import _require_diagnostic_attachment
+from pytics.analysis.target_diagnostic_fit import analyze_target_diagnostic
 
 
 @dataclass(frozen=True)
@@ -61,6 +64,11 @@ class DatasetAnalysis:
     target. When it is present, it is a projection of the selected
     column and of the relationship records already stored here. It is
     not a second statistical pass.
+
+    ``target_diagnostic`` is present exactly when ``target_analysis`` is.
+    It is the separate diagnostic-model pass over the frame for that
+    target. An unavailable model is a status on that record and does not
+    change ``target_analysis``.
     """
 
     n_rows: int
@@ -71,6 +79,7 @@ class DatasetAnalysis:
     duplicate_analysis: DuplicateAnalysis
     relationship_analysis: RelationshipAnalysis
     target_analysis: Optional[TargetAnalysis] = None
+    target_diagnostic: Optional[TargetDiagnosticAnalysis] = None
 
     def __post_init__(self) -> None:
         _require_count(self.n_rows, "n_rows")
@@ -113,6 +122,11 @@ class DatasetAnalysis:
             self.columns,
             self.relationship_analysis.relationships,
             n_rows=self.n_rows,
+        )
+        _require_diagnostic_attachment(
+            self.target_diagnostic,
+            self.target_analysis,
+            self.columns,
         )
 
     @property
@@ -163,6 +177,8 @@ def analyze_dataframe(
     target raises. It does not guess a column, and it does not return a
     dataset with target analysis disabled. The target projection runs
     after the relationship records exist and does not calculate them again.
+    The diagnostic model of that target runs last. It reads the frame and
+    does not change the target projection or the relationship records.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("analyze_dataframe expects a pandas DataFrame")
@@ -181,6 +197,7 @@ def analyze_dataframe(
     )
     relationship_analysis = collect_relationship_analysis(frame, columns)
     target_analysis = None
+    target_diagnostic = None
     if target_position is not None:
         target_analysis = project_target_analysis(
             columns,
@@ -188,6 +205,7 @@ def analyze_dataframe(
             position=target_position,
             n_rows=n_rows,
         )
+        target_diagnostic = analyze_target_diagnostic(frame, columns, target_analysis)
     return DatasetAnalysis(
         n_rows=n_rows,
         n_columns=n_columns,
@@ -197,6 +215,7 @@ def analyze_dataframe(
         duplicate_analysis=collect_duplicate_analysis(frame),
         relationship_analysis=relationship_analysis,
         target_analysis=target_analysis,
+        target_diagnostic=target_diagnostic,
     )
 
 

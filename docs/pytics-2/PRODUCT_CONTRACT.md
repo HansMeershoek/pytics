@@ -19,7 +19,7 @@ Primary purpose:
 - compare two datasets;
 - understand changes and drift between datasets.
 
-Pytics is about understanding. It is not about optimizing predictive performance. Where a target is supplied, TSK-032 records that column's semantic state, its own missingness, and the relationships already calculated with the other columns ([DEC-103](DECISIONS.md#dec-103)). TSK-033 adds the exact observed distribution of a Categorical target from the shared descriptive layer ([DEC-104](DECISIONS.md#dec-104)). It does not infer a target, a problem type, or an imbalance verdict, and it does not fit a diagnostic model. The public `profile` call is not yet that analysis.
+Pytics is about understanding. It is not about optimizing predictive performance. Where a target is supplied, TSK-032 records that column's semantic state, its own missingness, and the relationships already calculated with the other columns ([DEC-103](DECISIONS.md#dec-103)). TSK-033 adds the exact observed distribution of a Categorical target from the shared descriptive layer ([DEC-104](DECISIONS.md#dec-104)). It does not infer a target, a problem type, or an imbalance verdict. TSK-034 adds one lightweight untuned diagnostic model for that explicit target ([DEC-105](DECISIONS.md#dec-105)). It reports whether a simple model recovers held-out signal compared with a naive baseline, and which inputs that held-out signal is sensitive to. It is not a search for the best model, not a predictability verdict, and not a causal statement. The public `profile` call is not yet that analysis.
 
 | ID | Requirement | Status |
 | --- | --- | --- |
@@ -167,7 +167,7 @@ Sampling, stochastic models, and other nondeterministic methods must record rele
 | --- | --- | --- |
 | REQ-P-12 | Reproduce results for the same data, configuration, version, and seed where reasonably possible, and record metadata for nondeterministic methods. | Accepted |
 
-The seed's place in the public configuration is [OPEN-009](DECISIONS.md#open-questions). Controlled sampling for expensive semantic evidence is accepted ([DEC-054](DECISIONS.md#dec-054)). Other sampling rules, and sample sizes, are [OPEN-010](DECISIONS.md#open-questions).
+The seed's place in the public configuration is [OPEN-009](DECISIONS.md#open-questions). The TSK-034 diagnostic model uses a fixed internal seed, 0, and retains it with its validation design, estimator parameters, and library version ([DEC-105](DECISIONS.md#dec-105)). Controlled sampling for expensive semantic evidence is accepted ([DEC-054](DECISIONS.md#dec-054)). Other sampling rules, and sample sizes, are [OPEN-010](DECISIONS.md#open-questions).
 
 ## How a result is used
 

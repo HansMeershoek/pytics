@@ -13,7 +13,9 @@ p-values on those records are the dataset-level relationship screen.
 They are not recomputed for the target. A supported target reuses the
 descriptive object that column analysis already stored. This module
 does not assign a classification or regression problem type, and it
-does not label a target balanced or imbalanced.
+does not label a target balanced or imbalanced. The diagnostic model,
+which does assign a predictive task, is a separate pass in
+``target_diagnostic_fit``. The summary copies its retained result.
 """
 
 from __future__ import annotations
@@ -54,6 +56,8 @@ from pytics.analysis.relationships.models.numeric_categorical import (
 from pytics.analysis.relationships.models.numeric_numeric import (
     NumericNumericRelationship,
 )
+from pytics.analysis.target_diagnostic import TargetDiagnosticAnalysis
+from pytics.analysis.target_diagnostic import copy_target_diagnostic
 from pytics.semantics.interpretation import Confidence
 from pytics.semantics.interpretation import InferenceSource
 from pytics.semantics.interpretation import SemanticType
@@ -300,9 +304,10 @@ class TargetSummary:
     """Product projection of a retained target analysis.
 
     The summary copies identity, semantic state, population, descriptive
-    facts, and relationship links. It does not read a DataFrame, infer a
-    semantic type, calculate a statistic, or adjust a p-value. Copied
-    relationship records are new frozen objects with the same values.
+    facts, relationship links, and the diagnostic-model result. It does
+    not read a DataFrame, infer a semantic type, calculate a statistic,
+    adjust a p-value, or fit a model. Copied records are new frozen
+    objects with the same values.
     """
 
     position: int
@@ -317,9 +322,13 @@ class TargetSummary:
     boolean_facts: Optional[BooleanDescriptiveAnalysis]
     categorical_facts: Optional[CategoricalDescriptiveAnalysis]
     relationships: Tuple[TargetRelationship, ...]
+    diagnostic: TargetDiagnosticAnalysis
 
     def __post_init__(self) -> None:
         _require_target_contents(self)
+        _require_type(self.diagnostic, TargetDiagnosticAnalysis, "diagnostic")
+        if self.diagnostic.target_position != self.position:
+            raise ValueError("the diagnostic must name the summarized target")
 
     @property
     def n_other_columns(self) -> int:
@@ -493,6 +502,7 @@ def build_target_summary(analysis: object) -> Optional[TargetSummary]:
         relationships=tuple(
             _copy_link(link, copy_relationship) for link in retained.relationships
         ),
+        diagnostic=copy_target_diagnostic(analysis.target_diagnostic),
     )
 
 

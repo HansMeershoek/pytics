@@ -15,5 +15,8 @@ missingness patterns, exact duplicate-row groups, and Numeric × Numeric
 and Numeric × Categorical relationships are collected in this package
 from the DataFrame. They are
 not semantic evidence. The relationship implementation lives in
-``relationships``. ``relationship`` re-exports it.
+``relationships``. ``relationship`` re-exports it. For an explicit
+target, ``target_diagnostic_fit`` fits one untuned diagnostic model and
+is the only scikit-learn user. ``target_diagnostic`` holds its frozen
+result.
 """

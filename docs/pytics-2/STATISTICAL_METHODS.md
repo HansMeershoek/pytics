@@ -138,4 +138,22 @@ TSK-033 does not add a target test ([DEC-104](DECISIONS.md#dec-104)). A selected
 
 One lightweight untuned diagnostic model is allowed, for understanding (`REQ-L-04`). Validation is holdout or cross-validation, not training-set evaluation (`REQ-L-05`). Held-out permutation importance is the primary importance direction. Report spread across permutations where applicable. Warn that correlated predictors can share or obscure that importance. Do not present it as causal importance (`REQ-L-07`).
 
-The estimator family is not selected ([OPEN-013](DECISIONS.md#open-questions)).
+TSK-034 selects that model ([DEC-105](DECISIONS.md#dec-105), resolving [OPEN-013](DECISIONS.md#open-013)). It is a diagnostic probe, not a predictive optimizer. There is no tuning, search, comparison, ensemble, calibration, threshold choice, or class weighting.
+
+| Part | Classification | Regression |
+| --- | --- | --- |
+| Task | Boolean target: binary. Categorical target: binary with two observed classes, multiclass with three or more. | Numeric target, including `{0, 1}`. |
+| Modeling rows | Non-missing target rows. | Finite non-missing target rows. |
+| Validation | One holdout, fraction 0.25, seed 0. Per class, in class order, `ceil(0.25 * n_class)` validation rows, at least 1 and at most `n_class - 1`. | One holdout, fraction 0.25, seed 0. `ceil(0.25 * n)` validation rows from one random permutation. |
+| Estimator | `LogisticRegression(C=1.0, solver="lbfgs", max_iter=1000)`, L2 by default. | `Ridge(alpha=1.0, solver="auto")`. |
+| Baseline | `DummyClassifier(strategy="prior")`: training class proportions. | `DummyRegressor(strategy="mean")`: training mean. |
+| Metrics | ROC AUC (binary) or unweighted macro one-versus-rest ROC AUC (multiclass); balanced accuracy; log loss. | R²; MAE; RMSE. |
+| Importance score | Negative log loss. | R². |
+
+Preprocessing is fitted on the training rows inside one pipeline. Numeric inputs treat missing and non-finite values as missing, impute the training median, add a missing indicator when training rows have missing values, and standardize to the training mean and standard deviation. Boolean and Categorical inputs are one-hot encoded from integer codes, with missing as its own level and a level not seen in training encoded as all zeros. There is no target encoding and no ordinal encoding of nominal levels.
+
+Metric definitions. ROC AUC is the Mann–Whitney area, `(R_pos - n_pos (n_pos + 1) / 2) / (n_pos n_neg)`, with tied scores sharing average ranks, computed on the probability of the second class. Macro one-versus-rest AUC is the unweighted mean of each class's area against the rest. A constant score gives 0.5. Balanced accuracy is the mean per-class recall of the most probable class. A probability tie predicts the first class in class order, so the prior baseline scores `1 / K`. Log loss is `-mean(log(clip(p_true, 1e-15, 1)))` in natural logs. R² is `1 - SS_res / SS_tot` against the validation mean. It is not clamped and can be negative. It is undefined, and stored as absent, when the validation target is constant. RMSE is `sqrt(mean((y - ŷ)²))`. Every metric keeps the model value and the baseline value. Their difference, signed so that positive favors the model, is derived. It is not a predictability score.
+
+Permutation importance uses the validation rows only. Each included original column is permuted on those rows, five times, while every other input is unchanged. The five row orders come from the seed and are shared by every input: one column seed drawn from `numpy.random.RandomState(seed)`, then cumulative in-place shuffles of the row positions by a `RandomState` with that column seed. A Numeric input's value and missing indicator, or a Boolean or Categorical input's one-hot columns, move together. Each repeat stores the validation score minus the permuted score. The mean and the population standard deviation across repeats are derived. Negative values are kept. The values are the sensitivity of held-out performance under this one model. They are not causal, not an effect size, not a test, and not comparable with relationship effects or p-values. Correlated inputs can share or hide importance. The importance view follows physical column order and does not reorder target relationship links.
+
+The metrics have no confidence interval in this slice. A linear probe can miss non-linear and interaction signal, so a small improvement is not evidence that the target is unpredictable.
