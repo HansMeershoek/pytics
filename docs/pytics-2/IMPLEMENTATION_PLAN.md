@@ -1,8 +1,8 @@
 # Implementation plan
 
-Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, TSK-022, TSK-023, TSK-024, TSK-025, TSK-026, and TSK-027 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. TSK-016 connects those components for one Series and does not invent that confidence. TSK-017 retains that column analysis for one DataFrame and does not invent that confidence. TSK-018 summarizes that analysis as a dataset overview and does not invent that confidence. TSK-019 summarizes each column of that analysis as a variable and does not invent that confidence. TSK-020 adds finite-population descriptive statistics after a Numeric selection and does not change that confidence. TSK-021 adds true and false counts after a Boolean selection and does not change inference or that confidence. TSK-022 records exact missingness structure and does not infer a missingness mechanism. TSK-023 records exact duplicate rows and does not treat them as errors. TSK-024 describes selected Numeric × Numeric pairs with Spearman and Pearson and does not implement other relationship families. TSK-025 makes Numeric descriptive statistics robust when a derived value is not a finite float64, and it splits the relationship implementation into a small package. It does not add a relationship family and it does not select the next slice. TSK-026 adds selected Numeric × selected Categorical relationships: observed group summaries, eta squared, and classical one-way ANOVA. It does not add post-hoc tests and it does not select the slice after that. TSK-027 moves relationship metadata to the family or component that owns it. It does not add a family, change those calculations, or select the slice after that.
+Status: **TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, TSK-022, TSK-023, TSK-024, TSK-025, TSK-026, TSK-027, and TSK-028 are complete. No later slice is approved.** The strong-physical-type phase is complete. The Semantic Foundation Review has been consolidated into project memory. TSK-006 strengthens the universal column-evidence family and does not add a semantic reading. TSK-007 adds frequency observations and does not add a semantic reading. TSK-008 adds numeric-structure observations and does not add a semantic reading. TSK-009 adds string-structure observations and does not add a semantic reading. TSK-010 adds pattern observations and does not add a semantic reading. TSK-011 adds an Identifier candidate assessment and does not select a semantic reading. TSK-012 adds Numeric, Categorical, and Text candidate assessments and does not select a semantic reading. TSK-013 adds string-content observations and does not select a semantic reading. TSK-014 resolves structural readings and candidate assessments and does not assign candidate confidence. TSK-015 records the inferred state after that resolution and does not invent that confidence. TSK-016 connects those components for one Series and does not invent that confidence. TSK-017 retains that column analysis for one DataFrame and does not invent that confidence. TSK-018 summarizes that analysis as a dataset overview and does not invent that confidence. TSK-019 summarizes each column of that analysis as a variable and does not invent that confidence. TSK-020 adds finite-population descriptive statistics after a Numeric selection and does not change that confidence. TSK-021 adds true and false counts after a Boolean selection and does not change inference or that confidence. TSK-022 records exact missingness structure and does not infer a missingness mechanism. TSK-023 records exact duplicate rows and does not treat them as errors. TSK-024 describes selected Numeric × Numeric pairs with Spearman and Pearson and does not implement other relationship families. TSK-025 makes Numeric descriptive statistics robust when a derived value is not a finite float64, and it splits the relationship implementation into a small package. It does not add a relationship family and it does not select the next slice. TSK-026 adds selected Numeric × selected Categorical relationships: observed group summaries, eta squared, and classical one-way ANOVA. It does not add post-hoc tests and it does not select the slice after that. TSK-027 moves relationship metadata to the family or component that owns it. It does not add a family, change those calculations, or select the slice after that. TSK-028 adds selected Boolean × selected Boolean relationships: a 2×2 table, probability difference, probability ratio, phi, and a two-sided Fisher exact p-value. It does not add a confidence interval or select the slice after that.
 
-Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, Slice 015, Slice 016, Slice 017, Slice 018, Slice 019, Slice 020, Slice 021, Slice 022, Slice 023, Slice 024, Slice 025, Slice 026, and Slice 027. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
+Pytics 2.0 implementation has started only for Slice 001, Slice 002, Slice 003, Slice 004, Slice 005, Slice 006, Slice 007, Slice 008, Slice 009, Slice 010, Slice 011, Slice 012, Slice 013, Slice 014, Slice 015, Slice 016, Slice 017, Slice 018, Slice 019, Slice 020, Slice 021, Slice 022, Slice 023, Slice 024, Slice 025, Slice 026, Slice 027, and Slice 028. This file does not sequence the rest of the analytical contract, and it does not assign priority. Sequencing beyond those slices is [OPEN-037](DECISIONS.md#open-questions). Selecting a semantic reading from a candidate assessment does not start from this file. The next implementation slice is not selected.
 
 ## Authorization
 
@@ -16,7 +16,7 @@ Outside an approved slice:
 - do not implement the engine, result classes, or method registry;
 - do not install or pin the candidate stack in [DEPENDENCIES.md](DEPENDENCIES.md).
 
-Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, TSK-022, TSK-023, TSK-024, TSK-025, TSK-026, and TSK-027 are the only slices approved under that rule.
+Accepting architectural direction is not approval of a slice. The end state is replacement inside `src/pytics` ([DEC-039](DECISIONS.md#dec-039)). In-place migration is [DEC-063](DECISIONS.md#dec-063). TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, TSK-022, TSK-023, TSK-024, TSK-025, TSK-026, TSK-027, and TSK-028 are the only slices approved under that rule.
 
 ## How a future slice is opened
 
@@ -51,7 +51,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 requirement → implementation task → source files → tests → verification → completion
 ```
 
-No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, TSK-022, TSK-023, TSK-024, TSK-025, TSK-026, and TSK-027 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, REQ-H-01, REQ-H-02, REQ-H-04, REQ-H-05, REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-04, REQ-A-05, REQ-A-06, REQ-I-01, REQ-IA-05, REQ-IA-08, REQ-IA-09, REQ-B-01, or REQ-B-02.
+No requirement row in that register is completed. TSK-001, TSK-002, TSK-003, TSK-004, TSK-005, TSK-006, TSK-007, TSK-008, TSK-009, TSK-010, TSK-011, TSK-012, TSK-013, TSK-014, TSK-015, TSK-016, TSK-017, TSK-018, TSK-019, TSK-020, TSK-021, TSK-022, TSK-023, TSK-024, TSK-025, TSK-026, TSK-027, and TSK-028 are completed tasks. They do not complete REQ-S-01, REQ-S-02, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-D-01, REQ-D-02, REQ-D-03, REQ-E-03, REQ-E-04, REQ-F-01, REQ-F-02, REQ-G-01, REQ-G-02, REQ-H-01, REQ-H-02, REQ-H-04, REQ-H-05, REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-04, REQ-A-05, REQ-A-06, REQ-I-01, REQ-IA-05, REQ-IA-08, REQ-IA-09, REQ-B-01, or REQ-B-02.
 
 ## Reuse of 1.1.5
 
@@ -1601,6 +1601,49 @@ Do not add a dependency. Do not approve a later slice.
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 12 passed for TSK-027.
 
-## After TSK-027
+## TSK-028
 
-TSK-027 makes the relationship container honest for more than one statistical family. It does not choose the next family. [DEC-098](DECISIONS.md#dec-098) records where coverage, population, computation, confidence, method identity, and adjustment now live. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+Slice 028, Boolean × Boolean relationship analysis. Approved 2026-10-04 after TSK-027. Completed the same day. No later slice is approved by this section.
+
+Linked requirements: REQ-K-01, REQ-K-02, and REQ-K-04 for selected Boolean × Boolean in addition to Numeric × Numeric and Numeric × Categorical. REQ-K-03 remains in force. REQ-K-05 is respected because no assumption test was added. REQ-P-10, REQ-G-03, REQ-IA-11, REQ-T-03, and REQ-T-05 are not completed. None of those requirement rows is completed. See [PROGRESS.md](PROGRESS.md).
+
+### Scope
+
+- Calculate selected Boolean × selected Boolean only. Do not infer Boolean from `{0, 1}`, `{0.0, 1.0}`, Boolean-like strings, or a categorical column.
+- Keep canonical physical pair identity. Name the left column the conditioning variable and the right column the outcome variable. Those roles are conditional probabilities, not causes.
+- Use the pairwise non-missing Boolean population. Retain all four 2×2 cells.
+- Store the probability difference, the probability ratio, and phi separately from a raw two-sided Fisher exact p-value.
+- Leave an exact infinite ratio unavailable. Do not add a continuity correction or a confidence interval.
+- Add `BOOLEAN_BOOLEAN` to `RelationshipFamily` and remove it from the unimplemented families. Keep coverage identities.
+- Copy the record in `build_relationships_summary` without recomputing.
+
+Representation follows [DEC-062](DECISIONS.md#dec-062). Placement follows the relationship package in [DEC-096](DECISIONS.md#dec-096). The contract is [DEC-099](DECISIONS.md#dec-099). It narrows [OPEN-004](DECISIONS.md#open-questions), [OPEN-006](DECISIONS.md#open-questions), [OPEN-007](DECISIONS.md#open-questions), [OPEN-008](DECISIONS.md#open-questions), [OPEN-010](DECISIONS.md#open-questions), [OPEN-037](DECISIONS.md#open-questions), [OPEN-038](DECISIONS.md#open-questions), [OPEN-043](DECISIONS.md#open-questions), [OPEN-044](DECISIONS.md#open-questions), and [OPEN-045](DECISIONS.md#open-questions) only as that decision says. It does not close the method catalog, the public result, or the multiple-testing family.
+
+### Exclusions
+
+Do not add Categorical × Categorical, Numeric × Boolean, or a generic RxC contingency framework. Do not add an odds ratio, Cramér's V, Pearson chi-square, Barnard's test, Boschloo's test, or a Boolean confidence interval. Do not add a continuity correction. Do not change Spearman, Pearson, the Fisher z interval, eta squared, or classical one-way ANOVA. Do not change semantic inference or Boolean descriptive counting. Do not add a multiple-testing correction, a plugin, or a registry. Do not split `models.py` only because it grew. Do not add a dependency or raise the SciPy floor. Do not route `pytics.profile` or `pytics.compare` through this result. Do not export it from top-level `pytics`. Do not freeze the internal dataclasses as a public schema.
+
+Do not resolve [OPEN-009](DECISIONS.md#open-questions), [OPEN-014](DECISIONS.md#open-questions), [OPEN-016](DECISIONS.md#open-questions), [OPEN-018](DECISIONS.md#open-questions), [OPEN-019](DECISIONS.md#open-questions), [OPEN-046](DECISIONS.md#open-046), [OPEN-047](DECISIONS.md#open-047), [OPEN-048](DECISIONS.md#open-048), or [OPEN-049](DECISIONS.md#open-049). The open questions named in [DEC-099](DECISIONS.md#dec-099) record the narrowings and stay open.
+
+Do not add a dependency. Do not approve a later slice.
+
+### Acceptance criteria
+
+1. Selected Boolean × Boolean is calculated. Integer `{0, 1}`, Boolean-like strings, and categorical Boolean values are not.
+2. Canonical physical pair identity stays. Conditioning is the left column and outcome is the right column. That orientation is not causal.
+3. Pairwise non-missing rows are exact. The four cells sum to `n_paired`. A zero event count is distinct from an absent conditioning level.
+4. The probability difference, the probability ratio, and phi have explicit formulas. An exact infinite ratio is unavailable. No continuity correction is applied.
+5. Two-sided Fisher exact supplies the raw p-value only. SciPy's odds ratio is not stored. A constant margin does not store a p-value of `1.0`.
+6. Adjustment stays unapplied. No strength label and no confidence interval are added.
+7. `RelationshipFamily` includes Boolean × Boolean. Coverage reconciles. A degenerate pair still retains a record when the table can be stored.
+8. The product summary copies the record and does not reread the DataFrame or call Fisher.
+9. The record does not retain a DataFrame, Series, Index, ndarray, BooleanArray, or SciPy result.
+10. Repeated analysis is equal. Previous Numeric families are unchanged. No generic RxC framework or registry is added.
+11. No dependency was added and the SciPy floor was not raised. `profile` and `compare` are unchanged.
+12. The full suite has only the known legacy PDF failure. [DEC-099](DECISIONS.md#dec-099) records the statistical contract, including the measured Fisher cost.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 12 passed for TSK-028.
+
+## After TSK-028
+
+TSK-028 calculates selected Boolean × Boolean and leaves Categorical × Categorical, Boolean confidence intervals, and the odds ratio unselected. [DEC-099](DECISIONS.md#dec-099) records the 2×2 contract. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

@@ -23,6 +23,7 @@ from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
 from pytics.analysis.missing import MissingAnalysis
 from pytics.analysis.relationship import AssociationMethod
+from pytics.analysis.relationship import BooleanBooleanRelationship
 from pytics.analysis.relationship import AssociationResult
 from pytics.analysis.relationship import CorrelationEstimate
 from pytics.analysis.relationship import CorrelationInterval
@@ -149,12 +150,21 @@ def _assert_counts(summary: RelationshipsSummary) -> None:
                 else:
                     assert method.estimate.value is None
                 assert not hasattr(method, "is_significant")
-        else:
-            assert isinstance(relationship, NumericCategoricalRelationship)
+        elif isinstance(relationship, NumericCategoricalRelationship):
             assert relationship.family is RelationshipFamily.NUMERIC_CATEGORICAL
             assert relationship.omnibus.frequentist.adjusted_p_value is None
             assert (
                 relationship.omnibus.frequentist.adjustment
+                is MultipleTestingAdjustment.NOT_APPLIED
+            )
+        else:
+            assert isinstance(relationship, BooleanBooleanRelationship)
+            assert relationship.family is RelationshipFamily.BOOLEAN_BOOLEAN
+            assert relationship.conditioning_position == relationship.left_position
+            assert relationship.outcome_position == relationship.right_position
+            assert relationship.independence.frequentist.adjusted_p_value is None
+            assert (
+                relationship.independence.frequentist.adjustment
                 is MultipleTestingAdjustment.NOT_APPLIED
             )
 
@@ -329,7 +339,7 @@ def test_recognized_families_are_counted_without_raw_scans(
     _assert_counts(summary)
     assert read_positions == [0, 1]
     assert summary.n_total_pairs == 21
-    assert summary.n_supported_pairs == 5
+    assert summary.n_supported_pairs == 6
     assert (
         sum(
             isinstance(item, NumericNumericRelationship)
@@ -344,10 +354,16 @@ def test_recognized_families_are_counted_without_raw_scans(
         )
         == 4
     )
+    assert (
+        sum(
+            isinstance(item, BooleanBooleanRelationship)
+            for item in summary.relationships
+        )
+        == 1
+    )
     counts = {item.family: item.n_pairs for item in summary.unimplemented_family_counts}
     assert counts == {
         UnimplementedRelationshipFamily.NUMERIC_BOOLEAN: 4,
-        UnimplementedRelationshipFamily.BOOLEAN_BOOLEAN: 1,
         UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL: 1,
         UnimplementedRelationshipFamily.DATETIME_NUMERIC: 2,
         UnimplementedRelationshipFamily.DATETIME_CATEGORICAL: 2,
@@ -1029,10 +1045,10 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
             n_ineligible_pairs=1,
             unimplemented_family_counts=(
                 UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.BOOLEAN_BOOLEAN, 1
+                    UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL, 1
                 ),
                 UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.BOOLEAN_BOOLEAN, 1
+                    UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL, 1
                 ),
             ),
             relationships=(),
@@ -1604,17 +1620,31 @@ def _imported_modules(tree: ast.AST) -> set[str]:
     return found
 
 
+def _model_modules(package: object) -> list[object]:
+    import importlib
+    import pkgutil
+
+    modules = [package]
+    for module_info in pkgutil.walk_packages(
+        package.__path__,  # type: ignore[attr-defined]
+        package.__name__ + ".",  # type: ignore[attr-defined]
+    ):
+        modules.append(importlib.import_module(module_info.name))
+    return modules
+
+
 def test_relationship_module_does_not_gate_methods_on_normality() -> None:
     import pytics.analysis.relationships as relationships_package
     import pytics.analysis.relationships.models as models_module
     import pytics.analysis.relationships.numeric_categorical as numeric_categorical_module
 
+    model_modules = _model_modules(models_module)
     source = "\n".join(
         inspect.getsource(module)
         for module in (
             relationship_module,
             relationships_package,
-            models_module,
+            *model_modules,
             numeric_numeric_module,
             numeric_categorical_module,
             collector_module,
@@ -1627,15 +1657,36 @@ def test_relationship_module_does_not_gate_methods_on_normality() -> None:
     assert "statsmodels" not in source
     assert "AnalysisPlugin" not in source
     assert "MethodRegistry" not in source
-    model_tree = ast.parse(inspect.getsource(models_module))
+    model_imports = set()
+    for module in model_modules:
+        model_imports.update(_imported_modules(ast.parse(inspect.getsource(module))))
     numeric_tree = ast.parse(inspect.getsource(numeric_numeric_module))
     categorical_tree = ast.parse(inspect.getsource(numeric_categorical_module))
-    model_imports = _imported_modules(model_tree)
     numeric_imports = _imported_modules(numeric_tree)
     categorical_imports = _imported_modules(categorical_tree)
     assert "scipy" not in model_imports
     assert "pandas" not in model_imports
     assert "numpy" not in model_imports
+    assert model_imports.isdisjoint(
+        {
+            "pytics.analysis.relationships.collector",
+            "pytics.analysis.relationships.numeric_numeric",
+            "pytics.analysis.relationships.numeric_categorical",
+            "pytics.analysis.relationships.boolean_boolean",
+        }
+    )
+    assert (
+        models_module.NumericNumericRelationship
+        is models_module.numeric_numeric.NumericNumericRelationship
+    )
+    assert (
+        models_module.NumericCategoricalRelationship
+        is models_module.numeric_categorical.NumericCategoricalRelationship
+    )
+    assert (
+        models_module.BooleanBooleanRelationship
+        is models_module.boolean_boolean.BooleanBooleanRelationship
+    )
     assert not any("collector" in name for name in numeric_imports)
     assert not any("collector" in name for name in categorical_imports)
     assert "scipy.stats" in categorical_imports

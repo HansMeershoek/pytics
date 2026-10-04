@@ -14,12 +14,15 @@ from scipy.stats import spearmanr
 
 import pytics.analysis.column as column_module
 import pytics.analysis.dataset as dataset_module
+import pytics.analysis.relationships.boolean_boolean as boolean_boolean_module
 import pytics.analysis.relationships.collector as collector_module
 import pytics.analysis.relationships.numeric_categorical as numeric_categorical_module
 import pytics.analysis.relationships.numeric_numeric as numeric_numeric_module
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.relationship import AssociationMethod
+from pytics.analysis.relationship import BooleanBooleanPopulation
+from pytics.analysis.relationship import BooleanBooleanRelationship
 from pytics.analysis.relationship import CorrelationEstimate
 from pytics.analysis.relationship import CorrelationInterval
 from pytics.analysis.relationship import CorrelationIntervalMethod
@@ -151,6 +154,7 @@ def test_dataset_container_keeps_coverage_and_not_one_method() -> None:
     assert tuple(RelationshipFamily) == (
         RelationshipFamily.NUMERIC_NUMERIC,
         RelationshipFamily.NUMERIC_CATEGORICAL,
+        RelationshipFamily.BOOLEAN_BOOLEAN,
     )
     assert (
         retained.n_supported_pairs
@@ -330,15 +334,21 @@ def test_version_capability_is_not_a_dataset_field() -> None:
         }
     )
     retained = analyze_dataframe(flags).relationship_analysis
-    assert retained.relationships == ()
-    assert retained.n_analyzed_pairs == 0
-    assert retained.n_unimplemented_family_pairs == 1
-    assert retained.unimplemented_family_counts[0].family is (
-        UnimplementedRelationshipFamily.BOOLEAN_BOOLEAN
+    assert len(retained.relationships) == 1
+    assert retained.n_analyzed_pairs == 1
+    assert retained.n_supported_pairs == 1
+    assert retained.n_unimplemented_family_pairs == 0
+    relationship = retained.relationships[0]
+    assert isinstance(relationship, BooleanBooleanRelationship)
+    assert relationship.family is RelationshipFamily.BOOLEAN_BOOLEAN
+    assert relationship.population is (
+        BooleanBooleanPopulation.PAIRWISE_NON_MISSING_BOOLEAN
     )
     _assert_no_dataset_claims(retained)
-    assert RelationshipFamily.NUMERIC_NUMERIC in RelationshipFamily
-    assert not any(family.value == "boolean_boolean" for family in RelationshipFamily)
+    assert RelationshipFamily.BOOLEAN_BOOLEAN in RelationshipFamily
+    assert "boolean_boolean" not in {
+        family.value for family in UnimplementedRelationshipFamily
+    }
 
 
 def test_summary_copies_records_without_source_or_recalculation(
@@ -351,8 +361,11 @@ def test_summary_copies_records_without_source_or_recalculation(
 
     monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
     monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
+    monkeypatch.setattr(collector_module, "_read_boolean_column", _fail)
     monkeypatch.setattr(collector_module, "_association_methods", _fail)
     monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
+    monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
+    monkeypatch.setattr(boolean_boolean_module, "fisher_exact", _fail)
     monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)
     monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
     monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)

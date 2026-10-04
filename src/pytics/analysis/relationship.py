@@ -13,6 +13,17 @@ from pytics.analysis.relationships.collector import build_relationships_summary
 from pytics.analysis.relationships.collector import collect_relationship_analysis
 from pytics.analysis.relationships.collector import relationship_analysis_for_columns
 from pytics.analysis.relationships.models import AssociationMethod
+from pytics.analysis.relationships.models import BooleanAssociationEstimate
+from pytics.analysis.relationships.models import BooleanAssociationMethod
+from pytics.analysis.relationships.models import BooleanBooleanPopulation
+from pytics.analysis.relationships.models import BooleanBooleanRelationship
+from pytics.analysis.relationships.models import BooleanContingencyTable
+from pytics.analysis.relationships.models import BooleanDirectionalEstimate
+from pytics.analysis.relationships.models import BooleanDirectionalMethod
+from pytics.analysis.relationships.models import BooleanIndependenceMethod
+from pytics.analysis.relationships.models import BooleanIndependenceTest
+from pytics.analysis.relationships.models import BooleanLevel
+from pytics.analysis.relationships.models import ConditionalOutcomeProbability
 from pytics.analysis.relationships.models import AssociationResult
 from pytics.analysis.relationships.models import CategoricalGroupSummary
 from pytics.analysis.relationships.models import CategoryGroupOrder
