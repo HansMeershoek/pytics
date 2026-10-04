@@ -24,7 +24,9 @@ match a Numeric column.
 
 Category order is the physical categorical vocabulary with unused and
 unpaired levels removed. The ANOVA calculation does not use that order.
-Ordered categorical metadata does not become an ordinal score.
+Ordered categorical metadata does not become an ordinal score. This
+module stores the raw ANOVA p-value. It does not apply dataset-level
+correction.
 """
 
 from __future__ import annotations

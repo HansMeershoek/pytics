@@ -32,6 +32,8 @@ from pytics.analysis.relationship import NumericNumericRelationship
 from pytics.analysis.relationship import RelationshipFamily
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
+from pytics.analysis.relationship import UnimplementedFamilyCount
+from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationships.boolean_boolean import relationship_from_counts
 from pytics.semantics.interpretation import SemanticType
@@ -259,8 +261,13 @@ def test_boolean_with_numeric_or_categorical_is_not_this_family() -> None:
     assert [(item.numeric_position, item.boolean_position) for item in flagged] == [
         (0, 1)
     ]
-    assert summary.unimplemented_family_counts == ()
-    assert summary.n_ineligible_pairs == 1
+    assert summary.unimplemented_family_counts == (
+        UnimplementedFamilyCount(
+            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 1
+        ),
+    )
+    assert summary.n_unimplemented_family_pairs == 1
+    assert summary.n_ineligible_pairs == 0
 
 
 def test_binary_integers_and_boolean_strings_are_not_boolean_pairs() -> None:
@@ -748,15 +755,19 @@ def test_mixed_coverage_reconciles() -> None:
     assert summary.n_total_pairs == 15
     assert summary.n_supported_pairs == 8
     assert summary.n_analyzed_pairs == 8
-    assert summary.n_unimplemented_family_pairs == 0
-    assert summary.n_ineligible_pairs == 7
+    assert summary.n_unimplemented_family_pairs == 2
+    assert summary.n_ineligible_pairs == 5
     assert (
         summary.n_supported_pairs
         + summary.n_unimplemented_family_pairs
         + summary.n_ineligible_pairs
         == summary.n_total_pairs
     )
-    assert summary.unimplemented_family_counts == ()
+    assert summary.unimplemented_family_counts == (
+        UnimplementedFamilyCount(
+            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 2
+        ),
+    )
     assert (
         sum(
             isinstance(item, NumericBooleanRelationship)

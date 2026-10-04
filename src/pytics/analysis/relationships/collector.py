@@ -3,11 +3,14 @@
 Eligibility uses the selected semantic type. The calculated families are
 selected Numeric × Numeric, selected Numeric × Categorical, selected
 Boolean × Boolean, selected Numeric × Boolean, and selected Categorical
-× Categorical. Other recognized directions are counted. Ineligible pairs
-are counted and not read. Each needed source column is prepared once.
-Those temporary arrays are discarded before the collector returns. The
-summary builder copies the retained records and does not calculate a
-statistic.
+× Categorical. Recognized families that are not calculated are counted,
+including Categorical × Boolean and the datetime directions. Ineligible
+pairs are semantic pairs the contract does not treat as relationship
+candidates. They are counted and not read. Each needed source column is
+prepared once. Those temporary arrays are discarded before the collector
+returns. After the pair records exist, one dataset-level correction
+adjusts the available primary p-values. The summary builder copies the
+retained records and does not calculate a statistic.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ import pandas as pd
 
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
+from pytics.analysis.relationships.adjustment import adjust_primary_p_values
 from pytics.analysis.relationships.boolean_boolean import _read_boolean_column
 from pytics.analysis.relationships.boolean_boolean import analyze as _analyze_boolean
 from pytics.analysis.relationships.categorical_categorical import (
@@ -92,6 +96,9 @@ _UNIMPLEMENTED_FAMILIES = {
     frozenset((SemanticType.DATETIME, SemanticType.CATEGORICAL)): (
         UnimplementedRelationshipFamily.DATETIME_CATEGORICAL
     ),
+    frozenset((SemanticType.CATEGORICAL, SemanticType.BOOLEAN)): (
+        UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN
+    ),
 }
 
 
@@ -121,13 +128,16 @@ def collect_relationship_analysis(
 
     A component that cannot produce a finite result is recorded as
     unavailable. That state does not raise, and it does not discard the
-    pair or the other component.
+    pair or the other component. Available primary p-values are then
+    adjusted together. Complementary and unavailable p-values are not.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("collect_relationship_analysis expects a pandas DataFrame")
     _require_aligned_columns(frame, columns)
     n_rows = int(frame.shape[0])
-    relationships = _relationships_for_frame(frame, columns, n_rows)
+    relationships = adjust_primary_p_values(
+        _relationships_for_frame(frame, columns, n_rows)
+    )
     return relationship_analysis_for_columns(
         columns,
         n_rows=n_rows,
@@ -521,8 +531,12 @@ def _pair_class(
 ) -> _PairClass:
     """Classify one unordered pair of selected types.
 
-    ``None`` is an unresolved column. It is ineligible, as are identifiers,
-    constants, empty columns, and pair types with no accepted direction.
+    ``None`` is an unresolved column. It is ineligible, as are Identifier,
+    Constant, Empty, Text, Timedelta, and pair types with no recognized
+    family. A recognized family that is not calculated is unimplemented.
+    Categorical × Boolean is that family in either physical order.
+    Datetime × Boolean is ineligible: no datetime-boolean family is
+    recognized, and Boolean is not collapsed into Categorical.
     """
     if left is None or right is None:
         return _Eligibility.INELIGIBLE

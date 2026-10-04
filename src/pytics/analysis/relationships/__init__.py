@@ -6,7 +6,9 @@ coverage container. ``numeric_numeric`` calculates Numeric × Numeric.
 ``boolean_boolean`` calculates Boolean × Boolean.
 ``numeric_boolean`` calculates Numeric × Boolean.
 ``categorical_categorical`` calculates Categorical × Categorical.
-``collector`` chooses pairs and projects the product summary.
+``adjustment`` applies the dataset-level primary-test correction after
+those calculations. ``collector`` chooses pairs and projects the product
+summary.
 Importing this package is not a frozen public API.
 """
 

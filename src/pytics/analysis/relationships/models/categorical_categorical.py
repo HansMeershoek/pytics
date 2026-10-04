@@ -236,10 +236,12 @@ class CategoricalIndependenceTest:
     ``statistic`` is the uncorrected Pearson statistic. ``degrees_of_freedom``
     is ``(r - 1) * (c - 1)`` for the observed levels when that statistic
     exists. Yates's correction is not used, including for a 2×2 table.
-    ``frequentist`` holds the raw upper-tail chi-square p-value. The
-    statistic and the p-value do not share one availability flag: a
-    non-finite tail does not erase a finite statistic. ``adjusted_p_value``
-    stays absent. The p-value is not a significance flag.
+    ``frequentist`` holds the upper-tail chi-square p-value. The
+    calculator stores that raw p-value. Dataset-level correction may
+    later set the adjusted companion of the same test. The statistic
+    and the p-value do not share one availability flag: a non-finite
+    tail does not erase a finite statistic. The p-value is not a
+    significance flag.
     """
 
     method: CategoricalIndependenceMethod

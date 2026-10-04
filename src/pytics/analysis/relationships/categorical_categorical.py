@@ -28,7 +28,8 @@ counts are not stored. The retained diagnostics are the minimum expected
 count and the Cochran checkpoints of cells below 5 and below 1. Those
 checkpoints do not turn the test on or off. A sparse table keeps its
 table, its V when the formula is defined, its statistic, and its raw
-p-value, and it does not switch to Fisher's exact test.
+p-value, and it does not switch to Fisher's exact test. This module
+does not apply dataset-level correction.
 
 The retained table stores positive cells only. Pair counts use a
 temporary one-dimensional histogram when the observed rectangle has at

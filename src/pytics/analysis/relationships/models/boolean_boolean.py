@@ -13,7 +13,6 @@ from typing import Optional
 
 from pytics.analysis.relationships.models.common import BooleanLevel
 from pytics.analysis.relationships.models.common import FrequentistEvidence
-from pytics.analysis.relationships.models.common import MultipleTestingAdjustment
 from pytics.analysis.relationships.models.common import RelationshipFamily
 from pytics.analysis.relationships.models.common import ResultAvailability
 from pytics.analysis.relationships.models.common import UnavailabilityReason
@@ -264,10 +263,12 @@ class BooleanAssociationEstimate:
 class BooleanIndependenceTest:
     """Two-sided Fisher's exact test for one Boolean pair.
 
-    ``frequentist`` holds the raw conditional p-value when every margin
-    is positive. SciPy's odds-ratio statistic is not stored. A constant
-    margin does not store the p-value ``1.0`` that the library returns
-    for a degenerate table. ``adjusted_p_value`` stays absent.
+    ``frequentist`` holds the conditional p-value when every margin is
+    positive. The calculator stores that raw p-value. Dataset-level
+    correction may later set the adjusted companion of the same test.
+    SciPy's odds-ratio statistic is not stored. A constant margin does
+    not store the p-value ``1.0`` that the library returns for a
+    degenerate table.
     """
 
     method: BooleanIndependenceMethod
@@ -278,8 +279,6 @@ class BooleanIndependenceTest:
         if self.method is not BooleanIndependenceMethod.FISHER_EXACT:
             raise ValueError("the Boolean independence method is Fisher's exact test")
         _require_type(self.frequentist, FrequentistEvidence, "frequentist")
-        if self.frequentist.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
-            raise ValueError("multiple-testing adjustment is not applied")
         if (
             self.frequentist.reason is not None
             and self.frequentist.reason not in _BOOLEAN_MARGINAL_REASONS

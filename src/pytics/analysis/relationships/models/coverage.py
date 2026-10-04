@@ -31,13 +31,18 @@ from pytics.analysis.relationships.models.numeric_numeric import (
 
 
 class UnimplementedRelationshipFamily(Enum):
-    """Accepted pair direction that this slice does not calculate.
+    """Recognized relationship family this version does not calculate.
 
-    A count of these pairs is not a claim that the family was analyzed.
+    Unimplemented means the semantic pair has a meaningful analytical
+    family under the current contract, and Pytics does not yet produce
+    a record for it. It does not mean the pair is ineligible. Both
+    physical orientations of one family share one member. A count of
+    these pairs is not a claim that the family was analyzed.
     """
 
     DATETIME_NUMERIC = "datetime_numeric"
     DATETIME_CATEGORICAL = "datetime_categorical"
+    CATEGORICAL_BOOLEAN = "categorical_boolean"
 
 
 @dataclass(frozen=True)
@@ -78,10 +83,17 @@ class RelationshipAnalysis:
     Supported pairs are family-specific records, in ascending physical
     position order. ``RelationshipFamily`` names the families this
     version can calculate. Records name the families present in this
-    dataset. Unimplemented recognized families and ineligible pairs are
-    counts, because those pairs have no record. ``n_analyzed_pairs`` is
-    the number of retained records, including records whose statistical
-    components are unavailable. It is not a count of significant tests.
+    dataset.
+
+    Calculated, or supported, means Pytics computes a relationship
+    record for that semantic pair family. Unimplemented means a
+    recognized family has no calculator yet, so those pairs are counts.
+    Ineligible means the current contract does not treat that semantic
+    pair as a relationship candidate. Ineligible is not a placeholder
+    for a recognized family that has not been implemented.
+    ``n_analyzed_pairs`` is the number of retained records, including
+    records whose statistical components are unavailable. It is not a
+    count of significant tests.
     """
 
     n_rows: int

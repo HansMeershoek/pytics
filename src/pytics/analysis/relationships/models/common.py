@@ -73,23 +73,35 @@ class UnavailabilityReason(Enum):
 
 
 class MultipleTestingAdjustment(Enum):
-    """Multiple-testing status of a stored p-value.
+    """What happened to one stored p-value.
 
-    ``NOT_APPLIED`` means the raw p-value has no adjusted companion yet.
+    ``NOT_APPLIED`` means this p-value was not adjusted. That covers an
+    unavailable p-value, which never enters a correction family, and an
+    available complementary p-value that the correction policy leaves
+    raw. It does not mean a correction was attempted and failed.
+
+    ``BENJAMINI_HOCHBERG`` means this p-value was one available primary
+    relationship test in the dataset-level exploratory family, and it
+    received that family's Benjamini–Hochberg adjustment. The adjusted
+    value is evidence about that same raw test. It is not a significance
+    flag.
     """
 
     NOT_APPLIED = "not_applied"
+    BENJAMINI_HOCHBERG = "benjamini_hochberg"
 
 
 @dataclass(frozen=True)
 class FrequentistEvidence:
-    """Raw frequentist evidence for one inferential result.
+    """Frequentist evidence for one inferential result.
 
     A correlation test, a one-way ANOVA p-value, a Boolean exact
     test, and a Pearson chi-square p-value all use this record.
     ``adjustment`` belongs to this result. It is not a dataset-wide
-    correction status. ``adjusted_p_value`` stays ``None`` while
-    adjustment is not applied. The p-value is not a significance flag.
+    correction status. ``NOT_APPLIED`` keeps ``adjusted_p_value`` empty.
+    ``BENJAMINI_HOCHBERG`` stores the adjusted companion of this same
+    raw p-value. An unavailable test is not adjusted. The p-value is
+    not a significance flag.
     """
 
     availability: ResultAvailability
@@ -101,16 +113,29 @@ class FrequentistEvidence:
     def __post_init__(self) -> None:
         _require_enum(self.availability, ResultAvailability, "availability")
         _require_enum(self.adjustment, MultipleTestingAdjustment, "adjustment")
-        if self.adjusted_p_value is not None:
-            raise ValueError("an unadjusted test has no adjusted p-value")
-        if self.availability is ResultAvailability.AVAILABLE:
-            _require_p_value(self.p_value)
-            if self.reason is not None:
-                raise ValueError("an available test has no unavailability reason")
+        if self.availability is ResultAvailability.UNAVAILABLE:
+            if self.p_value is not None:
+                raise ValueError("an unavailable test has no p-value")
+            if self.adjusted_p_value is not None:
+                raise ValueError("an unavailable test has no adjusted p-value")
+            if self.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
+                raise ValueError("an unavailable test is not adjusted")
+            _require_enum(self.reason, UnavailabilityReason, "reason")
             return
-        if self.p_value is not None:
-            raise ValueError("an unavailable test has no p-value")
-        _require_enum(self.reason, UnavailabilityReason, "reason")
+        _require_p_value(self.p_value)
+        if self.reason is not None:
+            raise ValueError("an available test has no unavailability reason")
+        if self.adjustment is MultipleTestingAdjustment.NOT_APPLIED:
+            if self.adjusted_p_value is not None:
+                raise ValueError("an unadjusted test has no adjusted p-value")
+            return
+        if self.adjustment is not MultipleTestingAdjustment.BENJAMINI_HOCHBERG:
+            raise ValueError("adjustment is not a known correction")
+        if self.adjusted_p_value is None:
+            raise ValueError("an adjusted test has an adjusted p-value")
+        _require_p_value(self.adjusted_p_value)
+        if self.adjusted_p_value + 1e-12 < self.p_value:  # type: ignore[operator]
+            raise ValueError("an adjusted p-value cannot be less than its raw p-value")
 
 
 def _require_p_value(value: Optional[float]) -> None:

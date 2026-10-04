@@ -111,6 +111,23 @@ def _assert_no_dataset_method_claims(value: object) -> None:
         assert not hasattr(value, name)
 
 
+def _assert_adjustment(
+    frequentist: FrequentistEvidence,
+    *,
+    complementary: bool = False,
+) -> None:
+    """Primary available tests are adjusted. Complementary and missing ones are not."""
+    if complementary or frequentist.availability is ResultAvailability.UNAVAILABLE:
+        assert frequentist.adjustment is MultipleTestingAdjustment.NOT_APPLIED
+        assert frequentist.adjusted_p_value is None
+        return
+    assert frequentist.adjustment is MultipleTestingAdjustment.BENJAMINI_HOCHBERG
+    assert type(frequentist.adjusted_p_value) is float
+    assert frequentist.p_value is not None
+    assert 0.0 <= frequentist.adjusted_p_value <= 1.0
+    assert frequentist.adjusted_p_value + 1e-12 >= frequentist.p_value
+
+
 def _assert_counts(summary: RelationshipsSummary) -> None:
     expected = summary.n_columns * (summary.n_columns - 1) // 2
     assert summary.n_total_pairs == expected
@@ -144,11 +161,10 @@ def _assert_counts(summary: RelationshipsSummary) -> None:
             assert relationship.spearman.n_observations == relationship.n_paired
             assert relationship.pearson.n_observations == relationship.n_paired
             for method in relationship.methods:
-                assert (
-                    method.frequentist.adjustment
-                    is MultipleTestingAdjustment.NOT_APPLIED
+                _assert_adjustment(
+                    method.frequentist,
+                    complementary=method.method is AssociationMethod.PEARSON,
                 )
-                assert method.frequentist.adjusted_p_value is None
                 if method.estimate.availability is ResultAvailability.AVAILABLE:
                     assert method.estimate.value is not None
                     assert math.isfinite(method.estimate.value)
@@ -158,20 +174,14 @@ def _assert_counts(summary: RelationshipsSummary) -> None:
                 assert not hasattr(method, "is_significant")
         elif isinstance(relationship, NumericCategoricalRelationship):
             assert relationship.family is RelationshipFamily.NUMERIC_CATEGORICAL
-            assert relationship.omnibus.frequentist.adjusted_p_value is None
-            assert (
-                relationship.omnibus.frequentist.adjustment
-                is MultipleTestingAdjustment.NOT_APPLIED
-            )
+            _assert_adjustment(relationship.omnibus.frequentist)
         elif isinstance(relationship, NumericBooleanRelationship):
             assert relationship.family is RelationshipFamily.NUMERIC_BOOLEAN
             assert {relationship.numeric_position, relationship.boolean_position} == {
                 relationship.left_position,
                 relationship.right_position,
             }
-            frequentist = relationship.mean_difference_test.frequentist
-            assert frequentist.adjusted_p_value is None
-            assert frequentist.adjustment is MultipleTestingAdjustment.NOT_APPLIED
+            _assert_adjustment(relationship.mean_difference_test.frequentist)
         elif isinstance(relationship, CategoricalCategoricalRelationship):
             assert relationship.family is RelationshipFamily.CATEGORICAL_CATEGORICAL
             assert relationship.population is (
@@ -186,22 +196,14 @@ def _assert_counts(summary: RelationshipsSummary) -> None:
             assert relationship.independence.method is (
                 CategoricalIndependenceMethod.PEARSON_CHI_SQUARE
             )
-            assert relationship.independence.frequentist.adjusted_p_value is None
-            assert (
-                relationship.independence.frequentist.adjustment
-                is MultipleTestingAdjustment.NOT_APPLIED
-            )
+            _assert_adjustment(relationship.independence.frequentist)
             assert relationship.table.grand_total == relationship.n_paired
         else:
             assert isinstance(relationship, BooleanBooleanRelationship)
             assert relationship.family is RelationshipFamily.BOOLEAN_BOOLEAN
             assert relationship.conditioning_position == relationship.left_position
             assert relationship.outcome_position == relationship.right_position
-            assert relationship.independence.frequentist.adjusted_p_value is None
-            assert (
-                relationship.independence.frequentist.adjustment
-                is MultipleTestingAdjustment.NOT_APPLIED
-            )
+            _assert_adjustment(relationship.independence.frequentist)
 
 
 def test_one_numeric_pair_keeps_spearman_and_pearson() -> None:
@@ -334,18 +336,21 @@ def test_unsupported_semantic_pairs_are_not_numeric_relationships(
     assert (relationship.left_position, relationship.right_position) == (0, 2)
     assert relationship.numeric_position == 0
     assert relationship.categorical_position == 2
-    assert summary.n_unimplemented_family_pairs == 2
+    assert summary.n_unimplemented_family_pairs == 3
     assert summary.unimplemented_family_counts == (
         UnimplementedFamilyCount(UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1),
         UnimplementedFamilyCount(
             UnimplementedRelationshipFamily.DATETIME_CATEGORICAL, 1
+        ),
+        UnimplementedFamilyCount(
+            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 1
         ),
     )
     assert analysis.columns[4].inferred.selected_type is SemanticType.CONSTANT
     assert analysis.columns[5].inferred.selected_type is SemanticType.EMPTY
     assert analysis.columns[6].inferred.selected_type is SemanticType.IDENTIFIER
     assert analysis.columns[7].inferred.selected_type is None
-    assert summary.n_ineligible_pairs == summary.n_total_pairs - 4
+    assert summary.n_ineligible_pairs == summary.n_total_pairs - 5
 
 
 def test_recognized_families_are_counted_without_raw_scans(
@@ -416,8 +421,9 @@ def test_recognized_families_are_counted_without_raw_scans(
     assert counts == {
         UnimplementedRelationshipFamily.DATETIME_NUMERIC: 2,
         UnimplementedRelationshipFamily.DATETIME_CATEGORICAL: 2,
+        UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN: 4,
     }
-    assert summary.n_ineligible_pairs == 6
+    assert summary.n_ineligible_pairs == 2
 
 
 def test_binary_integers_stay_numeric_pairs() -> None:
@@ -684,6 +690,7 @@ def test_builder_does_not_recompute(
     monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
     monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
     monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)
+    monkeypatch.setattr(collector_module, "adjust_primary_p_values", _fail)
     monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
     summary = build_relationships_summary(analysis)
     _assert_counts(summary)

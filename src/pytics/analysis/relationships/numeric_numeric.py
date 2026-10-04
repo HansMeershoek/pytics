@@ -10,7 +10,8 @@ correlation is not stored.
 
 An estimate, its frequentist p-value, and a confidence interval can each
 be unavailable on their own. Raw p-values are stored when the test
-exists. Adjusted p-values are not calculated.
+exists. This module does not adjust them. Dataset-level correction may
+later adjust the Spearman p-value and leaves the Pearson p-value raw.
 """
 
 from __future__ import annotations

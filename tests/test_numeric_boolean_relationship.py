@@ -43,6 +43,7 @@ from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import StandardizedDifferenceMethod
 from pytics.analysis.relationship import StandardizedMeanDifference
 from pytics.analysis.relationship import UnavailabilityReason
+from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationship import relationship_analysis_for_columns
@@ -302,8 +303,13 @@ def test_selected_types_decide_the_family() -> None:
         ("NumericBooleanRelationship", 1, 2),
         ("NumericCategoricalRelationship", 2, 3),
     ]
-    assert summary.unimplemented_family_counts == ()
-    assert summary.n_ineligible_pairs == 16
+    assert summary.unimplemented_family_counts == (
+        UnimplementedFamilyCount(
+            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 1
+        ),
+    )
+    assert summary.n_unimplemented_family_pairs == 1
+    assert summary.n_ineligible_pairs == 15
     nullable, binary = (
         item
         for item in summary.relationships
@@ -787,8 +793,10 @@ def test_welch_matches_scipy_for_ordinary_samples() -> None:
         )
         assert 0.0 <= test.frequentist.p_value <= 1.0
         assert (test.statistic > 0.0) == (relationship.mean_difference.value > 0.0)
-        assert test.frequentist.adjustment is MultipleTestingAdjustment.NOT_APPLIED
-        assert test.frequentist.adjusted_p_value is None
+        assert test.frequentist.adjustment is (
+            MultipleTestingAdjustment.BENJAMINI_HOCHBERG
+        )
+        assert test.frequentist.adjusted_p_value == test.frequentist.p_value
         smaller = min(len(true_values), len(false_values)) - 1
         assert smaller <= test.degrees_of_freedom <= relationship.n_paired - 2
 
@@ -848,8 +856,8 @@ def test_mixed_frame_counts_each_family_once() -> None:
     assert summary.n_total_pairs == 45
     assert summary.n_supported_pairs == summary.n_analyzed_pairs == 17
     assert len(summary.relationships) == 17
-    assert summary.n_unimplemented_family_pairs == 5
-    assert summary.n_ineligible_pairs == 23
+    assert summary.n_unimplemented_family_pairs == 9
+    assert summary.n_ineligible_pairs == 19
     by_family: dict[RelationshipFamily, int] = {}
     for item in summary.relationships:
         by_family[item.family] = by_family.get(item.family, 0) + 1
@@ -865,6 +873,7 @@ def test_mixed_frame_counts_each_family_once() -> None:
     } == {
         UnimplementedRelationshipFamily.DATETIME_NUMERIC: 3,
         UnimplementedRelationshipFamily.DATETIME_CATEGORICAL: 2,
+        UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN: 4,
     }
     roles = sorted(
         (item.numeric_position, item.boolean_position)
@@ -1017,13 +1026,25 @@ def test_adding_numeric_boolean_pairs_leaves_other_families_unchanged() -> None:
     numeric_together = _pick(together, NumericNumericRelationship, 0, 1)
     categorical_together = _pick(together, NumericCategoricalRelationship, 0, 2)
     boolean_together = _pick(together, BooleanBooleanRelationship, 3, 4)
-    assert numeric_together.methods == numeric.methods
+    assert numeric_together.spearman.estimate == numeric.spearman.estimate
+    assert numeric_together.spearman.frequentist.p_value == (
+        numeric.spearman.frequentist.p_value
+    )
+    assert numeric_together.pearson == numeric.pearson
+    assert numeric_together.spearman.frequentist.adjusted_p_value != (
+        numeric.spearman.frequentist.adjusted_p_value
+    )
     assert categorical_together.groups == categorical.groups
     assert categorical_together.effect == categorical.effect
-    assert categorical_together.omnibus == categorical.omnibus
+    assert categorical_together.omnibus.statistic == categorical.omnibus.statistic
+    assert categorical_together.omnibus.frequentist.p_value == (
+        categorical.omnibus.frequentist.p_value
+    )
     assert boolean_together.table == boolean.table
     assert boolean_together.phi == boolean.phi
-    assert boolean_together.independence == boolean.independence
+    assert boolean_together.independence.frequentist.p_value == (
+        boolean.independence.frequentist.p_value
+    )
 
 
 def _single(frame: pd.DataFrame, kind: type) -> object:

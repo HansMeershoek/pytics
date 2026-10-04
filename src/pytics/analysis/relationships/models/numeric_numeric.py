@@ -13,6 +13,7 @@ from typing import Optional
 from typing import Tuple
 
 from pytics.analysis.relationships.models.common import FrequentistEvidence
+from pytics.analysis.relationships.models.common import MultipleTestingAdjustment
 from pytics.analysis.relationships.models.common import RelationshipFamily
 from pytics.analysis.relationships.models.common import ResultAvailability
 from pytics.analysis.relationships.models.common import UnavailabilityReason
@@ -206,9 +207,10 @@ class NumericNumericRelationship:
 
     ``methods`` is Spearman, then Pearson. Spearman is the primary
     descriptive association of this family because this record exposes
-    it as the Spearman component. Pearson is complementary. There is no
-    separate primary-method field. Both records exist when a method is
-    unavailable.
+    it as the Spearman component. Its p-value is the primary inferential
+    hypothesis for dataset-level correction. Pearson is complementary.
+    Its p-value stays raw. There is no separate primary-method field.
+    Both records exist when a method is unavailable.
 
     ``population`` is the pairwise finite eligibility rule. ``n_total_rows``,
     ``n_paired``, and ``n_excluded`` are the pair counts for that rule.
@@ -238,6 +240,8 @@ class NumericNumericRelationship:
             raise ValueError("the first method must be Spearman")
         if pearson.method is not AssociationMethod.PEARSON:
             raise ValueError("the second method must be Pearson")
+        if pearson.frequentist.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
+            raise ValueError("Pearson evidence is not in the correction family")
         if (
             spearman.n_observations != self.n_paired
             or pearson.n_observations != self.n_paired

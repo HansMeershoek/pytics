@@ -15,7 +15,6 @@ from typing import Tuple
 
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.relationships.models.common import FrequentistEvidence
-from pytics.analysis.relationships.models.common import MultipleTestingAdjustment
 from pytics.analysis.relationships.models.common import RelationshipFamily
 from pytics.analysis.relationships.models.common import ResultAvailability
 from pytics.analysis.relationships.models.common import UnavailabilityReason
@@ -118,10 +117,12 @@ class OmnibusAnovaResult:
 
     ``statistic`` is the finite F ratio when that ratio exists. Zero
     within-group variation does not store an infinite F or a p-value.
-    ``frequentist`` holds the raw upper-tail p-value when the F ratio
-    is finite. Those two components do not share one availability flag.
-    ``adjusted_p_value`` stays absent. The p-value is not a significance
-    flag, and this record does not name which groups differ.
+    ``frequentist`` holds the upper-tail p-value when the F ratio is
+    finite. The calculator stores that raw p-value. Dataset-level
+    correction may later set the adjusted companion of the same test.
+    Those components do not share one availability flag with the F
+    statistic. The p-value is not a significance flag, and this record
+    does not name which groups differ.
     """
 
     method: OmnibusTestMethod
@@ -138,8 +139,6 @@ class OmnibusAnovaResult:
             "statistic_availability",
         )
         _require_type(self.frequentist, FrequentistEvidence, "frequentist")
-        if self.frequentist.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
-            raise ValueError("multiple-testing adjustment is not applied")
         if (
             self.frequentist.reason is not None
             and self.frequentist.reason not in _ANOVA_COMPONENT_REASONS

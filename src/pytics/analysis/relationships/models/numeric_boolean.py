@@ -255,11 +255,12 @@ class MeanDifferenceTest:
 
     ``statistic`` is the t ratio, with the sign of the mean difference.
     ``degrees_of_freedom`` is the Welch–Satterthwaite value. ``frequentist``
-    holds the raw two-sided p-value. The null hypothesis is equal
-    population means of the finite Numeric values in the two Boolean
-    groups. The p-value is not a significance flag and not an effect
-    size. Zero within-group variation does not store an infinite t or a
-    p-value of zero. ``adjusted_p_value`` stays absent.
+    holds the two-sided p-value. The calculator stores that raw p-value.
+    Dataset-level correction may later set the adjusted companion of the
+    same test. The null hypothesis is equal population means of the
+    finite Numeric values in the two Boolean groups. The p-value is not
+    a significance flag and not an effect size. Zero within-group
+    variation does not store an infinite t or a p-value of zero.
     """
 
     method: MeanDifferenceTestMethod
@@ -288,10 +289,13 @@ class MeanDifferenceTest:
             if self.degrees_of_freedom < 1.0:  # type: ignore[operator]
                 raise ValueError("Welch degrees of freedom are at least 1")
             if self.statistic_reason is not None:
-                raise ValueError("an available t statistic has no unavailability reason")
+                raise ValueError(
+                    "an available t statistic has no unavailability reason"
+                )
             if (
                 self.frequentist.availability is ResultAvailability.UNAVAILABLE
-                and self.frequentist.reason is not UnavailabilityReason.NON_FINITE_RESULT
+                and self.frequentist.reason
+                is not UnavailabilityReason.NON_FINITE_RESULT
             ):
                 raise ValueError(
                     "a finite t statistic leaves the p-value unavailable only when "

@@ -9,7 +9,9 @@ odds-ratio statistic is not the stored effect.
 
 A zero cell is not replaced by a continuity correction. An exact
 infinite ratio is unavailable. A constant paired margin leaves phi and
-the exact test unavailable and keeps the contingency table.
+the exact test unavailable and keeps the contingency table. This module
+stores the raw Fisher p-value. It does not apply dataset-level
+correction.
 """
 
 from __future__ import annotations

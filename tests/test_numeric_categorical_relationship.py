@@ -32,6 +32,8 @@ from pytics.analysis.relationship import OmnibusTestMethod
 from pytics.analysis.relationship import RelationshipFamily
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
+from pytics.analysis.relationship import UnimplementedFamilyCount
+from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationship import relationship_analysis_for_columns
 from pytics.semantics.interpretation import SemanticType
@@ -180,7 +182,11 @@ def test_physical_categorical_is_eligible_and_other_types_are_not() -> None:
         1,
         2,
     )
-    assert summary.unimplemented_family_counts == ()
+    assert summary.unimplemented_family_counts == (
+        UnimplementedFamilyCount(
+            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 2
+        ),
+    )
     assert "numeric_categorical" not in {
         item.family.value for item in summary.unimplemented_family_counts
     }
@@ -338,9 +344,11 @@ def test_effect_matches_an_independent_sum_of_squares() -> None:
     assert relationship.omnibus.frequentist.p_value == pytest.approx(
         float(library.pvalue)
     )
-    assert relationship.omnibus.frequentist.adjusted_p_value is None
     assert relationship.omnibus.frequentist.adjustment is (
-        MultipleTestingAdjustment.NOT_APPLIED
+        MultipleTestingAdjustment.BENJAMINI_HOCHBERG
+    )
+    assert relationship.omnibus.frequentist.adjusted_p_value == (
+        relationship.omnibus.frequentist.p_value
     )
     assert not hasattr(relationship, "is_significant")
     assert not hasattr(relationship.effect, "strength")
@@ -685,8 +693,8 @@ def test_mixed_frame_coverage_counts_each_pair_once(
     assert summary.n_total_pairs == 15
     assert summary.n_supported_pairs == 13
     assert summary.n_analyzed_pairs == len(summary.relationships) == 13
-    assert summary.n_unimplemented_family_pairs == 0
-    assert summary.n_ineligible_pairs == 2
+    assert summary.n_unimplemented_family_pairs == 2
+    assert summary.n_ineligible_pairs == 0
     assert (
         summary.n_supported_pairs
         + summary.n_unimplemented_family_pairs

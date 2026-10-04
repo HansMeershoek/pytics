@@ -38,6 +38,7 @@ from pytics.analysis.relationship import NumericNumericRelationship
 from pytics.analysis.relationship import RelationshipFamily
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
+from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationships.categorical_categorical import _assemble
@@ -181,8 +182,8 @@ def _assert_pearson(relationship: CategoricalCategoricalRelationship) -> None:
     assert test.frequentist.p_value == pytest.approx(
         float(reference.pvalue), rel=1e-12, abs=1e-12
     )
-    assert test.frequentist.adjustment is NOT_APPLIED
-    assert test.frequentist.adjusted_p_value is None
+    assert test.frequentist.adjustment is MultipleTestingAdjustment.BENJAMINI_HOCHBERG
+    assert test.frequentist.adjusted_p_value == test.frequentist.p_value
     if int(reference.dof) == 1:
         assert test.statistic != pytest.approx(float(yates.statistic))
     assert relationship.association.method is CategoricalAssociationMethod.CRAMERS_V
@@ -281,7 +282,11 @@ def test_selected_categorical_pairs_are_calculated_and_other_types_are_not() -> 
         family.value for family in UnimplementedRelationshipFamily
     }
     assert RelationshipFamily.CATEGORICAL_CATEGORICAL in RelationshipFamily
-    assert summary.unimplemented_family_counts == ()
+    assert summary.unimplemented_family_counts == (
+        UnimplementedFamilyCount(
+            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 2
+        ),
+    )
 
 
 def test_boolean_and_numeric_pairs_stay_in_their_families() -> None:
@@ -1045,8 +1050,8 @@ def test_mixed_frame_counts_each_family_once() -> None:
     summary = build_relationships_summary(analyze_dataframe(frame))
     assert summary.n_total_pairs == 45
     assert summary.n_supported_pairs == summary.n_analyzed_pairs == 15
-    assert summary.n_unimplemented_family_pairs == 5
-    assert summary.n_ineligible_pairs == 25
+    assert summary.n_unimplemented_family_pairs == 11
+    assert summary.n_ineligible_pairs == 19
     assert (
         summary.n_supported_pairs
         + summary.n_unimplemented_family_pairs
@@ -1070,6 +1075,7 @@ def test_mixed_frame_counts_each_family_once() -> None:
     } == {
         UnimplementedRelationshipFamily.DATETIME_NUMERIC: 2,
         UnimplementedRelationshipFamily.DATETIME_CATEGORICAL: 3,
+        UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN: 6,
     }
     assert positions == sorted(set(positions))
     assert len(positions) == 15
@@ -1095,6 +1101,7 @@ def test_summary_copies_records_without_recomputing(
     def _fail(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("summary builder used a source-dependent operation")
 
+    monkeypatch.setattr(collector_module, "adjust_primary_p_values", _fail)
     monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
     monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
     monkeypatch.setattr(categorical_module, "_pearson_chi_square", _fail)
@@ -1175,7 +1182,11 @@ def test_adding_categorical_pairs_leaves_other_families_unchanged() -> None:
     ).relationships[0]
     assert isinstance(together[0], NumericNumericRelationship)
     assert isinstance(numeric, NumericNumericRelationship)
-    assert together[0].methods == numeric.methods
+    assert together[0].spearman.estimate == numeric.spearman.estimate
+    assert together[0].spearman.frequentist.p_value == (
+        numeric.spearman.frequentist.p_value
+    )
+    assert together[0].pearson == numeric.pearson
     numeric_categorical = next(
         item
         for item in together
@@ -1185,14 +1196,19 @@ def test_adding_categorical_pairs_leaves_other_families_unchanged() -> None:
     assert isinstance(categorical, NumericCategoricalRelationship)
     assert numeric_categorical.groups == categorical.groups
     assert numeric_categorical.effect == categorical.effect
-    assert numeric_categorical.omnibus == categorical.omnibus
+    assert numeric_categorical.omnibus.statistic == categorical.omnibus.statistic
+    assert numeric_categorical.omnibus.frequentist.p_value == (
+        categorical.omnibus.frequentist.p_value
+    )
     boolean_together = next(
         item for item in together if isinstance(item, BooleanBooleanRelationship)
     )
     assert isinstance(boolean, BooleanBooleanRelationship)
     assert boolean_together.table == boolean.table
     assert boolean_together.phi == boolean.phi
-    assert boolean_together.independence == boolean.independence
+    assert boolean_together.independence.frequentist.p_value == (
+        boolean.independence.frequentist.p_value
+    )
     numeric_boolean = next(
         item
         for item in together
@@ -1205,7 +1221,15 @@ def test_adding_categorical_pairs_leaves_other_families_unchanged() -> None:
         numeric_boolean.standardized_mean_difference
         == flagged.standardized_mean_difference
     )
-    assert numeric_boolean.mean_difference_test == flagged.mean_difference_test
+    assert numeric_boolean.mean_difference_interval == (
+        flagged.mean_difference_interval
+    )
+    assert numeric_boolean.mean_difference_test.statistic == (
+        flagged.mean_difference_test.statistic
+    )
+    assert numeric_boolean.mean_difference_test.frequentist.p_value == (
+        flagged.mean_difference_test.frequentist.p_value
+    )
 
 
 def test_models_reject_inconsistent_categorical_tables() -> None:

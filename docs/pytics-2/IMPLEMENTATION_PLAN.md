@@ -1720,4 +1720,28 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
 ## After TSK-030
 
-TSK-030 calculates selected Categorical × Categorical and leaves bias-corrected association, exact and resampling tests, Categorical × Boolean, datetime relationships, multiple testing, and target analysis unselected. [DEC-101](DECISIONS.md#dec-101) records the contingency contract. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-030 calculates selected Categorical × Categorical and leaves bias-corrected association, exact and resampling tests, Categorical × Boolean, datetime relationships, multiple testing, and target analysis unselected. [DEC-101](DECISIONS.md#dec-101) records the contingency contract. The next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-031 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-031
+
+Slice 031, relationship statistical consolidation. Approved 2026-10-04 after TSK-030. Completed the same day. No later slice is approved by this section.
+
+Inspect the five calculated families as one statistical subsystem. Decide and apply the dataset-level multiple-testing policy. Audit availability and coverage. Do not add a relationship family, a target analysis, a renderer, a method registry, or a generic relationship superclass.
+
+Acceptance checks:
+
+1. The five calculated formulas, effects, intervals, and raw p-values stay intact. Family calculators do not run the dataset correction.
+2. Benjamini–Hochberg adjusts one available primary p-value per calculated pair: Spearman, ANOVA, Welch, Fisher, or chi-square. Pearson stays raw. Unavailable p-values do not enter `m`.
+3. Adjusted values are stored on the retained frequentist component before `RelationshipAnalysis` is frozen. The summary copies them and does not recompute them.
+4. Adjustment is deterministic, including ties, zero, and one. Adjusted values stay on `[0, 1]` and are not below the raw value. There is no significance verdict.
+5. Adding an eligible tested relationship can change adjusted p-values and does not change raw p-values or effects. An ineligible column does not change the correction family.
+6. Calculated, unimplemented, and ineligible have the meanings in [DEC-102](DECISIONS.md#dec-102). Categorical × Boolean is one unimplemented family in either physical order. Datetime × Numeric and Datetime × Categorical stay unimplemented.
+7. Pair counts still reconcile. `RelationshipFamily` still names only calculated families. No unavailability reason is renamed without a semantic error.
+8. Records stay frozen. No source object is retained. Correction memory is linear in `m`, and 100,000 hypotheses are safe.
+9. The full suite has only the known legacy PDF failure. [DEC-102](DECISIONS.md#dec-102) records the contract.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-031
+
+TSK-031 corrects the available primary relationship tests and classifies Categorical × Boolean as unimplemented. It leaves datetime methods, exact and resampling tests, robust alternatives, target analysis, and the rendered Relationships view unselected. [DEC-102](DECISIONS.md#dec-102) records the correction and coverage contract. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

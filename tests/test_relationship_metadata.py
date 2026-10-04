@@ -46,6 +46,7 @@ from pytics.analysis.relationship import RelationshipFamily
 from pytics.analysis.relationship import RelationshipsSummary
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
+from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import build_relationships_summary
 from pytics.semantics.interpretation import SemanticType
@@ -185,9 +186,13 @@ def test_mixed_dataset_records_are_self_describing() -> None:
     assert summary.n_total_pairs == 10
     assert summary.n_supported_pairs == 5
     assert summary.n_analyzed_pairs == 5
-    assert summary.n_unimplemented_family_pairs == 0
-    assert summary.n_ineligible_pairs == 5
-    assert summary.unimplemented_family_counts == ()
+    assert summary.n_unimplemented_family_pairs == 1
+    assert summary.n_ineligible_pairs == 4
+    assert summary.unimplemented_family_counts == (
+        UnimplementedFamilyCount(
+            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 1
+        ),
+    )
     numeric, left_group, left_flag, right_group, right_flag = summary.relationships
     assert isinstance(numeric, NumericNumericRelationship)
     assert isinstance(left_group, NumericCategoricalRelationship)
@@ -251,9 +256,12 @@ def test_numeric_numeric_statistics_stay_on_the_pair() -> None:
     assert relationship.pearson.estimate.value == pytest.approx(pearson.correlation)
     assert relationship.pearson.frequentist.p_value == pytest.approx(pearson.pvalue)
     assert relationship.spearman.frequentist.adjustment is (
+        MultipleTestingAdjustment.BENJAMINI_HOCHBERG
+    )
+    assert relationship.spearman.frequentist.adjusted_p_value is not None
+    assert relationship.pearson.frequentist.adjustment is (
         MultipleTestingAdjustment.NOT_APPLIED
     )
-    assert relationship.spearman.frequentist.adjusted_p_value is None
     assert relationship.pearson.frequentist.adjusted_p_value is None
     interval = relationship.pearson.confidence_interval
     assert interval.availability is ResultAvailability.AVAILABLE
@@ -285,8 +293,10 @@ def test_numeric_categorical_statistics_stay_on_the_pair() -> None:
     assert pair.omnibus.frequentist.p_value == pytest.approx(
         float(f_distribution.sf(statistic, 2, 3))
     )
-    assert pair.omnibus.frequentist.adjustment is MultipleTestingAdjustment.NOT_APPLIED
-    assert pair.omnibus.frequentist.adjusted_p_value is None
+    assert pair.omnibus.frequentist.adjustment is (
+        MultipleTestingAdjustment.BENJAMINI_HOCHBERG
+    )
+    assert pair.omnibus.frequentist.adjusted_p_value is not None
     assert pair.groups[0].descriptive.mean == pytest.approx(1.5)
     assert pair.groups[1].n == 2
 

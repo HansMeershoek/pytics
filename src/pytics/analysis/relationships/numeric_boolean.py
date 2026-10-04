@@ -21,7 +21,8 @@ small-sample correction. Welch's t-test does not assume equal variances.
 It is not chosen by a normality or variance test, and no rank or
 permutation test replaces it. The interval and the p-value use the
 Student t distribution on the Welch–Satterthwaite degrees of freedom,
-through ``scipy.stats.t``.
+through ``scipy.stats.t``. This module stores the raw Welch p-value.
+It does not apply dataset-level correction.
 """
 
 from __future__ import annotations
@@ -332,8 +333,7 @@ def _pooled_standard_deviation(
         if moments.standard_deviation is None:
             return None
         weighted.append(
-            moments.standard_deviation
-            * math.sqrt((moments.n - 1) / degrees_of_freedom)
+            moments.standard_deviation * math.sqrt((moments.n - 1) / degrees_of_freedom)
         )
     scale = math.hypot(*weighted)
     if not math.isfinite(scale):
