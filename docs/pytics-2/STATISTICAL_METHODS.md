@@ -90,7 +90,7 @@ Text and timedelta relationship methods are not specified. Omission is not a rej
 | Standard | Likely: descriptive statistics, effect sizes, primary relationships, confidence intervals where appropriate, appropriate frequentist inference, multiple-testing correction, missing analysis, duplicate analysis, univariate outliers, and controlled multivariate anomaly analysis. | Intended default. Not a closed list. Correction still depends on [OPEN-007](DECISIONS.md#open-questions). |
 | Deep | May add further bootstrap or resampling, further robust alternatives, broader Bayesian inference, post-hoc analysis, deeper temporal analysis, more expensive anomaly analysis, and deeper drift inference. | Direction, not a closed list |
 
-Exact contents and thresholds are [OPEN-010](DECISIONS.md#open-questions).
+Exact contents and thresholds are [OPEN-010](DECISIONS.md#open-questions). An internal exact duplicate-row pass now exists ([DEC-094](DECISIONS.md#dec-094)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents.
 
 ## Bayesian work
 

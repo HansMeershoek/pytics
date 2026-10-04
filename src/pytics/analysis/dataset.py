@@ -2,8 +2,9 @@
 
 Each physical column is analyzed once, in source order. The result keeps
 dataset dimensions, the column analyses, missing-cell totals derived from
-basic evidence already retained, and the exact missingness aggregates
-collected from one DataFrame pass. It does not keep the DataFrame.
+basic evidence already retained, the exact missingness aggregates
+collected from one DataFrame pass, and the exact duplicate-row groups
+collected from a separate pass. It does not keep the DataFrame.
 """
 
 from __future__ import annotations
@@ -16,6 +17,9 @@ import pandas as pd
 
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import analyze_series
+from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.duplicate import _require_duplicate_attachment
+from pytics.analysis.duplicate import collect_duplicate_analysis
 from pytics.analysis.missing import MissingAnalysis
 from pytics.analysis.missing import _require_missing_attachment
 from pytics.analysis.missing import collect_missing_analysis
@@ -35,8 +39,10 @@ class DatasetAnalysis:
     is zero.
 
     ``missing_analysis`` is the retained row distribution and exact
-    missingness patterns. Those facts are cross-column, so they are not
-    derived from the column records. The boolean mask is not stored.
+    missingness patterns. ``duplicate_analysis`` is the retained exact
+    duplicate groups. Both facts are cross-column, so they are not
+    derived from the column records. The missingness mask and the row
+    values are not stored. Neither pass depends on the other.
     """
 
     n_rows: int
@@ -44,6 +50,7 @@ class DatasetAnalysis:
     n_cells: int
     columns: Tuple[ColumnAnalysis, ...]
     missing_analysis: MissingAnalysis
+    duplicate_analysis: DuplicateAnalysis
 
     def __post_init__(self) -> None:
         _require_count(self.n_rows, "n_rows")
@@ -70,6 +77,11 @@ class DatasetAnalysis:
             missing_counts=tuple(
                 column.evidence.basic.n_missing for column in self.columns
             ),
+        )
+        _require_duplicate_attachment(
+            self.duplicate_analysis,
+            n_rows=self.n_rows,
+            n_columns=self.n_columns,
         )
 
     @property
@@ -104,8 +116,10 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
     The argument must already be a pandas DataFrame. Other inputs are not
     converted. Column order is the DataFrame's column order. Duplicate
     labels stay distinct records. After the column analyses, one
-    missingness pass counts exact row patterns. The DataFrame is not
-    copied and is not modified, and it is not stored on the result.
+    missingness pass counts exact row patterns, then one duplicate pass
+    groups exactly equal rows. Those two passes do not call each other.
+    The DataFrame is not copied and is not modified, and it is not stored
+    on the result.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("analyze_dataframe expects a pandas DataFrame")
@@ -125,6 +139,7 @@ def analyze_dataframe(frame: pd.DataFrame) -> DatasetAnalysis:
         n_cells=n_rows * n_columns,
         columns=columns,
         missing_analysis=collect_missing_analysis(frame),
+        duplicate_analysis=collect_duplicate_analysis(frame),
     )
 
 

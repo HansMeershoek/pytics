@@ -13,8 +13,10 @@ interpretation exists.
 
 Cell completeness is the complement of the missing-cell ratio. It is
 not a complete-row ratio. Semantic-resolution coverage is resolved
-columns divided by columns. Those ratios use different denominators,
-and each is ``None`` when its denominator is zero.
+columns divided by columns. Unique-row and excess-duplicate ratios use
+the row count. Those ratios use different denominators, and each is
+``None`` when its denominator is zero. Duplicate groups are not copied
+onto the overview.
 """
 
 from __future__ import annotations
@@ -77,7 +79,9 @@ class DatasetOverview:
 
     ``completeness_ratio`` is cell completeness. ``semantic_resolution_ratio``
     is the share of columns whose semantic resolution selected a type.
-    Neither ratio is a quality score.
+    ``n_unique_rows`` and ``n_excess_duplicate_rows`` are copied from the
+    retained duplicate analysis. Their ratios use ``n_rows``. None of
+    these ratios is a quality score.
     """
 
     n_rows: int
@@ -85,6 +89,8 @@ class DatasetOverview:
     n_cells: int
     n_missing_cells: int
     n_non_missing_cells: int
+    n_unique_rows: int
+    n_excess_duplicate_rows: int
     semantic_type_counts: Tuple[SemanticTypeCount, ...]
     insufficient_evidence_columns: Tuple[ColumnRef, ...]
     ambiguous_columns: Tuple[ColumnRef, ...]
@@ -102,6 +108,16 @@ class DatasetOverview:
             raise ValueError("n_cells must equal n_rows * n_columns")
         if self.n_missing_cells + self.n_non_missing_cells != self.n_cells:
             raise ValueError("missing and non-missing cells must sum to n_cells")
+        _require_count(self.n_unique_rows, "n_unique_rows")
+        _require_count(self.n_excess_duplicate_rows, "n_excess_duplicate_rows")
+        if self.n_unique_rows > self.n_rows:
+            raise ValueError("n_unique_rows cannot exceed n_rows")
+        if self.n_excess_duplicate_rows != self.n_rows - self.n_unique_rows:
+            raise ValueError(
+                "n_excess_duplicate_rows must equal n_rows - n_unique_rows"
+            )
+        if self.n_rows > 0 and self.n_unique_rows < 1:
+            raise ValueError("a dataset with rows has at least one unique row")
         counts = _validate_semantic_counts(self.semantic_type_counts)
         groups = (
             ("insufficient_evidence_columns", self.insufficient_evidence_columns),
@@ -166,6 +182,28 @@ class DatasetOverview:
         return self.n_non_missing_cells / self.n_cells
 
     @property
+    def unique_row_ratio(self) -> Optional[float]:
+        """Distinct row values divided by all rows.
+
+        ``None`` when there are no rows. This is the same ratio as the
+        duplicate summary. It is not a quality score.
+        """
+        if self.n_rows == 0:
+            return None
+        return self.n_unique_rows / self.n_rows
+
+    @property
+    def excess_duplicate_row_ratio(self) -> Optional[float]:
+        """Excess duplicate rows divided by all rows.
+
+        ``None`` when there are no rows. Excess rows are occurrences
+        beyond one of each distinct row value.
+        """
+        if self.n_rows == 0:
+            return None
+        return self.n_excess_duplicate_rows / self.n_rows
+
+    @property
     def resolved_column_count(self) -> int:
         """Columns whose resolution selected a semantic type."""
         return sum(item.count for item in self.semantic_type_counts)
@@ -211,7 +249,9 @@ def build_dataset_overview(analysis: DatasetAnalysis) -> DatasetOverview:
     """Summarize one dataset analysis.
 
     The argument must already be a ``DatasetAnalysis``. A DataFrame is
-    not accepted and is not analyzed. The analysis is not modified.
+    not accepted and is not analyzed. Unique-row and excess-duplicate
+    counts are read from the retained duplicate analysis. They are not
+    recomputed from raw values. The analysis is not modified.
     """
     if not isinstance(analysis, DatasetAnalysis):
         raise TypeError("build_dataset_overview expects a DatasetAnalysis")
@@ -253,12 +293,15 @@ def build_dataset_overview(analysis: DatasetAnalysis) -> DatasetOverview:
         for semantic_type, count in zip(type_order, counts)
         if count > 0
     )
+    duplicate = analysis.duplicate_analysis
     return DatasetOverview(
         n_rows=analysis.n_rows,
         n_columns=analysis.n_columns,
         n_cells=analysis.n_cells,
         n_missing_cells=analysis.n_missing_cells,
         n_non_missing_cells=analysis.n_non_missing_cells,
+        n_unique_rows=duplicate.n_unique_rows(analysis.n_rows),
+        n_excess_duplicate_rows=duplicate.n_excess_duplicate_rows,
         semantic_type_counts=semantic_type_counts,
         insufficient_evidence_columns=tuple(insufficient),
         ambiguous_columns=tuple(ambiguous),

@@ -105,7 +105,7 @@ No arbitrary quality score (`REQ-P-07`).
 | --- | --- | --- |
 | REQ-IA-05 | Overview answers those four questions and does not show a composite quality score. | Accepted |
 
-An internal analytical overview now exposes size, cell completeness, the resolved semantic types that are present, semantic-resolution coverage, and the columns that are Empty, Constant, Identifier, insufficient, or ambiguous ([DEC-089](DECISIONS.md#dec-089)). It does not render this view, name the dataset, or add a composite quality score. "What deserves attention" is not yet a Finding.
+An internal analytical overview now exposes size, cell completeness, the resolved semantic types that are present, semantic-resolution coverage, and the columns that are Empty, Constant, Identifier, insufficient, or ambiguous ([DEC-089](DECISIONS.md#dec-089)). It also copies unique-row and excess-duplicate counts from the duplicate analysis ([DEC-094](DECISIONS.md#dec-094)). It does not list duplicate groups, render this view, name the dataset, or add a composite quality score. "What deserves attention" is not yet a Finding.
 
 ### Findings
 
@@ -142,6 +142,8 @@ Dedicated exact, identifier, partial, and conflict analysis (`REQ-I-01` through 
 | ID | Requirement | Status |
 | --- | --- | --- |
 | REQ-IA-09 | Duplicates is its own view for the duplicate contract. | Accepted |
+
+An internal duplicate summary now exposes exact duplicate groups and the dataset counts of unique rows, rows in those groups, and excess duplicate rows ([DEC-094](DECISIONS.md#dec-094)). Group membership is physical row position. The summary does not render this view, decide that a duplicate is an error, or match near-duplicates. Identifier duplicates, conflicting duplicates, and partial duplicates are not this summary.
 
 ### Anomalies
 

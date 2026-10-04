@@ -27,6 +27,7 @@ from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
+from pytics.analysis.duplicate import DuplicateAnalysis
 from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.overview import ColumnRef
 from pytics.analysis.overview import DatasetOverview
@@ -96,6 +97,21 @@ def _assert_invariants(overview: DatasetOverview) -> None:
         assert overview.missing_ratio + overview.completeness_ratio == pytest.approx(1)
         assert 0.0 <= overview.missing_ratio <= 1.0
         assert 0.0 <= overview.completeness_ratio <= 1.0
+    assert overview.n_excess_duplicate_rows == (
+        overview.n_rows - overview.n_unique_rows
+    )
+    assert 0 <= overview.n_unique_rows <= overview.n_rows
+    if overview.n_rows == 0:
+        assert overview.unique_row_ratio is None
+        assert overview.excess_duplicate_row_ratio is None
+    else:
+        assert overview.n_unique_rows >= 1
+        assert overview.unique_row_ratio == pytest.approx(
+            overview.n_unique_rows / overview.n_rows
+        )
+        assert overview.excess_duplicate_row_ratio == pytest.approx(
+            overview.n_excess_duplicate_rows / overview.n_rows
+        )
     if overview.n_columns == 0:
         assert overview.semantic_resolution_ratio is None
     else:
@@ -262,6 +278,7 @@ def _manual_analysis(
             n_rows,
             tuple(column.evidence.basic.n_missing for column in columns),
         ),
+        duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
     )
 
 
@@ -272,6 +289,8 @@ def _direct_overview(**overrides: object) -> DatasetOverview:
         "n_cells": 1,
         "n_missing_cells": 0,
         "n_non_missing_cells": 1,
+        "n_unique_rows": 1,
+        "n_excess_duplicate_rows": 0,
         "semantic_type_counts": (SemanticTypeCount(SemanticType.NUMERIC, 1),),
         "insufficient_evidence_columns": (),
         "ambiguous_columns": (),
@@ -384,6 +403,10 @@ def test_zero_by_zero_dataset_leaves_both_ratios_undefined():
     assert overview.semantic_resolution_ratio is None
     assert overview.missing_ratio is None
     assert overview.completeness_ratio is None
+    assert overview.n_unique_rows == 0
+    assert overview.n_excess_duplicate_rows == 0
+    assert overview.unique_row_ratio is None
+    assert overview.excess_duplicate_row_ratio is None
 
 
 def test_zero_row_schema_is_resolved_empty_without_cell_ratios():
@@ -399,6 +422,9 @@ def test_zero_row_schema_is_resolved_empty_without_cell_ratios():
     overview = build_dataset_overview(analysis)
     _assert_invariants(overview)
     assert overview.n_rows == 0
+    assert overview.n_unique_rows == 0
+    assert overview.n_excess_duplicate_rows == 0
+    assert overview.unique_row_ratio is None
     assert overview.n_columns == 4
     assert overview.n_cells == 0
     assert overview.missing_ratio is None
@@ -420,6 +446,10 @@ def test_rows_without_columns_have_no_resolution_ratio():
     overview = _overview(pd.DataFrame(index=range(5)))
     _assert_invariants(overview)
     assert overview.n_rows == 5
+    assert overview.n_unique_rows == 1
+    assert overview.n_excess_duplicate_rows == 4
+    assert overview.unique_row_ratio == pytest.approx(1 / 5)
+    assert overview.excess_duplicate_row_ratio == pytest.approx(4 / 5)
     assert overview.n_columns == 0
     assert overview.n_cells == 0
     assert overview.missing_ratio is None
@@ -683,6 +713,7 @@ def test_builder_does_not_call_analysis_or_semantic_collection(monkeypatch):
 
     targets = (
         (dataset_module, "analyze_dataframe"),
+        (dataset_module, "collect_duplicate_analysis"),
         (column_module, "analyze_series"),
         (pipeline, "infer_series_semantics"),
         (physical, "classify_physical_dtype"),
@@ -726,6 +757,8 @@ def test_overview_module_does_not_import_pandas_or_collectors():
         "collect_string_structure_evidence",
         "collect_pattern_evidence",
         "resolve_semantics",
+        "collect_duplicate_analysis",
+        "collect_missing_analysis",
     }
     assert forbidden.isdisjoint(names)
 
@@ -783,6 +816,17 @@ def test_builder_rejects_an_unrecognized_resolution_status():
     object.__setattr__(analysis.columns[0], "inferred", _Inferred())
     with pytest.raises(ValueError, match="unrecognized resolution status"):
         build_dataset_overview(analysis)
+
+
+def test_overview_rejects_inconsistent_duplicate_counts():
+    with pytest.raises(ValueError, match="cannot exceed n_rows"):
+        _direct_overview(n_unique_rows=2)
+    with pytest.raises(ValueError, match="must equal n_rows - n_unique_rows"):
+        _direct_overview(n_excess_duplicate_rows=1)
+    with pytest.raises(ValueError, match="at least one unique row"):
+        _direct_overview(n_unique_rows=0, n_excess_duplicate_rows=1)
+    with pytest.raises(ValueError, match="n_unique_rows"):
+        _direct_overview(n_unique_rows=-1)
 
 
 def test_overview_rejects_inconsistent_dimensions():
