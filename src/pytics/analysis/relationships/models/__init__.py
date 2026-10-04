@@ -1,11 +1,12 @@
 """Relationship result models.
 
-``common`` holds availability, reasons, Boolean levels, and frequentist
-evidence. ``numeric_numeric``, ``numeric_categorical``,
-``boolean_boolean``, and ``numeric_boolean`` hold those families'
-retained records. ``coverage`` holds pair coverage and the heterogeneous
-collection. Importing this package re-exports those names. It is not a
-frozen public API, and it does not calculate a statistic.
+``common`` holds availability, reasons, Boolean levels, category
+scalars, and frequentist evidence. ``numeric_numeric``,
+``numeric_categorical``, ``boolean_boolean``, ``numeric_boolean``, and
+``categorical_categorical`` hold those families' retained records.
+``coverage`` holds pair coverage and the heterogeneous collection.
+Importing this package re-exports those names. It is not a frozen
+public API, and it does not calculate a statistic.
 """
 
 from pytics.analysis.relationships.models.boolean_boolean import (
@@ -33,6 +34,33 @@ from pytics.analysis.relationships.models.boolean_boolean import (
 from pytics.analysis.relationships.models.boolean_boolean import BooleanIndependenceTest
 from pytics.analysis.relationships.models.boolean_boolean import (
     ConditionalOutcomeProbability,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    CategoricalAssociationEstimate,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    CategoricalAssociationMethod,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    CategoricalAxisOrder,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    CategoricalCategoricalPopulation,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    CategoricalCategoricalRelationship,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    CategoricalContingencyTable,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    CategoricalIndependenceMethod,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    CategoricalIndependenceTest,
+)
+from pytics.analysis.relationships.models.categorical_categorical import (
+    ExpectedCountDiagnostics,
 )
 from pytics.analysis.relationships.models.common import BooleanLevel
 from pytics.analysis.relationships.models.common import FrequentistEvidence
@@ -117,7 +145,16 @@ __all__ = [
     "BooleanIndependenceMethod",
     "BooleanIndependenceTest",
     "BooleanLevel",
+    "CategoricalAssociationEstimate",
+    "CategoricalAssociationMethod",
+    "CategoricalAxisOrder",
+    "CategoricalCategoricalPopulation",
+    "CategoricalCategoricalRelationship",
+    "CategoricalContingencyTable",
     "CategoricalGroupSummary",
+    "CategoricalIndependenceMethod",
+    "CategoricalIndependenceTest",
+    "ExpectedCountDiagnostics",
     "CategoryGroupOrder",
     "ConditionalOutcomeProbability",
     "CorrelationEstimate",

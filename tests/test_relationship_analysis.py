@@ -24,6 +24,11 @@ from pytics.analysis.duplicate import DuplicateAnalysis
 from pytics.analysis.missing import MissingAnalysis
 from pytics.analysis.relationship import AssociationMethod
 from pytics.analysis.relationship import BooleanBooleanRelationship
+from pytics.analysis.relationship import CategoricalAssociationMethod
+from pytics.analysis.relationship import CategoricalAxisOrder
+from pytics.analysis.relationship import CategoricalCategoricalPopulation
+from pytics.analysis.relationship import CategoricalCategoricalRelationship
+from pytics.analysis.relationship import CategoricalIndependenceMethod
 from pytics.analysis.relationship import AssociationResult
 from pytics.analysis.relationship import CorrelationEstimate
 from pytics.analysis.relationship import CorrelationInterval
@@ -167,6 +172,26 @@ def _assert_counts(summary: RelationshipsSummary) -> None:
             frequentist = relationship.mean_difference_test.frequentist
             assert frequentist.adjusted_p_value is None
             assert frequentist.adjustment is MultipleTestingAdjustment.NOT_APPLIED
+        elif isinstance(relationship, CategoricalCategoricalRelationship):
+            assert relationship.family is RelationshipFamily.CATEGORICAL_CATEGORICAL
+            assert relationship.population is (
+                CategoricalCategoricalPopulation.PAIRWISE_NON_MISSING_CATEGORICAL
+            )
+            assert relationship.axis_order is (
+                CategoricalAxisOrder.PHYSICAL_CATEGORICAL_VOCABULARY
+            )
+            assert relationship.association.method is (
+                CategoricalAssociationMethod.CRAMERS_V
+            )
+            assert relationship.independence.method is (
+                CategoricalIndependenceMethod.PEARSON_CHI_SQUARE
+            )
+            assert relationship.independence.frequentist.adjusted_p_value is None
+            assert (
+                relationship.independence.frequentist.adjustment
+                is MultipleTestingAdjustment.NOT_APPLIED
+            )
+            assert relationship.table.grand_total == relationship.n_paired
         else:
             assert isinstance(relationship, BooleanBooleanRelationship)
             assert relationship.family is RelationshipFamily.BOOLEAN_BOOLEAN
@@ -351,7 +376,7 @@ def test_recognized_families_are_counted_without_raw_scans(
     _assert_counts(summary)
     assert read_positions == [0, 1]
     assert summary.n_total_pairs == 21
-    assert summary.n_supported_pairs == 10
+    assert summary.n_supported_pairs == 11
     assert (
         sum(
             isinstance(item, NumericNumericRelationship)
@@ -380,9 +405,15 @@ def test_recognized_families_are_counted_without_raw_scans(
         )
         == 4
     )
+    assert (
+        sum(
+            isinstance(item, CategoricalCategoricalRelationship)
+            for item in summary.relationships
+        )
+        == 1
+    )
     counts = {item.family: item.n_pairs for item in summary.unimplemented_family_counts}
     assert counts == {
-        UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL: 1,
         UnimplementedRelationshipFamily.DATETIME_NUMERIC: 2,
         UnimplementedRelationshipFamily.DATETIME_CATEGORICAL: 2,
     }
@@ -1063,10 +1094,10 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
             n_ineligible_pairs=1,
             unimplemented_family_counts=(
                 UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL, 1
+                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
                 ),
                 UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL, 1
+                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
                 ),
             ),
             relationships=(),
@@ -1082,10 +1113,10 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
             n_ineligible_pairs=1,
             unimplemented_family_counts=(
                 UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
+                    UnimplementedRelationshipFamily.DATETIME_CATEGORICAL, 1
                 ),
                 UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL, 1
+                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
                 ),
             ),
             relationships=(),
@@ -1101,7 +1132,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
             n_ineligible_pairs=1,
             unimplemented_family_counts=(
                 UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL, 1
+                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
                 ),
             ),
             relationships=(),
@@ -1290,7 +1321,7 @@ def test_remaining_model_and_pair_rejections(monkeypatch: pytest.MonkeyPatch) ->
         UnimplementedFamilyCount(family="numeric_boolean", n_pairs=1)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="positive int"):
         UnimplementedFamilyCount(
-            family=UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL,
+            family=UnimplementedRelationshipFamily.DATETIME_NUMERIC,
             n_pairs=0,
         )
     with pytest.raises(ValueError, match="available interval has no"):

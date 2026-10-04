@@ -29,6 +29,7 @@ class RelationshipFamily(Enum):
     NUMERIC_CATEGORICAL = "numeric_categorical"
     BOOLEAN_BOOLEAN = "boolean_boolean"
     NUMERIC_BOOLEAN = "numeric_boolean"
+    CATEGORICAL_CATEGORICAL = "categorical_categorical"
 
 
 class BooleanLevel(Enum):
@@ -84,8 +85,8 @@ class MultipleTestingAdjustment(Enum):
 class FrequentistEvidence:
     """Raw frequentist evidence for one inferential result.
 
-    A correlation test, a one-way ANOVA p-value, and a Boolean exact
-    test all use this record.
+    A correlation test, a one-way ANOVA p-value, a Boolean exact
+    test, and a Pearson chi-square p-value all use this record.
     ``adjustment`` belongs to this result. It is not a dataset-wide
     correction status. ``adjusted_p_value`` stays ``None`` while
     adjustment is not applied. The p-value is not a significance flag.
@@ -206,3 +207,18 @@ def _require_nonnegative_float(value: Optional[float], field: str) -> None:
         raise ValueError(f"{field} cannot be negative")
     if value == 0.0 and math.copysign(1.0, value) < 0.0:
         raise ValueError(f"{field} must not be negative zero")
+
+
+def _require_category_scalar(value: object) -> None:
+    """Reject containers. Pandas scalar category values stay scalars."""
+    if isinstance(value, tuple):
+        for item in value:
+            _require_category_scalar(item)
+        return
+    if isinstance(value, (list, dict, set, bytearray)):
+        raise TypeError("category must be a retained scalar")
+    module = type(value).__module__
+    if module.startswith(("numpy", "pandas.core", "scipy")):
+        raise TypeError(
+            "category must not be a NumPy object, a pandas container, or a SciPy object"
+        )

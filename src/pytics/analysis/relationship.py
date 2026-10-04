@@ -25,7 +25,16 @@ from pytics.analysis.relationships.models import BooleanGroupSummary
 from pytics.analysis.relationships.models import BooleanIndependenceMethod
 from pytics.analysis.relationships.models import BooleanIndependenceTest
 from pytics.analysis.relationships.models import BooleanLevel
+from pytics.analysis.relationships.models import CategoricalAssociationEstimate
+from pytics.analysis.relationships.models import CategoricalAssociationMethod
+from pytics.analysis.relationships.models import CategoricalAxisOrder
+from pytics.analysis.relationships.models import CategoricalCategoricalPopulation
+from pytics.analysis.relationships.models import CategoricalCategoricalRelationship
+from pytics.analysis.relationships.models import CategoricalContingencyTable
+from pytics.analysis.relationships.models import CategoricalIndependenceMethod
+from pytics.analysis.relationships.models import CategoricalIndependenceTest
 from pytics.analysis.relationships.models import ConditionalOutcomeProbability
+from pytics.analysis.relationships.models import ExpectedCountDiagnostics
 from pytics.analysis.relationships.models import AssociationResult
 from pytics.analysis.relationships.models import CategoricalGroupSummary
 from pytics.analysis.relationships.models import CategoryGroupOrder

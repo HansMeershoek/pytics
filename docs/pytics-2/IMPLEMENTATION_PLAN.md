@@ -1695,4 +1695,29 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md). All 12 p
 
 ## After TSK-029
 
-TSK-029 calculates selected Numeric × Boolean and leaves robust and rank-based complements, Categorical × Boolean, Categorical × Categorical, and target analysis unselected. [DEC-100](DECISIONS.md#dec-100) records the two-group contract. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-029 calculates selected Numeric × Boolean and leaves robust and rank-based complements, Categorical × Boolean, Categorical × Categorical, and target analysis unselected. [DEC-100](DECISIONS.md#dec-100) records the two-group contract. The next concrete implementation slice remained subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-030 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-030
+
+Slice 030, Categorical × Categorical relationship analysis. Approved 2026-10-04 after TSK-029. Completed the same day. No later slice is approved by this section.
+
+Calculate selected Categorical × selected Categorical only. Keep canonical physical pair identity. Use the pairwise non-missing categorical population. Retain the observed contingency table, classical Cramér's V, expected-count diagnostics, and uncorrected Pearson chi-square with a raw p-value. Do not apply Yates's correction. Do not switch sparse tables to Fisher's exact test. Do not add a bias correction, an interval, ordinal association, mutual information, Theil's U, a G-test, a Monte Carlo test, multiple-testing correction, findings, or a renderer. Do not change semantic inference. Do not merge this family with Boolean × Boolean. Do not add target semantics. Do not add a generic contingency framework, a superclass, or a registry.
+
+Acceptance checks:
+
+1. Selected Categorical × Categorical is calculated. Semantic inference is unchanged. Canonical physical pair identity is unchanged.
+2. Both axes follow the physical categorical vocabulary with unused levels removed. The population is pairwise non-missing. Exclusions reconcile. The source frame is unchanged.
+3. The observed contingency table and its margins are retained as Python integers. Invariants are enforced. Category values are not stringified.
+4. A high-cardinality pair cannot allocate an uncontrolled Cartesian matrix. The `2**20` histogram bound is an algorithm switch, not a statistical cutoff, and the pair remains calculated above it.
+5. Classical Cramér's V is the symmetric effect. Its formula is frozen. It is unsigned and lies on `[0, 1]`. Degenerate tables have explicit availability.
+6. Pearson's chi-square of independence is the frequentist result. Yates's correction is off, including for 2×2. Degrees of freedom are `(r - 1) * (c - 1)`. Expected-count diagnostics do not gate the test. Sparse tables are not reclassified as exact or as absent.
+7. Adjustment stays unapplied. No strength label or significance flag is added. Non-finite results are not stored as estimates. A p-value of `0.0` from underflow may be stored.
+8. `RelationshipFamily` includes Categorical × Categorical. Coverage reconciles. `RelationshipRecord` has a fifth typed variant. There is no universal record and no registry.
+9. The product summary copies records without rereading the DataFrame or calling SciPy. No DataFrame, Series, Index, ndarray, Categorical, or SciPy result is retained. The four earlier families are unchanged. Boolean × Boolean stays specialized.
+10. The full suite has only the known legacy PDF failure. [DEC-101](DECISIONS.md#dec-101) records the statistical contract, and the measured cost is recorded.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-030
+
+TSK-030 calculates selected Categorical × Categorical and leaves bias-corrected association, exact and resampling tests, Categorical × Boolean, datetime relationships, multiple testing, and target analysis unselected. [DEC-101](DECISIONS.md#dec-101) records the contingency contract. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

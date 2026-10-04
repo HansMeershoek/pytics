@@ -16,6 +16,7 @@ import pytics.analysis.relationships.numeric_categorical as numeric_categorical_
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.numeric import collect_numeric_descriptive_analysis
+from pytics.analysis.relationship import CategoricalCategoricalRelationship
 from pytics.analysis.relationship import CategoricalGroupSummary
 from pytics.analysis.relationship import CategoryGroupOrder
 from pytics.analysis.relationship import FrequentistEvidence
@@ -31,7 +32,6 @@ from pytics.analysis.relationship import OmnibusTestMethod
 from pytics.analysis.relationship import RelationshipFamily
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
-from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationship import relationship_analysis_for_columns
 from pytics.semantics.interpretation import SemanticType
@@ -157,8 +157,8 @@ def test_physical_categorical_is_eligible_and_other_types_are_not() -> None:
     assert analysis.columns[5].inferred.selected_type is SemanticType.EMPTY
     assert analysis.columns[6].inferred.selected_type is SemanticType.IDENTIFIER
     assert analysis.columns[7].inferred.selected_type is None
-    assert summary.n_supported_pairs == 3
-    assert summary.n_analyzed_pairs == 3
+    assert summary.n_supported_pairs == 4
+    assert summary.n_analyzed_pairs == 4
     flagged = [
         item
         for item in summary.relationships
@@ -167,9 +167,20 @@ def test_physical_categorical_is_eligible_and_other_types_are_not() -> None:
     assert [(item.numeric_position, item.boolean_position) for item in flagged] == [
         (0, 3)
     ]
-    assert {item.family for item in summary.unimplemented_family_counts} == {
-        UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL
-    }
+    categorical_pairs_only = [
+        item
+        for item in summary.relationships
+        if isinstance(item, CategoricalCategoricalRelationship)
+    ]
+    assert len(categorical_pairs_only) == 1
+    assert (
+        categorical_pairs_only[0].left_position,
+        categorical_pairs_only[0].right_position,
+    ) == (
+        1,
+        2,
+    )
+    assert summary.unimplemented_family_counts == ()
     assert "numeric_categorical" not in {
         item.family.value for item in summary.unimplemented_family_counts
     }
@@ -672,9 +683,9 @@ def test_mixed_frame_coverage_counts_each_pair_once(
     monkeypatch.setattr(collector_module, "_read_categorical_column", _spy_categorical)
     summary = build_relationships_summary(analyze_dataframe(frame))
     assert summary.n_total_pairs == 15
-    assert summary.n_supported_pairs == 12
-    assert summary.n_analyzed_pairs == len(summary.relationships) == 12
-    assert summary.n_unimplemented_family_pairs == 1
+    assert summary.n_supported_pairs == 13
+    assert summary.n_analyzed_pairs == len(summary.relationships) == 13
+    assert summary.n_unimplemented_family_pairs == 0
     assert summary.n_ineligible_pairs == 2
     assert (
         summary.n_supported_pairs
@@ -694,6 +705,13 @@ def test_mixed_frame_coverage_counts_each_pair_once(
     ]
     assert len(numeric_pairs) == 3
     assert len(categorical_pairs) == 6
+    assert (
+        sum(
+            isinstance(item, CategoricalCategoricalRelationship)
+            for item in summary.relationships
+        )
+        == 1
+    )
     assert (
         sum(
             isinstance(item, NumericBooleanRelationship)

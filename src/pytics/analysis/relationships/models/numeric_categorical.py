@@ -20,6 +20,7 @@ from pytics.analysis.relationships.models.common import RelationshipFamily
 from pytics.analysis.relationships.models.common import ResultAvailability
 from pytics.analysis.relationships.models.common import UnavailabilityReason
 from pytics.analysis.relationships.models.common import _require_canonical_positions
+from pytics.analysis.relationships.models.common import _require_category_scalar
 from pytics.analysis.relationships.models.common import _require_enum
 from pytics.analysis.relationships.models.common import _require_nonnegative_float
 from pytics.analysis.relationships.models.common import _require_population_counts
@@ -267,21 +268,6 @@ class NumericCategoricalRelationship:
     def n_groups(self) -> int:
         """Observed categories in the paired population."""
         return len(self.groups)
-
-
-def _require_category_scalar(value: object) -> None:
-    """Reject containers. Pandas scalar category values stay scalars."""
-    if isinstance(value, tuple):
-        for item in value:
-            _require_category_scalar(item)
-        return
-    if isinstance(value, (list, dict, set, bytearray)):
-        raise TypeError("category must be a retained scalar")
-    module = type(value).__module__
-    if module.startswith(("numpy", "pandas.core", "scipy")):
-        raise TypeError(
-            "category must not be a NumPy object, a pandas container, or a SciPy object"
-        )
 
 
 def _require_numeric_categorical_components(

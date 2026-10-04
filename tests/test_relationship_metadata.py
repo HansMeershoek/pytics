@@ -159,6 +159,7 @@ def test_dataset_container_keeps_coverage_and_not_one_method() -> None:
         RelationshipFamily.NUMERIC_CATEGORICAL,
         RelationshipFamily.BOOLEAN_BOOLEAN,
         RelationshipFamily.NUMERIC_BOOLEAN,
+        RelationshipFamily.CATEGORICAL_CATEGORICAL,
     )
     assert (
         retained.n_supported_pairs
@@ -381,6 +382,7 @@ def test_summary_copies_records_without_source_or_recalculation(
     monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
     monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
     monkeypatch.setattr(collector_module, "_analyze_numeric_boolean", _fail)
+    monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
     monkeypatch.setattr(boolean_boolean_module, "fisher_exact", _fail)
     monkeypatch.setattr(numeric_boolean_module, "student_t", _fail)
     monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)

@@ -18,6 +18,7 @@ import pytics.analysis.relationships.numeric_categorical as numeric_categorical_
 import pytics.analysis.relationships.numeric_numeric as numeric_numeric_module
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.relationship import BooleanAssociationMethod
+from pytics.analysis.relationship import CategoricalCategoricalRelationship
 from pytics.analysis.relationship import BooleanBooleanPopulation
 from pytics.analysis.relationship import BooleanBooleanRelationship
 from pytics.analysis.relationship import BooleanDirectionalEstimate
@@ -31,7 +32,6 @@ from pytics.analysis.relationship import NumericNumericRelationship
 from pytics.analysis.relationship import RelationshipFamily
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
-from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationships.boolean_boolean import relationship_from_counts
 from pytics.semantics.interpretation import SemanticType
@@ -296,10 +296,12 @@ def test_categorical_boolean_values_follow_the_selected_type() -> None:
     analysis = analyze_dataframe(frame)
     assert analysis.columns[0].inferred.selected_type is SemanticType.CATEGORICAL
     assert analysis.columns[1].inferred.selected_type is SemanticType.CATEGORICAL
-    assert analysis.relationship_analysis.relationships == ()
-    assert analysis.relationship_analysis.unimplemented_family_counts[0].family is (
-        UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL
-    )
+    assert len(analysis.relationship_analysis.relationships) == 1
+    relationship = analysis.relationship_analysis.relationships[0]
+    assert isinstance(relationship, CategoricalCategoricalRelationship)
+    assert not isinstance(relationship, BooleanBooleanRelationship)
+    assert analysis.relationship_analysis.n_supported_pairs == 1
+    assert analysis.relationship_analysis.unimplemented_family_counts == ()
 
 
 def test_constant_and_empty_boolean_columns_are_not_boolean_pairs() -> None:
@@ -783,6 +785,7 @@ def test_summary_copies_boolean_records_without_recomputing(
 
     monkeypatch.setattr(collector_module, "_read_boolean_column", _fail)
     monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
+    monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
     monkeypatch.setattr(boolean_module, "fisher_exact", _fail)
     monkeypatch.setattr(boolean_module, "relationship_from_counts", _fail)
     monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)

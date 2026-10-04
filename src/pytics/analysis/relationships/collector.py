@@ -2,11 +2,12 @@
 
 Eligibility uses the selected semantic type. The calculated families are
 selected Numeric × Numeric, selected Numeric × Categorical, selected
-Boolean × Boolean, and selected Numeric × Boolean. Other recognized
-directions are counted. Ineligible pairs are counted and not read. Each
-needed source column is prepared once. Those temporary arrays are
-discarded before the collector returns. The summary builder copies the
-retained records and does not calculate a statistic.
+Boolean × Boolean, selected Numeric × Boolean, and selected Categorical
+× Categorical. Other recognized directions are counted. Ineligible pairs
+are counted and not read. Each needed source column is prepared once.
+Those temporary arrays are discarded before the collector returns. The
+summary builder copies the retained records and does not calculate a
+statistic.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
@@ -25,7 +27,15 @@ from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.relationships.boolean_boolean import _read_boolean_column
 from pytics.analysis.relationships.boolean_boolean import analyze as _analyze_boolean
+from pytics.analysis.relationships.categorical_categorical import (
+    analyze as _analyze_categorical_categorical,
+)
 from pytics.analysis.relationships.models import AssociationResult
+from pytics.analysis.relationships.models import CategoricalAssociationEstimate
+from pytics.analysis.relationships.models import CategoricalCategoricalRelationship
+from pytics.analysis.relationships.models import CategoricalContingencyTable
+from pytics.analysis.relationships.models import CategoricalIndependenceTest
+from pytics.analysis.relationships.models import ExpectedCountDiagnostics
 from pytics.analysis.relationships.models import BooleanAssociationEstimate
 from pytics.analysis.relationships.models import BooleanBooleanRelationship
 from pytics.analysis.relationships.models import BooleanContingencyTable
@@ -76,9 +86,6 @@ _PairClass = Union[UnimplementedRelationshipFamily, _Eligibility]
 
 # Recognized directions that are not implemented. Lookup ignores order.
 _UNIMPLEMENTED_FAMILIES = {
-    frozenset((SemanticType.CATEGORICAL,)): (
-        UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL
-    ),
     frozenset((SemanticType.DATETIME, SemanticType.NUMERIC)): (
         UnimplementedRelationshipFamily.DATETIME_NUMERIC
     ),
@@ -106,10 +113,10 @@ def collect_relationship_analysis(
     ``columns`` are the column analyses already produced for ``frame``.
     Selected semantic types decide eligibility before any pair is read.
     Each Numeric column that belongs to a supported pair is converted
-    once. Each Categorical column that belongs to a Numeric × Categorical
-    pair is read once. Each Boolean column that belongs to a Boolean ×
-    Boolean or Numeric × Boolean pair is read once. Unsupported pairs do
-    not read raw values. Temporary arrays are discarded before return.
+    once. Each Categorical column that belongs to a supported pair is
+    read once. Each Boolean column that belongs to a Boolean × Boolean or
+    Numeric × Boolean pair is read once. Unsupported pairs do not read
+    raw values. Temporary arrays are discarded before return.
     The DataFrame is not modified.
 
     A component that cannot produce a finite result is recorded as
@@ -220,9 +227,9 @@ def _relationships_for_frame(
 
     A Numeric column is read once even when it pairs with several other
     columns. A Categorical column is read once even when it pairs with
-    several Numeric columns. A Boolean column is read once even when it
-    pairs with several Boolean or Numeric columns. Those preparations are
-    local to this function.
+    several Numeric or Categorical columns. A Boolean column is read once
+    even when it pairs with several Boolean or Numeric columns. Those
+    preparations are local to this function.
     """
     classification = _classify_columns(columns)
     if not classification.supported_pairs:
@@ -280,7 +287,10 @@ def _relationships_for_frame(
                     n_rows,
                 )
             )
-        else:
+        elif {left_type, right_type} == {
+            SemanticType.NUMERIC,
+            SemanticType.CATEGORICAL,
+        }:
             records.append(
                 _numeric_categorical_record(
                     columns,
@@ -291,6 +301,21 @@ def _relationships_for_frame(
                     n_rows,
                 )
             )
+        elif (
+            left_type is SemanticType.CATEGORICAL
+            and right_type is SemanticType.CATEGORICAL
+        ):
+            records.append(
+                _categorical_categorical_record(
+                    columns,
+                    categorical_columns,
+                    left,
+                    right,
+                    n_rows,
+                )
+            )
+        else:
+            raise TypeError("supported pair has no relationship calculator")
     return tuple(records)
 
 
@@ -430,6 +455,28 @@ def _numeric_boolean_record(
     )
 
 
+def _categorical_categorical_record(
+    columns: Tuple[ColumnAnalysis, ...],
+    categorical_columns: dict,
+    left: int,
+    right: int,
+    n_rows: int,
+) -> CategoricalCategoricalRelationship:
+    left_codes, left_categories = categorical_columns[left]
+    right_codes, right_categories = categorical_columns[right]
+    return _analyze_categorical_categorical(
+        left_codes,
+        left_categories,
+        right_codes,
+        right_categories,
+        left_position=left,
+        left_label=columns[left].label,
+        right_position=right,
+        right_label=columns[right].label,
+        n_total_rows=n_rows,
+    )
+
+
 def _role_positions(
     left: int,
     right: int,
@@ -487,6 +534,8 @@ def _pair_class(
         return _Eligibility.SUPPORTED
     if {left, right} == {SemanticType.NUMERIC, SemanticType.BOOLEAN}:
         return _Eligibility.SUPPORTED
+    if left is SemanticType.CATEGORICAL and right is SemanticType.CATEGORICAL:
+        return _Eligibility.SUPPORTED
     family = _UNIMPLEMENTED_FAMILIES.get(frozenset((left, right)))
     if family is None:
         return _Eligibility.INELIGIBLE
@@ -514,6 +563,7 @@ def _require_recorded_pairs(
                 NumericCategoricalRelationship,
                 BooleanBooleanRelationship,
                 NumericBooleanRelationship,
+                CategoricalCategoricalRelationship,
             ),
         ):
             raise TypeError(
@@ -576,11 +626,26 @@ def _require_record_family(
     if {left_type, right_type} == {SemanticType.NUMERIC, SemanticType.BOOLEAN}:
         if not isinstance(relationship, NumericBooleanRelationship):
             raise TypeError("a numeric-boolean pair requires that relationship record")
-    elif not isinstance(relationship, NumericCategoricalRelationship):
-        raise TypeError("a numeric-categorical pair requires that relationship record")
-    numeric_position, _other_position = _role_positions(left, right, left_type)
-    if relationship.numeric_position != numeric_position:
-        raise ValueError("numeric role must follow the selected numeric column")
+        numeric_position, _other_position = _role_positions(left, right, left_type)
+        if relationship.numeric_position != numeric_position:
+            raise ValueError("numeric role must follow the selected numeric column")
+        return
+    if {left_type, right_type} == {SemanticType.NUMERIC, SemanticType.CATEGORICAL}:
+        if not isinstance(relationship, NumericCategoricalRelationship):
+            raise TypeError(
+                "a numeric-categorical pair requires that relationship record"
+            )
+        numeric_position, _other_position = _role_positions(left, right, left_type)
+        if relationship.numeric_position != numeric_position:
+            raise ValueError("numeric role must follow the selected numeric column")
+        return
+    if left_type is SemanticType.CATEGORICAL and right_type is SemanticType.CATEGORICAL:
+        if not isinstance(relationship, CategoricalCategoricalRelationship):
+            raise TypeError(
+                "a categorical pair requires a CategoricalCategoricalRelationship"
+            )
+        return
+    raise TypeError("supported pair has no relationship family")
 
 
 def _copy_relationship(
@@ -594,6 +659,8 @@ def _copy_relationship(
         return _copy_boolean_boolean(relationship)
     if isinstance(relationship, NumericBooleanRelationship):
         return _copy_numeric_boolean(relationship)
+    if isinstance(relationship, CategoricalCategoricalRelationship):
+        return _copy_categorical_categorical(relationship)
     raise TypeError("relationship records must be calculated relationship values")
 
 
@@ -848,6 +915,80 @@ def _copy_boolean_group(group: BooleanGroupSummary) -> BooleanGroupSummary:
 def _copy_mean_difference_test(test: MeanDifferenceTest) -> MeanDifferenceTest:
     frequentist = test.frequentist
     return MeanDifferenceTest(
+        method=test.method,
+        statistic_availability=test.statistic_availability,
+        statistic=test.statistic,
+        degrees_of_freedom=test.degrees_of_freedom,
+        statistic_reason=test.statistic_reason,
+        frequentist=FrequentistEvidence(
+            availability=frequentist.availability,
+            p_value=frequentist.p_value,
+            adjusted_p_value=frequentist.adjusted_p_value,
+            adjustment=frequentist.adjustment,
+            reason=frequentist.reason,
+        ),
+    )
+
+
+def _copy_categorical_categorical(
+    relationship: CategoricalCategoricalRelationship,
+) -> CategoricalCategoricalRelationship:
+    return CategoricalCategoricalRelationship(
+        left_position=relationship.left_position,
+        left_label=relationship.left_label,
+        right_position=relationship.right_position,
+        right_label=relationship.right_label,
+        n_total_rows=relationship.n_total_rows,
+        n_paired=relationship.n_paired,
+        table=_copy_contingency(relationship.table),
+        association=_copy_cramers_v(relationship.association),
+        expected_counts=_copy_expected_counts(relationship.expected_counts),
+        independence=_copy_chi_square(relationship.independence),
+    )
+
+
+def _copy_contingency(
+    table: CategoricalContingencyTable,
+) -> CategoricalContingencyTable:
+    return CategoricalContingencyTable(
+        left_levels=tuple(table.left_levels),
+        right_levels=tuple(table.right_levels),
+        observed_counts=tuple(
+            (left_index, right_index, count)
+            for left_index, right_index, count in table.observed_counts
+        ),
+        left_totals=tuple(table.left_totals),
+        right_totals=tuple(table.right_totals),
+    )
+
+
+def _copy_cramers_v(
+    estimate: CategoricalAssociationEstimate,
+) -> CategoricalAssociationEstimate:
+    return CategoricalAssociationEstimate(
+        method=estimate.method,
+        availability=estimate.availability,
+        value=estimate.value,
+        reason=estimate.reason,
+    )
+
+
+def _copy_expected_counts(
+    diagnostics: ExpectedCountDiagnostics,
+) -> ExpectedCountDiagnostics:
+    return ExpectedCountDiagnostics(
+        availability=diagnostics.availability,
+        minimum_expected_count=diagnostics.minimum_expected_count,
+        n_cells_expected_below_5=diagnostics.n_cells_expected_below_5,
+        fraction_cells_expected_below_5=diagnostics.fraction_cells_expected_below_5,
+        n_cells_expected_below_1=diagnostics.n_cells_expected_below_1,
+        reason=diagnostics.reason,
+    )
+
+
+def _copy_chi_square(test: CategoricalIndependenceTest) -> CategoricalIndependenceTest:
+    frequentist = test.frequentist
+    return CategoricalIndependenceTest(
         method=test.method,
         statistic_availability=test.statistic_availability,
         statistic=test.statistic,

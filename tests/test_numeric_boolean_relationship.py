@@ -71,7 +71,15 @@ _UUIDS = (
 _FALSE = [1.0, 2.0, 3.0, 4.0]
 _TRUE = [2.0, 8.0, 14.0, 20.0, 26.0]
 _PI = Decimal("3.14159265358979323846264338327950288419716939937510582097494459")
-_REPRESENTATIVE_SIZES = ((2, 2), (2, 3), (3, 3), (5, 8), (20, 20), (100, 150), (1000, 1000))
+_REPRESENTATIVE_SIZES = (
+    (2, 2),
+    (2, 3),
+    (3, 3),
+    (5, 8),
+    (20, 20),
+    (100, 150),
+    (1000, 1000),
+)
 
 
 def _frame(
@@ -126,8 +134,7 @@ def _independent_welch(
     a = true_variance / len(true_values)
     b = false_variance / len(false_values)
     degrees_of_freedom = float(
-        (a + b) ** 2
-        / (a**2 / (len(true_values) - 1) + b**2 / (len(false_values) - 1))
+        (a + b) ** 2 / (a**2 / (len(true_values) - 1) + b**2 / (len(false_values) - 1))
     )
     scaled_error = math.sqrt(float(a + b))
     scaled_difference = float(true_mean - false_mean)
@@ -613,7 +620,9 @@ def test_hedges_g_matches_an_independent_formula(n_false: int, n_true: int) -> N
     degrees_of_freedom = n_false + n_true - 2
     correction = _exact_correction(degrees_of_freedom)
     cohen = _independent_cohen(true_values, false_values)
-    assert _hedges_correction(degrees_of_freedom) == pytest.approx(correction, rel=2e-15)
+    assert _hedges_correction(degrees_of_freedom) == pytest.approx(
+        correction, rel=2e-15
+    )
     assert standardized.method is StandardizedDifferenceMethod.HEDGES_G
     assert standardized.availability is AVAILABLE
     assert standardized.value == pytest.approx(correction * cohen, rel=1e-13)
@@ -837,9 +846,9 @@ def test_mixed_frame_counts_each_family_once() -> None:
     )
     summary = build_relationships_summary(analyze_dataframe(frame))
     assert summary.n_total_pairs == 45
-    assert summary.n_supported_pairs == summary.n_analyzed_pairs == 16
-    assert len(summary.relationships) == 16
-    assert summary.n_unimplemented_family_pairs == 6
+    assert summary.n_supported_pairs == summary.n_analyzed_pairs == 17
+    assert len(summary.relationships) == 17
+    assert summary.n_unimplemented_family_pairs == 5
     assert summary.n_ineligible_pairs == 23
     by_family: dict[RelationshipFamily, int] = {}
     for item in summary.relationships:
@@ -849,11 +858,11 @@ def test_mixed_frame_counts_each_family_once() -> None:
         RelationshipFamily.NUMERIC_CATEGORICAL: 6,
         RelationshipFamily.BOOLEAN_BOOLEAN: 1,
         RelationshipFamily.NUMERIC_BOOLEAN: 6,
+        RelationshipFamily.CATEGORICAL_CATEGORICAL: 1,
     }
     assert {
         item.family: item.n_pairs for item in summary.unimplemented_family_counts
     } == {
-        UnimplementedRelationshipFamily.CATEGORICAL_CATEGORICAL: 1,
         UnimplementedRelationshipFamily.DATETIME_NUMERIC: 3,
         UnimplementedRelationshipFamily.DATETIME_CATEGORICAL: 2,
     }
@@ -925,6 +934,7 @@ def test_summary_copies_numeric_boolean_records_without_recomputing(
         raise AssertionError("summary builder used a source-dependent operation")
 
     monkeypatch.setattr(collector_module, "_analyze_numeric_boolean", _fail)
+    monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
     monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
     monkeypatch.setattr(collector_module, "_read_boolean_column", _fail)
     monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
@@ -1204,7 +1214,9 @@ def test_numeric_boolean_components_reject_inconsistent_states() -> None:
             BooleanLevel.FALSE, UNAVAILABLE, described, Reason.CONDITIONING_LEVEL_ABSENT
         )
     with pytest.raises(ValueError, match="not a reason for this component"):
-        BooleanGroupSummary(BooleanLevel.FALSE, UNAVAILABLE, None, Reason.NON_FINITE_RESULT)
+        BooleanGroupSummary(
+            BooleanLevel.FALSE, UNAVAILABLE, None, Reason.NON_FINITE_RESULT
+        )
 
     with pytest.raises(ValueError, match="finite float"):
         MeanDifferenceEstimate(AVAILABLE, math.inf, None)
@@ -1307,7 +1319,9 @@ def test_relationship_record_rejects_inconsistent_components() -> None:
     replace = dataclasses.replace
     base = _only(_frame(_FALSE, _TRUE))
     absent = _only(
-        pd.DataFrame({"y": [1.0, 2.0, 3.0, np.nan], "flag": [False, False, False, True]})
+        pd.DataFrame(
+            {"y": [1.0, 2.0, 3.0, np.nan], "flag": [False, False, False, True]}
+        )
     )
     flags = pd.Series([False, False, True, True, pd.NA], dtype="boolean")
     equal = _only(pd.DataFrame({"y": [2.5, 2.5, 2.5, 2.5, 9.0], "flag": flags}))
@@ -1324,9 +1338,7 @@ def test_relationship_record_rejects_inconsistent_components() -> None:
         None,
         Reason.NON_FINITE_RESULT,
     )
-    non_finite_test = numeric_boolean_module._unavailable_test(
-        Reason.NON_FINITE_RESULT
-    )
+    non_finite_test = numeric_boolean_module._unavailable_test(Reason.NON_FINITE_RESULT)
 
     with pytest.raises(ValueError, match="roles must be the two physical"):
         replace(base, numeric_position=1, boolean_position=1)
@@ -1364,7 +1376,9 @@ def test_relationship_record_rejects_inconsistent_components() -> None:
         replace(absent, mean_difference=base.mean_difference)
     with pytest.raises(ValueError, match="equal paired values have mean difference 0"):
         replace(equal, mean_difference=MeanDifferenceEstimate(AVAILABLE, 1.0, None))
-    with pytest.raises(ValueError, match="insufficient_within_group_degrees_of_freedom"):
+    with pytest.raises(
+        ValueError, match="insufficient_within_group_degrees_of_freedom"
+    ):
         replace(
             singletons,
             standardized_mean_difference=base.standardized_mean_difference,
@@ -1409,7 +1423,9 @@ def test_relationship_record_rejects_inconsistent_components() -> None:
             base,
             mean_difference_interval=different.mean_difference_interval,
         )
-    with pytest.raises(ValueError, match="mean-difference interval must be unavailable"):
+    with pytest.raises(
+        ValueError, match="mean-difference interval must be unavailable"
+    ):
         replace(
             singletons,
             mean_difference_interval=numeric_boolean_module._unavailable_interval(
