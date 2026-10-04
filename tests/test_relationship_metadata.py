@@ -152,6 +152,7 @@ def test_dataset_container_keeps_coverage_and_not_one_method() -> None:
         "missing_analysis",
         "duplicate_analysis",
         "relationship_analysis",
+        "anomaly_analysis",
         "target_analysis",
         "target_leakage",
         "target_diagnostic",

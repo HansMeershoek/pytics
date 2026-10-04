@@ -431,6 +431,7 @@ def test_summary_reads_the_distribution_after_collectors_fail(
             missing_analysis=analysis.missing_analysis,
             duplicate_analysis=analysis.duplicate_analysis,
             relationship_analysis=analysis.relationship_analysis,
+            anomaly_analysis=analysis.anomaly_analysis,
             target_analysis=dataclasses.replace(
                 analysis.target_analysis,
                 categorical_facts=copy_categorical_descriptive_analysis(

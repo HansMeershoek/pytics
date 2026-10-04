@@ -5,9 +5,10 @@ dataset dimensions, the column analyses, missing-cell totals derived from
 basic evidence already retained, the exact missingness aggregates
 collected from one DataFrame pass, the exact duplicate-row groups
 collected from a separate pass, and the heterogeneous relationship
-records collected from selected semantic types, and, when the
-caller names one, the target projection of those facts, the
-leakage evidence for that target, and the diagnostic model of that
+records collected from selected semantic types, the univariate
+numeric anomaly evidence read from the retained numeric profiles,
+and, when the caller names one, the target projection of those facts,
+the leakage evidence for that target, and the diagnostic model of that
 target. It does not keep the DataFrame.
 """
 
@@ -19,6 +20,9 @@ from typing import Tuple
 
 import pandas as pd
 
+from pytics.analysis.anomaly import AnomalyAnalysis
+from pytics.analysis.anomaly import _require_anomaly_attachment
+from pytics.analysis.anomaly import collect_anomaly_analysis
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import analyze_series
 from pytics.analysis.duplicate import DuplicateAnalysis
@@ -60,10 +64,13 @@ class DatasetAnalysis:
     missingness patterns. ``duplicate_analysis`` is the retained exact
     duplicate groups. ``relationship_analysis`` is the retained
     heterogeneous relationship records and the pair-coverage counts.
-    It does not name one method for every pair. All three are
-    cross-column, so they are not derived from one column record. The
-    missingness mask, the row values, and the paired arrays are not
-    stored. The three passes do not call each other.
+    It does not name one method for every pair. ``anomaly_analysis``
+    is the retained univariate numeric anomaly evidence. Its quartiles
+    are the numeric profiles already stored on the columns. It does not
+    read the relationship, missingness, duplicate, or target results.
+    All four are cross-column, so they are not derived from one column
+    record. The missingness mask, the row values, and the paired arrays
+    are not stored. The passes do not call each other.
 
     ``target_analysis`` is ``None`` when the caller did not name a
     target. When it is present, it is a projection of the selected
@@ -86,6 +93,7 @@ class DatasetAnalysis:
     missing_analysis: MissingAnalysis
     duplicate_analysis: DuplicateAnalysis
     relationship_analysis: RelationshipAnalysis
+    anomaly_analysis: AnomalyAnalysis
     target_analysis: Optional[TargetAnalysis] = None
     target_leakage: Optional[TargetLeakageAnalysis] = None
     target_diagnostic: Optional[TargetDiagnosticAnalysis] = None
@@ -146,6 +154,11 @@ class DatasetAnalysis:
             self.target_leakage,
             self.target_diagnostic,
         )
+        _require_anomaly_attachment(
+            self.anomaly_analysis,
+            self.columns,
+            n_rows=self.n_rows,
+        )
 
     @property
     def n_missing_cells(self) -> int:
@@ -184,8 +197,10 @@ def analyze_dataframe(
     converted. Column order is the DataFrame's column order. Duplicate
     labels stay distinct records. After the column analyses, the
     relationship pass describes the pairs of each calculated family.
-    When a target was named, the target projection, leakage evidence,
-    and diagnostic model run next, in that order. Missingness patterns
+    Anomaly analysis then locates finite numeric values outside the
+    retained Tukey fences. It does not read the other passes. When a
+    target was named, the target projection, leakage evidence, and
+    diagnostic model run next, in that order. Missingness patterns
     and exact duplicate rows are collected when the result is built.
     Those passes do not call each other. The DataFrame is not copied
     and is not modified, and it is not stored on the result.
@@ -217,6 +232,7 @@ def analyze_dataframe(
         for position in range(n_columns)
     )
     relationship_analysis = collect_relationship_analysis(frame, columns)
+    anomaly_analysis = collect_anomaly_analysis(frame, columns)
     target_analysis = None
     target_leakage = None
     target_diagnostic = None
@@ -242,6 +258,7 @@ def analyze_dataframe(
         missing_analysis=collect_missing_analysis(frame),
         duplicate_analysis=collect_duplicate_analysis(frame),
         relationship_analysis=relationship_analysis,
+        anomaly_analysis=anomaly_analysis,
         target_analysis=target_analysis,
         target_leakage=target_leakage,
         target_diagnostic=target_diagnostic,

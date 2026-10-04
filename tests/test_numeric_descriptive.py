@@ -17,6 +17,7 @@ import pytics
 import pytics.analysis.column as column_module
 import pytics.analysis.numeric as numeric_module
 import pytics.analysis.variables as variables_module
+from pytics.analysis.anomaly import anomaly_analysis_for_columns
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
@@ -787,6 +788,7 @@ def test_numeric_detail_may_omit_descriptive_analysis():
                 (column,),
                 n_rows=3,
             ),
+            anomaly_analysis=anomaly_analysis_for_columns((column,), n_rows=3),
         )
     )
     detail = summary.variables[0].detail
@@ -887,6 +889,7 @@ def test_ambiguous_column_without_descriptive_analysis_has_no_detail():
                 (column,),
                 n_rows=3,
             ),
+            anomaly_analysis=anomaly_analysis_for_columns((column,), n_rows=3),
         )
     )
     assert summary.variables[0].resolution_status is ResolutionStatus.AMBIGUOUS

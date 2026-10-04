@@ -747,6 +747,7 @@ def test_target_projection_rejects_inconsistent_records() -> None:
             missing_analysis=analysis.missing_analysis,
             duplicate_analysis=analysis.duplicate_analysis,
             relationship_analysis=analysis.relationship_analysis,
+            anomaly_analysis=analysis.anomaly_analysis,
             target_analysis=dataclasses.replace(
                 target,
                 numeric_facts=NumericDescriptiveAnalysis(
@@ -981,6 +982,7 @@ def test_attachment_and_record_guards() -> None:
         missing_analysis=analysis.missing_analysis,
         duplicate_analysis=analysis.duplicate_analysis,
         relationship_analysis=analysis.relationship_analysis,
+        anomaly_analysis=analysis.anomaly_analysis,
     )
     with pytest.raises(TypeError, match="TargetAnalysis"):
         DatasetAnalysis(**fields, target_analysis="y")  # type: ignore[arg-type]
@@ -1008,6 +1010,7 @@ def test_attachment_and_record_guards() -> None:
             missing_analysis=copied_boolean.missing_analysis,
             duplicate_analysis=copied_boolean.duplicate_analysis,
             relationship_analysis=copied_boolean.relationship_analysis,
+            anomaly_analysis=copied_boolean.anomaly_analysis,
             target_analysis=dataclasses.replace(
                 boolean_target,
                 boolean_facts=BooleanDescriptiveAnalysis(

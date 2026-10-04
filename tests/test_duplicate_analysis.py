@@ -14,6 +14,7 @@ from pandas.core.groupby.generic import SeriesGroupBy
 import pytics
 import pytics.analysis.dataset as dataset_module
 import pytics.analysis.duplicate as duplicate_module
+from pytics.analysis.anomaly import anomaly_analysis_for_columns
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
@@ -27,6 +28,8 @@ from pytics.analysis.overview import build_dataset_overview
 from pytics.analysis.variables import VariableSummary
 from pytics.analysis.variables import build_variables_summary
 from tests.missing_margins import missing_analysis_for_margins
+
+_NO_ANOMALIES = anomaly_analysis_for_columns((), n_rows=0)
 
 _RETAINED = (
     pd.DataFrame,
@@ -528,6 +531,7 @@ def test_models_are_frozen_and_reject_inconsistent_groups():
                 unimplemented_family_counts=(),
                 relationships=(),
             ),
+            anomaly_analysis=_NO_ANOMALIES,
         )
     with pytest.raises(TypeError, match="DuplicateAnalysis"):
         DatasetAnalysis(
@@ -547,6 +551,7 @@ def test_models_are_frozen_and_reject_inconsistent_groups():
                 unimplemented_family_counts=(),
                 relationships=(),
             ),
+            anomaly_analysis=_NO_ANOMALIES,
         )
 
 

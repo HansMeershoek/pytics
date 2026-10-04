@@ -295,7 +295,9 @@ A Numeric variable detail copies those structural counts when the selected seman
 
 Descriptive statistics are a later analysis fact ([DEC-091](DECISIONS.md#dec-091)). They are not added to `NumericStructureEvidence`, and they are not collected before the selected semantic type is known. After resolution, a column selected as Numeric receives a finite-population profile: minimum, maximum, range, mean, median, sample standard deviation, Q1, Q3, and interquartile range. Missing values are excluded. Positive and negative infinity are excluded. An empty finite population leaves those statistics undefined. The sample standard deviation divides by `n - 1` (`ddof=1`). One finite value has no standard deviation. Q1, the median, and Q3 use one linear interpolation: the position is `(n - 1) * q`, which is Hyndman-Fan type 7. The method is not configurable. Integer minimum and maximum stay exact. Mean and sample standard deviation are float64 when that result is finite ([DEC-096](DECISIONS.md#dec-096)). A mean, sample standard deviation, range, or interquartile range that is not a finite supported number is `None`. `None` is not zero and not NaN. It does not reject the other statistics and it does not reject the column. Integer populations outside the exact float64 integer range are centered by their minimum in integer arithmetic before the mean and the deviation are calculated, so a difference of 1 is not stored as a zero deviation. Differences larger than `2**53` can still round. This is not arbitrary-precision arithmetic. Q1, the median, and Q3 stay on the type-7 linear rule. A non-integral quantile of integer data stays exact when float64 would move it outside the integer extrema. `-0.0` is recorded as `0.0`. Constant numeric columns stay Constant and are not described. An unavailable descriptive statistic does not change the selected Numeric type. This does not change semantic inference.
 
-Still not delivered for Numeric: sum; mode; a stored variance; MAD; coefficient of variation; skewness; kurtosis; distribution visualization; distribution fitting; normality tests; outlier or anomaly signals; confidence intervals; robust estimators; and Findings. Numeric analysis is not complete.
+Univariate anomaly evidence for a selected Numeric column is a separate result ([DEC-107](DECISIONS.md#dec-107)). It reuses this profile's Q1, Q3, and interquartile range. It is not a numeric descriptive statistic and it does not complete numeric analysis.
+
+Still not delivered for Numeric: sum; mode; a stored variance; MAD; coefficient of variation; skewness; kurtosis; distribution visualization; distribution fitting; normality tests; confidence intervals; robust estimators beyond the Tukey fences in section J; and Findings. Numeric analysis is not complete.
 
 A Numeric candidate assessment may be supported for a non-empty, non-constant physical integer or floating column ([DEC-083](DECISIONS.md#dec-083)). That storage is the positive evidence. Numeric-structure facts do not add a distribution cutoff and are not required. Complex storage is not that support. Numeric-looking strings are not parsed. `{0, 1}` and `{0.0, 1.0}` on numeric storage may support the Numeric candidate and are not Boolean or Binary. Empty and Constant are not supported for the candidate. The assessment does not select Numeric. The precedence chain does not call it. Resolution may select that candidate when it is the only one supported. The inferred result keeps that selection and the observed physical dtype, and it does not assign confidence ([DEC-085](DECISIONS.md#dec-085), [DEC-086](DECISIONS.md#dec-086)).
 
@@ -306,7 +308,7 @@ A Numeric candidate assessment may be supported for a non-empty, non-constant ph
 | REQ-B-03 | Skewness and kurtosis. | Accepted, where meaningful. |
 | REQ-B-04 | Robust statistics. | Accepted as a category. Which robust measures beyond those named in `REQ-B-02` and section J are not finalized ([OPEN-006](DECISIONS.md#open-questions)). |
 | REQ-B-05 | Distribution analysis, and normality or other distribution diagnostics where responsible. | Accepted. Diagnostics are evidence and signals, not overconfident declarations. |
-| REQ-B-06 | Univariate outlier signals. | Accepted as signals. The method set is Proposed / not yet finalized (section J). |
+| REQ-B-06 | Univariate outlier signals. | Accepted as signals. TSK-036 delivers Tukey inner fences for a selected Numeric column ([DEC-107](DECISIONS.md#dec-107)). Other univariate methods remain open ([OPEN-022](DECISIONS.md#open-questions)). |
 
 Trimmed mean was named as "potentially trimmed mean". It is **Proposed / not yet finalized** and has no requirement ID ([OPEN-019](DECISIONS.md#open-questions)).
 
@@ -468,16 +470,20 @@ Fuzzy or near-duplicate analysis may eventually become optional or deep function
 
 An outlier does not mean an error. An anomaly does not mean bad data. Do not automatically recommend deleting anomalous observations (`REQ-P-04`).
 
-Identifiers are normally excluded from ordinary multivariate anomaly modeling (`REQ-G-03`). Exact eligibility rules are [OPEN-043](DECISIONS.md#open-questions).
+TSK-036 records univariate numeric anomalies in `pytics.analysis` ([DEC-107](DECISIONS.md#dec-107)). The question is which finite observations are unusual under Tukey's inner fence, and which fence they cross. The fences use the Q1, Q3, and interquartile range already retained for a selected Numeric column. The coefficient is the rational `3/2`. A value on the fence is not an anomaly. Missing values are not anomalies. Infinities are counted apart from the finite population and are not called IQR outliers. A zero interquartile range does not classify the rows that differ from the quartile. There is no minimum sample size, no anomaly score, and no severity. Row identity is the physical position. Every crossing is retained.
+
+Boolean minority classes, rare categories, identifiers, datetimes, durations, and text are not this method. A selected Identifier is not fenced even when its storage is numeric. Multivariate anomaly detection is not delivered. IsolationForest was considered and not used. The rendered Anomalies view is not this result.
+
+Identifiers are normally excluded from ordinary multivariate anomaly modeling (`REQ-G-03`). The univariate exclusion is the selected semantic type. Exact eligibility for analyses other than this fence remains [OPEN-043](DECISIONS.md#open-questions).
 
 | ID | Requirement | Status |
 | --- | --- | --- |
 | REQ-J-01 | Treat outliers and anomalies as observations to understand, not as errors to delete, and do not automatically recommend deletion. | Accepted |
-| REQ-J-02 | Support robust univariate outlier analysis. | Accepted |
-| REQ-J-03 | Support multivariate anomaly detection. | Accepted |
-| REQ-J-04 | Multivariate anomaly analysis should eventually provide explainability or context where possible. | Accepted as a goal. The design is Proposed / not yet finalized. |
+| REQ-J-02 | Support robust univariate outlier analysis. | Accepted. TSK-036 delivers Tukey fences for selected Numeric columns. The requirement is not completed. |
+| REQ-J-03 | Support multivariate anomaly detection. | Accepted. Not delivered. |
+| REQ-J-04 | Multivariate anomaly analysis should eventually provide explainability or context where possible. | Accepted as a goal. Not delivered. Univariate fence evidence is the explanation of the method that exists. |
 
-Potential univariate perspectives, not a finalized method set: IQR, robust MAD-based methods, classical z-score where appropriate, and extreme quantiles. **Proposed / not yet finalized** ([OPEN-022](DECISIONS.md#open-questions)).
+Other univariate perspectives, including MAD-based methods, a classical z-score, and extreme quantiles, were not added. Multivariate methods remain open ([OPEN-022](DECISIONS.md#open-questions)).
 
 ## K — Relationships and statistical inference
 

@@ -58,8 +58,8 @@ class NumericVariableDetail:
     ``descriptive`` is the retained finite-population profile when column
     analysis collected one. It is a separate frozen value, not the
     numeric-structure evidence and not a Series. Range and interquartile
-    range stay on that value. Skewness, kurtosis, and outlier signals are
-    not part of it.
+    range stay on that value. Skewness and kurtosis are not part of it.
+    Univariate anomaly evidence is a separate dataset result.
     """
 
     n_non_missing: int

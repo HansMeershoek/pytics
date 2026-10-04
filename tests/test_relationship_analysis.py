@@ -17,6 +17,7 @@ import pytics
 import pytics.analysis.relationship as relationship_module
 import pytics.analysis.relationships.collector as collector_module
 import pytics.analysis.relationships.numeric_numeric as numeric_numeric_module
+from pytics.analysis.anomaly import anomaly_analysis_for_columns
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
@@ -54,6 +55,7 @@ from pytics.analysis.relationship import relationship_analysis_for_columns
 from pytics.semantics.interpretation import SemanticType
 
 _RETAINED = (pd.DataFrame, pd.Series, pd.Index, np.ndarray)
+_NO_ANOMALIES = anomaly_analysis_for_columns((), n_rows=0)
 _UUIDS = (
     "550e8400-e29b-41d4-a716-446655440000",
     "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
@@ -1153,6 +1155,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
             missing_analysis=MissingAnalysis(row_distribution=(), patterns=()),
             duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
             relationship_analysis=None,  # type: ignore[arg-type]
+            anomaly_analysis=_NO_ANOMALIES,
         )
     with pytest.raises(ValueError, match="selected semantic pair counts"):
         DatasetAnalysis(
@@ -1172,6 +1175,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
                 unimplemented_family_counts=(),
                 relationships=(),
             ),
+            anomaly_analysis=_NO_ANOMALIES,
         )
 
     left = np.array([1.0, 2.0, 3.0, 4.0])

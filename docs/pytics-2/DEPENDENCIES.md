@@ -25,7 +25,7 @@ Do not install these candidates from this file. Do not pin versions. Do not edit
 | Lightweight Bayesian calculations | NumPy and SciPy | Current direction ([DEC-057](DECISIONS.md#dec-057)) |
 | General probabilistic programming | PyMC is not intended as a core dependency at present | Current direction |
 | Diagnostic model | scikit-learn | Declared runtime dependency, `scikit-learn>=1.3`, by TSK-034 ([DEC-105](DECISIONS.md#dec-105)). Not a lock. The estimators are logistic and ridge regression, resolving [OPEN-013](DECISIONS.md#open-013). |
-| Multivariate anomaly methods | scikit-learn candidate methods | Current direction. Estimator is [OPEN-022](DECISIONS.md#open-questions). |
+| Multivariate anomaly methods | scikit-learn candidate methods | Current direction. The univariate method is Tukey fences and does not use scikit-learn ([DEC-107](DECISIONS.md#dec-107)). The multivariate estimator remains [OPEN-022](DECISIONS.md#open-questions). |
 | LightGBM | Not currently intended as a core dependency | Current direction |
 | Interactive visualization | Plotly | Current direction. Plotly is a rendering engine, not the visual design system ([DEC-061](DECISIONS.md#dec-061)). |
 | HTML templating | Jinja2 | Current direction |
@@ -48,7 +48,7 @@ Matplotlib appears in the 1.1.5 inventory below. It is not part of the candidate
 - the Bayesian catalog ([OPEN-008](DECISIONS.md#open-questions));
 - the final HTML and PDF libraries ([OPEN-035](DECISIONS.md#open-questions));
 - the Plotly-to-static-PDF mechanism ([OPEN-041](DECISIONS.md#open-questions));
-- the anomaly estimator ([OPEN-022](DECISIONS.md#open-questions));
+- the multivariate anomaly estimator ([OPEN-022](DECISIONS.md#open-questions)). The univariate method is Tukey fences and does not add a dependency ([DEC-107](DECISIONS.md#dec-107));
 - Python versions ([OPEN-036](DECISIONS.md#open-questions)). Choose the range only after checking the dependency stack that is actually accepted. Python 3.14 compatibility matters because it is the known local baseline. Do not require 3.14 if a broader modern range is supportable.
 
 ## Historical 1.1.5 inventory

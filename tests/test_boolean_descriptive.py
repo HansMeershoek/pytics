@@ -22,6 +22,7 @@ from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.anomaly import anomaly_analysis_for_columns
 from pytics.analysis.relationship import relationship_analysis_for_columns
 from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
@@ -372,6 +373,7 @@ def test_boolean_selection_without_retained_counts_omits_detail():
                 (column,),
                 n_rows=2,
             ),
+            anomaly_analysis=anomaly_analysis_for_columns((column,), n_rows=2),
         )
     )
     assert summary.variables[0].selected_type is SemanticType.BOOLEAN

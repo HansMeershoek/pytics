@@ -28,6 +28,7 @@ from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.anomaly import anomaly_analysis_for_columns
 from pytics.analysis.relationship import relationship_analysis_for_columns
 from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.overview import ColumnRef
@@ -284,6 +285,7 @@ def _manual_analysis(
             columns,
             n_rows=n_rows,
         ),
+        anomaly_analysis=anomaly_analysis_for_columns(columns, n_rows=n_rows),
     )
 
 

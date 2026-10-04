@@ -14,6 +14,7 @@ import pytics
 import pytics.analysis.column as column_analysis
 import pytics.analysis.dataset as dataset
 import pytics.semantics.pipeline as pipeline
+from pytics.analysis.anomaly import anomaly_analysis_for_columns
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
@@ -44,6 +45,7 @@ _UUID_A = "550e8400-e29b-41d4-a716-446655440000"
 _UUID_B = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 _NO_OBSERVED_ROWS = MissingAnalysis(row_distribution=(), patterns=())
 _NO_DUPLICATE_GROUPS = DuplicateAnalysis(duplicate_groups=())
+_NO_ANOMALIES = anomaly_analysis_for_columns((), n_rows=0)
 _NO_RELATIONSHIPS = RelationshipAnalysis(
     n_rows=0,
     n_total_pairs=0,
@@ -321,6 +323,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
             relationship_analysis=_NO_RELATIONSHIPS,
+            anomaly_analysis=_NO_ANOMALIES,
         )
     with pytest.raises(ValueError, match="n_cells"):
         DatasetAnalysis(
@@ -331,6 +334,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
             relationship_analysis=_NO_RELATIONSHIPS,
+            anomaly_analysis=_NO_ANOMALIES,
         )
     with pytest.raises(TypeError, match="tuple"):
         DatasetAnalysis(
@@ -341,6 +345,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
             relationship_analysis=_NO_RELATIONSHIPS,
+            anomaly_analysis=_NO_ANOMALIES,
         )
     with pytest.raises(ValueError, match="one record"):
         DatasetAnalysis(
@@ -351,6 +356,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
             relationship_analysis=_NO_RELATIONSHIPS,
+            anomaly_analysis=_NO_ANOMALIES,
         )
     with pytest.raises(TypeError, match="ColumnAnalysis"):
         DatasetAnalysis(
@@ -361,6 +367,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
             relationship_analysis=_NO_RELATIONSHIPS,
+            anomaly_analysis=_NO_ANOMALIES,
         )
     shifted = analyze_series(pd.Series([1, 2, 3]), position=1, label="amount")
     with pytest.raises(ValueError, match="column position"):
@@ -372,6 +379,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
             relationship_analysis=_NO_RELATIONSHIPS,
+            anomaly_analysis=_NO_ANOMALIES,
         )
     with pytest.raises(ValueError, match="n_total"):
         DatasetAnalysis(
@@ -382,6 +390,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
             relationship_analysis=_NO_RELATIONSHIPS,
+            anomaly_analysis=_NO_ANOMALIES,
         )
     with pytest.raises(dataclasses.FrozenInstanceError):
         DatasetAnalysis(
@@ -392,6 +401,7 @@ def test_dataset_analysis_rejects_inconsistent_records():
             missing_analysis=_NO_OBSERVED_ROWS,
             duplicate_analysis=_NO_DUPLICATE_GROUPS,
             relationship_analysis=_NO_RELATIONSHIPS,
+            anomaly_analysis=_NO_ANOMALIES,
         ).n_rows = 1  # type: ignore[misc]
 
 
@@ -418,6 +428,7 @@ def test_dataset_facts_for_a_rectangular_frame():
         "missing_analysis",
         "duplicate_analysis",
         "relationship_analysis",
+        "anomaly_analysis",
         "target_analysis",
         "target_leakage",
         "target_diagnostic",

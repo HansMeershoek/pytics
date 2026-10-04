@@ -153,6 +153,8 @@ Separate univariate and multivariate perspectives (`REQ-J-02`, `REQ-J-03`).
 | --- | --- | --- |
 | REQ-IA-10 | Anomalies keeps univariate and multivariate perspectives separate. | Accepted |
 
+An internal anomaly summary now exposes Tukey fence evidence for selected Numeric columns ([DEC-107](DECISIONS.md#dec-107)). Each observation keeps its physical row, its value, and whether it is below the lower fence or above the upper fence. Coverage counts eligible, analyzed, unavailable, ineligible, and profile-absent columns. The summary does not render this view, assign severity, or include a multivariate result. Multivariate anomaly analysis is not delivered, so the two perspectives are not mixed.
+
 ### Relationships
 
 Professional relationship exploration. A table-oriented view is important. A matrix may be an additional view. Relationship detail should expose the relationship structure in `REQ-K-04`: description, effect, uncertainty, inference, diagnostics, and method metadata, plus visualization as appropriate (`REQ-K-01`, `REQ-K-02`, `REQ-P-10`). Do not use significance stars.
