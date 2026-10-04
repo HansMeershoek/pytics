@@ -11,5 +11,6 @@ Numeric column, and Boolean true/false counts for a selected Boolean
 column, are collected in this package after semantic resolution. Dataset
 missingness patterns, exact duplicate-row groups, and Numeric × Numeric
 relationships are collected in this package from the DataFrame. They are
-not semantic evidence.
+not semantic evidence. The relationship implementation lives in
+``relationships``. ``relationship`` re-exports it.
 """

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import inspect
 import math
@@ -14,6 +15,8 @@ from scipy.stats import norm
 
 import pytics
 import pytics.analysis.relationship as relationship_module
+import pytics.analysis.relationships.collector as collector_module
+import pytics.analysis.relationships.numeric_numeric as numeric_numeric_module
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
@@ -241,7 +244,7 @@ def test_unsupported_semantic_pairs_are_not_numeric_relationships(
     def _fail(*args: object, **kwargs: object) -> None:
         raise AssertionError("an unsupported pair must not read numeric values")
 
-    monkeypatch.setattr(relationship_module, "_read_numeric_column", _fail)
+    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
     analysis = analyze_dataframe(frame)
     summary = build_relationships_summary(analysis)
     _assert_counts(summary)
@@ -282,13 +285,13 @@ def test_recognized_families_are_counted_without_raw_scans(
         }
     )
     read_positions: list[int] = []
-    original = relationship_module._read_numeric_column
+    original = collector_module._read_numeric_column
 
     def _spy(series: pd.Series) -> tuple[np.ndarray, np.ndarray]:
         read_positions.append(len(read_positions))
         return original(series)
 
-    monkeypatch.setattr(relationship_module, "_read_numeric_column", _spy)
+    monkeypatch.setattr(collector_module, "_read_numeric_column", _spy)
     summary = _summary(frame)
     _assert_counts(summary)
     assert read_positions == [0, 1]
@@ -491,8 +494,8 @@ def test_large_integers_that_collapse_in_float64_are_unavailable(
     def _fail(*args: object, **kwargs: object) -> None:
         raise AssertionError("collapsed integers must not call SciPy")
 
-    monkeypatch.setattr(relationship_module, "spearmanr", _fail)
-    monkeypatch.setattr(relationship_module, "pearsonr", _fail)
+    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
+    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
     relationship = _only(frame)
     assert relationship.n_paired == 4
     assert (
@@ -519,8 +522,8 @@ def test_two_large_integers_use_source_order_when_float64_still_varies(
     def _fail(*args: object, **kwargs: object) -> None:
         raise AssertionError("two-point correlation must not call SciPy")
 
-    monkeypatch.setattr(relationship_module, "spearmanr", _fail)
-    monkeypatch.setattr(relationship_module, "pearsonr", _fail)
+    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
+    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
     relationship = _only(frame)
     assert relationship.spearman.estimate.value == pytest.approx(1.0)
     assert relationship.pearson.estimate.value == pytest.approx(1.0)
@@ -566,10 +569,10 @@ def test_builder_does_not_recompute(
     def _fail(*args: object, **kwargs: object) -> None:
         raise AssertionError("summary builder recomputed a relationship")
 
-    monkeypatch.setattr(relationship_module, "spearmanr", _fail)
-    monkeypatch.setattr(relationship_module, "pearsonr", _fail)
-    monkeypatch.setattr(relationship_module, "_read_numeric_column", _fail)
-    monkeypatch.setattr(relationship_module, "collect_relationship_analysis", _fail)
+    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
+    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
+    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
+    monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)
     monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
     summary = build_relationships_summary(analysis)
     _assert_counts(summary)
@@ -1059,7 +1062,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
     def _raise_value(*args: object, **kwargs: object) -> None:
         raise ValueError("library rejected the pair")
 
-    monkeypatch.setattr(relationship_module, "spearmanr", _raise_value)
+    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _raise_value)
     failed = relationship_module._spearman_result(left, right, 4)
     assert failed.estimate.reason is UnavailabilityReason.NON_FINITE_RESULT
     monkeypatch.undo()
@@ -1067,7 +1070,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
     def _tuple_result(*args: object, **kwargs: object) -> tuple[float, float]:
         return (0.25, 0.5)
 
-    monkeypatch.setattr(relationship_module, "pearsonr", _tuple_result)
+    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _tuple_result)
     from_tuple = relationship_module._pearson_result(left, right, 4)
     assert from_tuple.estimate.value == pytest.approx(0.25)
     assert from_tuple.frequentist.p_value == pytest.approx(0.5)
@@ -1076,7 +1079,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
     def _statistic(*args: object, **kwargs: object) -> object:
         return type("Result", (), {"statistic": 0.4, "pvalue": 0.0})()
 
-    monkeypatch.setattr(relationship_module, "spearmanr", _statistic)
+    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _statistic)
     from_statistic = relationship_module._spearman_result(left, right, 4)
     assert from_statistic.estimate.value == pytest.approx(0.4)
     assert from_statistic.frequentist.p_value == pytest.approx(0.0)
@@ -1085,7 +1088,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
     def _junk(*args: object, **kwargs: object) -> object:
         return object()
 
-    monkeypatch.setattr(relationship_module, "pearsonr", _junk)
+    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _junk)
     junk = relationship_module._pearson_result(left, right, 4)
     assert junk.estimate.reason is UnavailabilityReason.NON_FINITE_RESULT
     monkeypatch.undo()
@@ -1093,7 +1096,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
     def _wild(*args: object, **kwargs: object) -> object:
         return type("Result", (), {"correlation": 2.0, "pvalue": 0.2})()
 
-    monkeypatch.setattr(relationship_module, "pearsonr", _wild)
+    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _wild)
     wild = relationship_module._pearson_result(left, right, 4)
     assert wild.estimate.reason is UnavailabilityReason.NON_FINITE_RESULT
     monkeypatch.undo()
@@ -1101,7 +1104,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
     def _clamp(*args: object, **kwargs: object) -> object:
         return type("Result", (), {"correlation": 1.0 + 1e-12, "pvalue": -0.0})()
 
-    monkeypatch.setattr(relationship_module, "pearsonr", _clamp)
+    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _clamp)
     clamped = relationship_module._pearson_result(left, right, 4)
     assert clamped.estimate.value == pytest.approx(1.0)
     assert clamped.frequentist.p_value == pytest.approx(0.0)
@@ -1113,7 +1116,7 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
     def _bad_p(*args: object, **kwargs: object) -> object:
         return type("Result", (), {"correlation": 0.2, "pvalue": True})()
 
-    monkeypatch.setattr(relationship_module, "spearmanr", _bad_p)
+    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _bad_p)
     bad_p = relationship_module._spearman_result(left, right, 4)
     assert bad_p.estimate.value == pytest.approx(0.2)
     assert bad_p.frequentist.reason is UnavailabilityReason.NON_FINITE_RESULT
@@ -1511,19 +1514,19 @@ def test_remaining_model_and_pair_rejections(monkeypatch: pytest.MonkeyPatch) ->
     assert relationship_module._labels_match(_Incomparable(), _Incomparable()) is False
     assert relationship_module._labels_match(np.array([1]), np.array([1])) is False
 
-    monkeypatch.setattr(relationship_module, "_fisher_z_bounds", lambda *_args: None)
+    monkeypatch.setattr(numeric_numeric_module, "_fisher_z_bounds", lambda *_args: None)
     unavailable_interval = relationship_module._pearson_interval(estimate, 10)
     assert unavailable_interval.reason is UnavailabilityReason.NON_FINITE_RESULT
     monkeypatch.undo()
     assert relationship_module._fisher_z_bounds(float("nan"), 10) is None
-    monkeypatch.setattr(relationship_module, "_bound_endpoint", lambda _value: None)
+    monkeypatch.setattr(numeric_numeric_module, "_bound_endpoint", lambda _value: None)
     assert relationship_module._fisher_z_bounds(0.2, 10) is None
     assert relationship_module._has_variation(np.array([1.0])) is False
 
     def _wide_p(*_args: object, **_kwargs: object) -> object:
         return type("Result", (), {"correlation": 0.2, "pvalue": 1.5})()
 
-    monkeypatch.setattr(relationship_module, "spearmanr", _wide_p)
+    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _wide_p)
     wide = relationship_module._spearman_result(
         np.array([1.0, 2.0, 3.0, 4.0]),
         np.array([1.0, 3.0, 2.0, 4.0]),
@@ -1535,7 +1538,7 @@ def test_remaining_model_and_pair_rejections(monkeypatch: pytest.MonkeyPatch) ->
     def _array_correlation(*_args: object, **_kwargs: object) -> object:
         return type("Result", (), {"correlation": np.array([0.2]), "pvalue": 0.2})()
 
-    monkeypatch.setattr(relationship_module, "pearsonr", _array_correlation)
+    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _array_correlation)
     array_result = relationship_module._pearson_result(
         np.array([1.0, 2.0, 3.0, 4.0]),
         np.array([1.0, 3.0, 2.0, 4.0]),
@@ -1544,10 +1547,53 @@ def test_remaining_model_and_pair_rejections(monkeypatch: pytest.MonkeyPatch) ->
     assert array_result.estimate.reason is UnavailabilityReason.NON_FINITE_RESULT
 
 
+def _imported_modules(tree: ast.AST) -> set[str]:
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                found.add(alias.name)
+        elif isinstance(node, ast.ImportFrom) and node.module is not None:
+            found.add(node.module)
+    return found
+
+
 def test_relationship_module_does_not_gate_methods_on_normality() -> None:
-    source = inspect.getsource(relationship_module)
+    import pytics.analysis.relationships as relationships_package
+    import pytics.analysis.relationships.models as models_module
+
+    source = "\n".join(
+        inspect.getsource(module)
+        for module in (
+            relationship_module,
+            relationships_package,
+            models_module,
+            numeric_numeric_module,
+            collector_module,
+        )
+    )
     assert "shapiro" not in source
     assert "normaltest" not in source
     assert "anderson" not in source.lower()
     assert "is_significant" not in source
     assert "statsmodels" not in source
+    assert "AnalysisPlugin" not in source
+    assert "MethodRegistry" not in source
+    model_tree = ast.parse(inspect.getsource(models_module))
+    numeric_tree = ast.parse(inspect.getsource(numeric_numeric_module))
+    model_imports = _imported_modules(model_tree)
+    numeric_imports = _imported_modules(numeric_tree)
+    assert "scipy" not in model_imports
+    assert "pandas" not in model_imports
+    assert "numpy" not in model_imports
+    assert not any("collector" in name for name in numeric_imports)
+    assert not any(name.endswith("relationship") for name in numeric_imports)
+    assert relationship_module.RelationshipAnalysis is models_module.RelationshipAnalysis
+    assert (
+        relationship_module.collect_relationship_analysis
+        is collector_module.collect_relationship_analysis
+    )
+    assert (
+        relationship_module._read_numeric_column
+        is numeric_numeric_module._read_numeric_column
+    )

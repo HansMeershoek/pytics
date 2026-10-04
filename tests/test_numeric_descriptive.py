@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import dataclasses
 import math
+import warnings
 from fractions import Fraction
 from pathlib import Path
 
@@ -22,6 +23,11 @@ from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
+from pytics.analysis.duplicate import build_duplicate_summary
+from pytics.analysis.missing import build_missing_summary
+from pytics.analysis.overview import build_dataset_overview
+from pytics.analysis.relationship import ResultAvailability
+from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import relationship_analysis_for_columns
 from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
@@ -212,7 +218,7 @@ def test_one_finite_value_is_every_landmark_and_has_no_standard_deviation():
     assert direct.interquartile_range == 0
 
 
-def test_zero_population_deviation_stays_zero_and_unrepresentable_deviation_is_rejected():
+def test_zero_population_deviation_stays_zero_and_unrepresentable_deviation_is_absent():
     analyzed = analyze_series(pd.Series([0.0, 0.0, np.inf]))
     described = analyzed.numeric_analysis
     assert analyzed.inferred.selected_type is SemanticType.NUMERIC
@@ -221,8 +227,17 @@ def test_zero_population_deviation_stays_zero_and_unrepresentable_deviation_is_r
     assert described.standard_deviation == 0.0
     assert described.minimum == described.maximum == 0.0
     limit = float(np.finfo(float).max)
-    with pytest.raises(ValueError, match="finite"):
-        collect_numeric_descriptive_analysis(pd.Series([-limit, limit]))
+    extreme = collect_numeric_descriptive_analysis(pd.Series([-limit, limit]))
+    assert extreme.finite_count == 2
+    assert extreme.minimum == -limit
+    assert extreme.maximum == limit
+    assert extreme.mean == 0.0
+    assert extreme.standard_deviation is None
+    assert extreme.range is None
+    assert extreme.median == 0.0
+    assert extreme.q1 == pytest.approx(-0.5 * limit)
+    assert extreme.q3 == pytest.approx(0.5 * limit)
+    assert extreme.interquartile_range == pytest.approx(limit)
 
 
 def test_two_equal_finite_values_have_zero_sample_deviation():
@@ -287,8 +302,12 @@ def test_negative_zero_is_stored_as_zero_and_large_integers_stay_exact():
     assert type(wide.maximum) is int
     assert wide.minimum < wide.q1 <= wide.median <= wide.q3 < wide.maximum
     assert isinstance(wide.q1, Fraction)
-    # Float64 cannot separate these two integers, so the sample deviation collapses.
-    assert wide.standard_deviation == 0.0
+    assert wide.range == 1
+    assert type(wide.range) is int
+    assert isinstance(wide.interquartile_range, Fraction)
+    # Centering keeps the difference of 1. The sample deviation is not a false zero.
+    assert wide.standard_deviation == pytest.approx(math.sqrt(0.5))
+    assert wide.standard_deviation != 0.0
     huge = collect_numeric_descriptive_analysis(
         pd.Series(np.array([np.uint64(0), np.uint64(2**64 - 1)]))
     )
@@ -548,17 +567,18 @@ def test_models_are_frozen_and_reject_inconsistent_state():
             q1=1,
             q3=1,
         )
-    with pytest.raises(ValueError, match="at least two"):
-        NumericDescriptiveAnalysis(
-            finite_count=2,
-            minimum=1,
-            maximum=2,
-            mean=1.5,
-            median=1.5,
-            standard_deviation=None,
-            q1=1.25,
-            q3=1.75,
-        )
+    unavailable_deviation = NumericDescriptiveAnalysis(
+        finite_count=2,
+        minimum=1,
+        maximum=2,
+        mean=1.5,
+        median=1.5,
+        standard_deviation=None,
+        q1=1.25,
+        q3=1.75,
+    )
+    assert unavailable_deviation.standard_deviation is None
+    assert unavailable_deviation.standard_deviation != 0.0
     with pytest.raises(ValueError, match="cannot be negative"):
         NumericDescriptiveAnalysis(
             finite_count=2,
@@ -689,16 +709,28 @@ def test_models_are_frozen_and_reject_inconsistent_state():
             q1=1.25,
             q3=1.75,
         )
-    with pytest.raises(ValueError, match="mean is required"):
+    unavailable_mean = NumericDescriptiveAnalysis(
+        finite_count=1,
+        minimum=1,
+        maximum=1,
+        mean=None,
+        median=1,
+        standard_deviation=None,
+        q1=1,
+        q3=1,
+    )
+    assert unavailable_mean.mean is None
+    assert unavailable_mean.mean != 0.0
+    with pytest.raises(ValueError, match="must be finite"):
         NumericDescriptiveAnalysis(
-            finite_count=1,
-            minimum=1,
-            maximum=1,
-            mean=None,
-            median=1,
-            standard_deviation=None,
-            q1=1,
-            q3=1,
+            finite_count=2,
+            minimum=-1.0,
+            maximum=1.0,
+            mean=float("inf"),
+            median=0.0,
+            standard_deviation=1.0,
+            q1=-0.5,
+            q3=0.5,
         )
     with pytest.raises(TypeError, match="Fraction"):
         NumericDescriptiveAnalysis(
@@ -856,3 +888,287 @@ def test_ambiguous_column_without_descriptive_analysis_has_no_detail():
     )
     assert summary.variables[0].resolution_status is ResolutionStatus.AMBIGUOUS
     assert summary.variables[0].detail is None
+
+
+def _float_limit() -> float:
+    return float(np.finfo(float).max)
+
+
+def test_large_integers_keep_exact_extrema_and_a_positive_sample_deviation():
+    above_exact = collect_numeric_descriptive_analysis(
+        pd.Series([np.int64(2**53), np.int64(2**53 + 1)], dtype="int64")
+    )
+    near_signed_max = collect_numeric_descriptive_analysis(
+        pd.Series([np.int64(2**63 - 2), np.int64(2**63 - 1)], dtype="int64")
+    )
+    unsigned = collect_numeric_descriptive_analysis(
+        pd.Series(np.array([np.uint64(2**63), np.uint64(2**63 + 1)]))
+    )
+    unsigned_top = collect_numeric_descriptive_analysis(
+        pd.Series(np.array([np.uint64(2**64 - 2), np.uint64(2**64 - 1)]))
+    )
+    nullable = collect_numeric_descriptive_analysis(
+        pd.Series([pd.NA, np.int64(2**53), np.int64(2**53 + 1)], dtype="Int64")
+    )
+    nullable_unsigned = collect_numeric_descriptive_analysis(
+        pd.Series(
+            [pd.NA, np.uint64(2**63), np.uint64(2**63 + 3)],
+            dtype="UInt64",
+        )
+    )
+    for described in (
+        above_exact,
+        near_signed_max,
+        unsigned,
+        unsigned_top,
+        nullable,
+        nullable_unsigned,
+    ):
+        assert described.standard_deviation is not None
+        assert described.standard_deviation > 0.0
+        assert math.isfinite(described.standard_deviation)
+        assert type(described.minimum) is int
+        assert type(described.maximum) is int
+        assert described.minimum < described.maximum
+        assert described.mean is not None
+        assert math.isfinite(described.mean)
+        assert described.standard_deviation != 0.0
+    assert above_exact.minimum == 2**53
+    assert above_exact.maximum == 2**53 + 1
+    assert above_exact.standard_deviation == pytest.approx(math.sqrt(0.5))
+    assert near_signed_max.minimum == 2**63 - 2
+    assert near_signed_max.maximum == 2**63 - 1
+    assert near_signed_max.standard_deviation == pytest.approx(math.sqrt(0.5))
+    assert unsigned_top.range == 1
+    assert type(unsigned_top.range) is int
+    constant = collect_numeric_descriptive_analysis(
+        pd.Series(np.array([np.uint64(2**63), np.uint64(2**63), np.uint64(2**63)]))
+    )
+    assert constant.standard_deviation == 0.0
+    assert constant.minimum == constant.maximum == 2**63
+    assert type(constant.minimum) is int
+    full_span = collect_numeric_descriptive_analysis(
+        pd.Series([np.int64(-(2**63)), np.int64(2**63 - 1)], dtype="int64")
+    )
+    assert full_span.minimum == -(2**63)
+    assert full_span.maximum == 2**63 - 1
+    assert full_span.standard_deviation is not None
+    assert full_span.standard_deviation > 0.0
+    assert full_span.range == 2**64 - 1
+    assert type(full_span.range) is int
+
+
+@pytest.mark.parametrize(
+    ("values", "offset"),
+    [
+        ([1, 2, 4, 7], 0),
+        ([1, 2, 4, 7], 2**40),
+        ([1, 2, 4, 7], 2**60),
+        ([5, 5, 5, 5], 2**61),
+        ([-3, -1, 0, 4], -(2**60)),
+    ],
+)
+def test_integer_translation_preserves_sample_deviation(
+    values: list[int],
+    offset: int,
+) -> None:
+    plain = collect_numeric_descriptive_analysis(pd.Series(values, dtype="int64"))
+    shifted_values = np.array(values, dtype=np.int64) + np.int64(offset)
+    shifted = collect_numeric_descriptive_analysis(pd.Series(shifted_values))
+    assert shifted.minimum == plain.minimum + offset
+    assert shifted.maximum == plain.maximum + offset
+    assert type(shifted.minimum) is int
+    assert shifted.standard_deviation == pytest.approx(plain.standard_deviation)
+    if len(set(values)) == 1:
+        assert shifted.standard_deviation == 0.0
+    else:
+        assert shifted.standard_deviation is not None
+        assert shifted.standard_deviation > 0.0
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        [1, 2, 3, 4, 5],
+        [0.0, -1.5, 2.0, 4.0, 8.0],
+        [-10, -10, 0, 3, 3],
+        [1.0, 1.0, 1.0],
+    ],
+)
+def test_ordinary_finite_landmarks_stay_ordered(values: list[float]) -> None:
+    described = collect_numeric_descriptive_analysis(pd.Series(values))
+    assert described.minimum is not None
+    assert described.minimum <= described.q1 <= described.median <= described.q3
+    assert described.q3 <= described.maximum
+    assert described.mean is not None and math.isfinite(described.mean)
+    if described.finite_count >= 2:
+        assert described.standard_deviation is not None
+        assert math.isfinite(described.standard_deviation)
+        assert described.standard_deviation >= 0.0
+        assert described.range is not None
+        assert described.interquartile_range is not None
+
+
+def test_extreme_finite_floats_keep_representable_statistics():
+    limit = _float_limit()
+    repeated = collect_numeric_descriptive_analysis(pd.Series([limit, limit]))
+    assert repeated.minimum == repeated.maximum == limit
+    assert repeated.mean == limit
+    assert repeated.standard_deviation == 0.0
+    assert repeated.range == 0.0
+    opposed = collect_numeric_descriptive_analysis(pd.Series([-limit, limit, limit]))
+    assert opposed.minimum == -limit
+    assert opposed.maximum == limit
+    assert opposed.mean == pytest.approx(limit / 3.0)
+    assert opposed.standard_deviation is None
+    assert opposed.range is None
+    assert opposed.median == limit
+    assert math.isfinite(opposed.q1)
+    assert math.isfinite(opposed.q3)
+    assert opposed.interquartile_range == pytest.approx(limit - opposed.q1)
+    wide = collect_numeric_descriptive_analysis(
+        pd.Series([-limit, -limit, limit, limit])
+    )
+    assert wide.mean == 0.0
+    assert wide.median == 0.0
+    assert wide.q1 == -limit
+    assert wide.q3 == limit
+    assert wide.standard_deviation is None
+    assert wide.range is None
+    assert wide.interquartile_range is None
+    assert wide.minimum <= wide.q1 <= wide.median <= wide.q3 <= wide.maximum
+    for described in (repeated, opposed, wide):
+        for value in (
+            described.mean,
+            described.standard_deviation,
+            described.range,
+            described.interquartile_range,
+        ):
+            assert value is None or (
+                type(value) is float and math.isfinite(value) and value == value
+            )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        quiet = collect_numeric_descriptive_analysis(pd.Series([limit, -limit, limit]))
+    assert quiet.mean is not None and math.isfinite(quiet.mean)
+
+
+def test_unrepresentable_scaled_mean_stays_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    limit = _float_limit()
+
+    def _overflow(_values: object) -> float:
+        return float("inf")
+
+    monkeypatch.setattr(numeric_module.math, "fsum", _overflow)
+    described = collect_numeric_descriptive_analysis(pd.Series([limit, limit]))
+    assert described.minimum == described.maximum == limit
+    assert described.mean is None
+    assert described.standard_deviation == 0.0
+    assert numeric_module._restore_integer_offset(1, None) is None
+    assert numeric_module._restore_integer_offset(10**400, 1.0) is None
+    assert numeric_module._restore_integer_offset(1, float("inf")) is None
+    assert numeric_module._scaled_mean(np.array([0.0, 0.0])) == 0.0
+    assert numeric_module._scaled_mean(np.array([np.inf, 1.0])) is None
+    bounded = np.array([1.0, 2.0, 3.0])
+    monkeypatch.setattr(numeric_module.math, "fsum", lambda _values: 30.0)
+    assert numeric_module._scaled_mean(bounded) == 3.0
+    monkeypatch.setattr(numeric_module.math, "fsum", lambda _values: -30.0)
+    assert numeric_module._scaled_mean(bounded) == 1.0
+    assert numeric_module._scaled_sample_std(np.array([np.inf, 1.0])) is None
+    with pytest.raises(ValueError, match="finite"):
+        numeric_module._plain_float(float("nan"))
+    with pytest.raises(TypeError, match="derived numeric difference"):
+        numeric_module._difference(np.float64(2.0), np.float64(1.0))  # type: ignore[arg-type]
+
+
+def test_extreme_numeric_column_does_not_abort_dataset_analysis(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    limit = _float_limit()
+    frame = pd.DataFrame(
+        {
+            "extreme": [-limit, -limit, limit, limit],
+            "ordinary": [1.0, 2.0, 3.0, 4.0],
+            "sparse": [1.0, np.nan, 3.0, np.nan],
+        }
+    )
+    before = frame.copy(deep=True)
+    analysis = analyze_dataframe(frame)
+    pd.testing.assert_frame_equal(frame, before)
+    _walk(analysis)
+    extreme = analysis.columns[0].numeric_analysis
+    ordinary = analysis.columns[1].numeric_analysis
+    assert analysis.columns[0].inferred.selected_type is SemanticType.NUMERIC
+    assert analysis.columns[1].inferred.selected_type is SemanticType.NUMERIC
+    assert extreme is not None and ordinary is not None
+    assert extreme.standard_deviation is None
+    assert extreme.range is None
+    assert extreme.minimum == -limit
+    assert extreme.maximum == limit
+    assert extreme.median == 0.0
+    assert ordinary.standard_deviation == pytest.approx(_sample_std([1, 2, 3, 4]))
+    assert ordinary.mean == pytest.approx(2.5)
+    assert analysis.missing_analysis is not None
+    assert analysis.duplicate_analysis is not None
+    assert analysis.relationship_analysis.n_analyzed_pairs == 3
+    pair = analysis.relationship_analysis.relationships[0]
+    assert pair.spearman.estimate.availability is ResultAvailability.AVAILABLE
+    assert extreme.standard_deviation is None
+    overview = build_dataset_overview(analysis)
+    missing = build_missing_summary(analysis)
+    duplicates = build_duplicate_summary(analysis)
+    assert overview.n_rows == 4
+    assert missing.n_columns == 3
+    assert duplicates.n_rows == 4
+
+    def _recompute(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("variables builder recomputed a descriptive statistic")
+
+    monkeypatch.setattr(
+        numeric_module,
+        "collect_numeric_descriptive_analysis",
+        _recompute,
+    )
+    summary = build_variables_summary(analysis)
+    detail = summary.variables[0].detail
+    assert isinstance(detail, NumericVariableDetail)
+    assert detail.descriptive is not extreme
+    assert detail.descriptive == extreme
+    assert detail.descriptive is not None
+    assert detail.descriptive.standard_deviation is None
+    assert detail.descriptive.mean == extreme.mean
+    ordinary_detail = summary.variables[1].detail
+    assert isinstance(ordinary_detail, NumericVariableDetail)
+    assert ordinary_detail.descriptive == ordinary
+
+
+def test_robust_integer_deviation_does_not_make_float64_correlation_exact() -> None:
+    big = np.uint64(2**63)
+    frame = pd.DataFrame(
+        {
+            "wide": pd.Series(
+                [big, big + np.uint64(1), big, big + np.uint64(1)],
+                dtype="UInt64",
+            ),
+            "small": [1, 2, 3, 4],
+        }
+    )
+    before = frame.copy(deep=True)
+    analysis = analyze_dataframe(frame)
+    pd.testing.assert_frame_equal(frame, before)
+    described = analysis.columns[0].numeric_analysis
+    assert described is not None
+    assert described.minimum == 2**63
+    assert described.maximum == 2**63 + 1
+    assert described.standard_deviation == pytest.approx(math.sqrt(1.0 / 3.0))
+    relationship = analysis.relationship_analysis.relationships[0]
+    assert relationship.spearman.estimate.reason is (
+        UnavailabilityReason.PRECISION_COLLAPSED
+    )
+    assert relationship.pearson.estimate.reason is (
+        UnavailabilityReason.PRECISION_COLLAPSED
+    )
+    assert relationship.spearman.estimate.value is None
+    assert analysis.columns[0].inferred.selected_type is SemanticType.NUMERIC

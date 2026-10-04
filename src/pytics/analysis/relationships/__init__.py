@@ -1,13 +1,11 @@
-"""Relationship analysis entry points.
+"""Internal relationship analysis.
 
-The implementation lives in ``pytics.analysis.relationships``. This
-module re-exports the records and collectors that dataset analysis and
-the current tests import. It is not a frozen public schema, and it is
-not a method registry.
+``models`` holds records that more than one family can share.
+``numeric_numeric`` calculates the one implemented family.
+``collector`` chooses pairs and projects the product summary.
+Importing this package is not a frozen public API.
 """
 
-from pytics.analysis.relationships.collector import _labels_match
-from pytics.analysis.relationships.collector import _require_relationship_attachment
 from pytics.analysis.relationships.collector import build_relationships_summary
 from pytics.analysis.relationships.collector import collect_relationship_analysis
 from pytics.analysis.relationships.collector import relationship_analysis_for_columns
@@ -29,16 +27,3 @@ from pytics.analysis.relationships.models import ResultAvailability
 from pytics.analysis.relationships.models import UnavailabilityReason
 from pytics.analysis.relationships.models import UnimplementedFamilyCount
 from pytics.analysis.relationships.models import UnimplementedRelationshipFamily
-from pytics.analysis.relationships.numeric_numeric import _association_methods
-from pytics.analysis.relationships.numeric_numeric import _bound_endpoint
-from pytics.analysis.relationships.numeric_numeric import _fisher_z_bounds
-from pytics.analysis.relationships.numeric_numeric import _has_variation
-from pytics.analysis.relationships.numeric_numeric import _pearson_interval
-from pytics.analysis.relationships.numeric_numeric import _pearson_result
-from pytics.analysis.relationships.numeric_numeric import _read_integer_column
-from pytics.analysis.relationships.numeric_numeric import _read_numeric_column
-from pytics.analysis.relationships.numeric_numeric import _spearman_result
-from pytics.analysis.relationships.numeric_numeric import _to_float64
-from pytics.analysis.relationships.numeric_numeric import norm
-from pytics.analysis.relationships.numeric_numeric import pearsonr
-from pytics.analysis.relationships.numeric_numeric import spearmanr

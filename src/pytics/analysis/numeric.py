@@ -13,11 +13,22 @@ every statistic is undefined.
 Minimum and maximum keep the finite population's own numbers: a Python
 ``int`` for integer storage, including values above the float64 exact-integer
 range, and a Python ``float`` for floating storage. ``-0.0`` is stored as
-``0.0``. Mean and sample standard deviation are float64. The deviation is scaled
-before squaring so a finite population of large floats does not overflow.
-Quantiles use one
-linear-interpolation rule. Integer quantiles stay exact when float64 cannot
-represent the interpolated value.
+``0.0``. Mean and sample standard deviation are float64 when that result is
+finite. A result that is not a finite float64 is ``None``. ``None`` is not
+zero and not NaN. Integer populations outside the exact float64 integer
+range are centered by their minimum in integer arithmetic before the mean
+and the deviation are calculated, so a difference of 1 is not erased by the
+magnitude of the values. That centering is not arbitrary-precision
+arithmetic: differences above ``2**53`` can still round in float64.
+
+Quantiles use one linear-interpolation rule. Integer quantiles stay exact
+when float64 cannot represent the interpolated value. The floating
+interpolation is a weighted average, because ``a + fraction * (b - a)``
+overflows when ``b - a`` does not fit in float64 even though the interpolated
+value does.
+
+Range and interquartile range are derived. An integer difference stays a
+Python ``int``. A difference that is not finite is ``None``.
 
 The source Series is not retained. Integer and floating storage are not
 coerced into each other, numeric strings are not parsed, and complex values
@@ -27,6 +38,7 @@ are not accepted.
 from __future__ import annotations
 
 import math
+import warnings
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Optional
@@ -38,6 +50,10 @@ import pandas as pd
 # Sample standard deviation. NumPy's default ``ddof`` is 0, which is the
 # population convention. This profiling layer describes an observed sample.
 _SAMPLE_DDOF = 1
+
+# Every integer in this closed interval is a float64 value. Outside it, a
+# direct cast can map distinct integers onto one float.
+_FLOAT64_EXACT_INTEGER_LIMIT = 1 << 53
 
 # Linear interpolation, Hyndman-Fan type 7: the position is ``(n - 1) * q``.
 # Q1, the median, and Q3 are the same rule at 1/4, 1/2, and 3/4. The
@@ -58,14 +74,18 @@ class NumericDescriptiveAnalysis:
     It is not a copy of the zero, sign, or infinity counts.
 
     ``minimum`` and ``maximum`` are those finite observations. They are
-    ``None`` when ``finite_count`` is zero. ``mean``, ``median``, ``q1``,
-    and ``q3`` follow the same rule. ``standard_deviation`` is also
-    ``None`` when fewer than two finite observations exist, because the
-    sample convention divides by ``n - 1``.
+    ``None`` only when ``finite_count`` is zero. ``median``, ``q1``, and
+    ``q3`` follow that rule. ``mean`` is ``None`` when no finite
+    observation exists or when the mean is not a finite float64.
+    ``standard_deviation`` is ``None`` when fewer than two finite
+    observations exist, and also when the sample deviation is not a finite
+    float64. ``None`` is not a numeric zero and not NaN.
 
     ``range`` and ``interquartile_range`` are derived. They are not stored.
     A non-integral quantile of integer data may be a ``Fraction`` when the
     float64 image of that exact value would leave the integer extrema.
+    An integer difference stays a Python ``int``. A non-finite difference
+    is ``None``.
     """
 
     finite_count: int
@@ -85,22 +105,20 @@ class NumericDescriptiveAnalysis:
             return
         _require_observed(self.minimum, "minimum")
         _require_observed(self.maximum, "maximum")
-        _require_float_metric(self.mean, "mean")
+        if self.mean is not None:
+            _require_present_float(self.mean, "mean")
         _require_quantile(self.median, "median")
         _require_quantile(self.q1, "q1")
         _require_quantile(self.q3, "q3")
         if self.finite_count == 1:
             if self.standard_deviation is not None:
-                raise ValueError("standard deviation is undefined for one finite value")
+                raise ValueError(
+                    "standard deviation is undefined for one finite value"
+                )
             if not (self.minimum == self.q1 == self.median == self.q3 == self.maximum):
                 raise ValueError("one finite value is every distribution landmark")
-        else:
-            if self.standard_deviation is None:
-                raise ValueError(
-                    "standard deviation is required when at least two finite "
-                    "values exist"
-                )
-            _require_float_metric(self.standard_deviation, "standard_deviation")
+        elif self.standard_deviation is not None:
+            _require_present_float(self.standard_deviation, "standard_deviation")
             if self.standard_deviation < 0.0:
                 raise ValueError("standard deviation cannot be negative")
         if not (self.minimum <= self.q1 <= self.median <= self.q3 <= self.maximum):
@@ -110,8 +128,9 @@ class NumericDescriptiveAnalysis:
     def range(self) -> Optional[QuantileNumber]:
         """Maximum minus minimum of the finite population.
 
-        ``None`` when there is no finite observation. Zero when the finite
-        population has one value.
+        ``None`` when there is no finite observation, and when the
+        mathematical difference is not a finite value in the supported
+        representation. Zero when the finite population has one value.
         """
         if self.minimum is None or self.maximum is None:
             return None
@@ -121,8 +140,9 @@ class NumericDescriptiveAnalysis:
     def interquartile_range(self) -> Optional[QuantileNumber]:
         """Q3 minus Q1.
 
-        ``None`` when those quartiles are undefined. Zero when the finite
-        population has one value.
+        ``None`` when those quartiles are undefined, and when their
+        difference is not a finite value in the supported representation.
+        Zero when the finite population has one value.
         """
         if self.q1 is None or self.q3 is None:
             return None
@@ -142,7 +162,10 @@ def collect_numeric_descriptive_analysis(
 
     Missing values are dropped with pandas missingness. Infinities are then
     removed. Minimum, maximum, mean, sample standard deviation, and the
-    three linear quantiles are read from that finite population only.
+    three linear quantiles are read from that finite population only. A
+    mean, deviation, range, or interquartile range that cannot be stored
+    as a finite supported number is left undefined. That does not reject
+    the other statistics and does not reject the Series.
     """
     if not isinstance(series, pd.Series):
         raise TypeError("collect_numeric_descriptive_analysis expects a pandas Series")
@@ -187,9 +210,9 @@ def _from_finite(values: np.ndarray) -> NumericDescriptiveAnalysis:
     """Calculate one descriptive result from finite values already isolated.
 
     The array is sorted into a new array. Quantiles share that order
-    statistics. Mean and sample standard deviation use float64 even when
-    the source values are integers, so integers above ``2**53`` are not
-    exact in those two statistics.
+    statistics. Mean and sample standard deviation use a float64 image.
+    Integer values outside the exact float64 integer range are centered
+    before that image is built. The centered array is not retained.
     """
     finite_count = int(values.size)
     if finite_count == 0:
@@ -207,11 +230,20 @@ def _from_finite(values: np.ndarray) -> NumericDescriptiveAnalysis:
     ordered = np.sort(values)
     minimum = _endpoint(ordered[0], integer)
     maximum = _endpoint(ordered[-1], integer)
-    mean = _plain_float(np.mean(ordered, dtype=np.float64))
+    centered = integer and not _integers_fit_float64_exactly(ordered)
+    if centered:
+        image = _centered_integer_deltas(ordered)
+    else:
+        image = np.asarray(ordered, dtype=np.float64)
+    delta_mean = _float_mean(image)
+    if centered:
+        mean = _restore_integer_offset(int(ordered[0]), delta_mean)
+    else:
+        mean = delta_mean
     if finite_count == 1:
         standard_deviation = None
     else:
-        standard_deviation = _sample_standard_deviation(ordered)
+        standard_deviation = _scaled_sample_std(image)
     q1 = _linear_quantile(ordered, _Q1[0], _Q1[1], integer)
     median = _linear_quantile(ordered, _MEDIAN[0], _MEDIAN[1], integer)
     q3 = _linear_quantile(ordered, _Q3[0], _Q3[1], integer)
@@ -225,6 +257,94 @@ def _from_finite(values: np.ndarray) -> NumericDescriptiveAnalysis:
         q1=q1,
         q3=q3,
     )
+
+
+def _integers_fit_float64_exactly(ordered: np.ndarray) -> bool:
+    """Whether every integer in this sorted population is an exact float64."""
+    minimum = int(ordered[0])
+    maximum = int(ordered[-1])
+    return (
+        -_FLOAT64_EXACT_INTEGER_LIMIT <= minimum
+        and maximum <= _FLOAT64_EXACT_INTEGER_LIMIT
+    )
+
+
+def _centered_integer_deltas(ordered: np.ndarray) -> np.ndarray:
+    """Return exact non-negative offsets from the minimum, as float64.
+
+    Subtraction uses the unsigned width of the source dtype. Two's-complement
+    bits make ``value - minimum`` wrap-free for a sorted integer population:
+    every value is at least the minimum, and the difference fits in that
+    unsigned width. A difference of 1 therefore survives as ``1.0``.
+    Differences above ``2**53`` are not all exact after the cast. The
+    unsigned array is discarded with this function's result.
+    """
+    contiguous = np.ascontiguousarray(ordered)
+    unsigned_dtype = np.dtype(contiguous.dtype.str.replace("i", "u"))
+    bits = contiguous.view(unsigned_dtype)
+    deltas = np.subtract(bits, bits[0], dtype=unsigned_dtype)
+    return deltas.astype(np.float64, copy=False)
+
+
+def _float_mean(values: np.ndarray) -> Optional[float]:
+    """Return the float64 mean, or ``None`` when it is not finite.
+
+    NumPy's mean is the ordinary path. When that sum overflows, the values
+    are scaled into ``[-1, 1]`` and summed with ``math.fsum``. The mean of
+    finite inputs lies between the minimum and the maximum, so a finite
+    approximation is expected for supported dtypes. A non-finite result is
+    still left undefined rather than clipped or stored as infinity.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        result = float(np.mean(values, dtype=np.float64))
+    if math.isfinite(result):
+        return _plain_float(result)
+    return _scaled_mean(values)
+
+
+def _scaled_mean(values: np.ndarray) -> Optional[float]:
+    """Mean of finite values whose direct sum overflows float64."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        scale = float(np.max(np.abs(values)))
+    if scale == 0.0:
+        return 0.0
+    if not math.isfinite(scale):
+        return None
+    total = math.fsum(values / scale)
+    result = scale * (total / values.size)
+    if not math.isfinite(result):
+        return None
+    low = float(np.min(values))
+    high = float(np.max(values))
+    if result < low:
+        result = low
+    elif result > high:
+        result = high
+    return _plain_float(result)
+
+
+def _restore_integer_offset(
+    reference: int,
+    delta_mean: Optional[float],
+) -> Optional[float]:
+    """Add an integer minimum back onto the mean of centered deltas.
+
+    ``float(reference) + delta_mean`` is float64 addition. Bits of
+    ``delta_mean`` that fall below the unit in the last place of
+    ``reference`` round away. That is float64 rounding of a finite mean,
+    not a substitute value. The sum is ``None`` when it is not finite.
+    """
+    if delta_mean is None:
+        return None
+    try:
+        result = float(reference) + delta_mean
+    except OverflowError:
+        return None
+    if not math.isfinite(result):
+        return None
+    return _plain_float(result)
 
 
 def _linear_quantile(
@@ -285,9 +405,9 @@ def _float_interpolation(
 ) -> float:
     """Interpolate two finite floats in float64.
 
-    ``left * (1 - weight) + right * weight`` keeps a segment between large
-    opposite-signed values finite. Float rounding that steps outside the
-    two surrounding order statistics is pulled back onto that segment.
+    ``left * (1 - weight) + right * weight`` stays on the segment when
+    ``right - left`` overflows. Float rounding that steps outside the two
+    surrounding order statistics is pulled back onto that segment.
     """
     left_float = float(left)  # type: ignore[arg-type]
     right_float = float(right)  # type: ignore[arg-type]
@@ -307,21 +427,28 @@ def _on_segment(result: float, low: float, high: float) -> float:
     return result
 
 
-def _sample_standard_deviation(ordered: np.ndarray) -> float:
+def _scaled_sample_std(values: np.ndarray) -> Optional[float]:
     """Return the float64 sample standard deviation, divided by ``n - 1``.
 
     The values are scaled by their maximum absolute value before squaring.
-    A finite population of very large floats then stays finite instead of
-    overflowing. The result is still float64, so integers above ``2**53``
-    are not exact. Zero is returned as ``0.0``, never as negative zero.
+    A finite population of very large floats then stays finite when the
+    deviation itself fits in float64. The result is still float64. It is
+    ``None`` when that scaled product is not finite. Zero is returned as
+    ``0.0``, never as negative zero.
     """
-    as_float = np.asarray(ordered, dtype=np.float64)
-    scale = float(np.max(np.abs(as_float)))
-    if scale == 0.0:
-        return 0.0
-    standardized = as_float / scale
-    deviation = float(np.std(standardized, dtype=np.float64, ddof=_SAMPLE_DDOF))
-    return _plain_float(deviation * scale)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        scale = float(np.max(np.abs(values)))
+        if scale == 0.0:
+            return 0.0
+        if not math.isfinite(scale):
+            return None
+        standardized = values / scale
+        deviation = float(np.std(standardized, dtype=np.float64, ddof=_SAMPLE_DDOF))
+        result = deviation * scale
+    if not math.isfinite(result) or result < 0.0:
+        return None
+    return _plain_float(result)
 
 
 def _endpoint(value: object, integer: bool) -> ObservedNumber:
@@ -344,11 +471,24 @@ def _plain_float(value: object) -> float:
 def _difference(
     later: QuantileNumber,
     earlier: QuantileNumber,
-) -> QuantileNumber:
+) -> Optional[QuantileNumber]:
+    """Subtract two landmarks without storing a non-finite difference.
+
+    Python integers and fractions stay exact. A float difference that
+    overflows is undefined. It is not stored as infinity.
+    """
     difference = later - earlier
-    if type(difference) is float and difference == 0.0:
-        return 0.0
-    return difference
+    if isinstance(difference, Fraction):
+        return difference
+    if type(difference) is int:
+        return difference
+    if type(difference) is float:
+        if not math.isfinite(difference):
+            return None
+        if difference == 0.0:
+            return 0.0
+        return difference
+    raise TypeError("a derived numeric difference must be an int, float, or Fraction")
 
 
 def _require_undefined(analysis: NumericDescriptiveAnalysis) -> None:
@@ -389,9 +529,7 @@ def _require_quantile(value: object, field: str) -> None:
     raise TypeError(f"{field} must be an int, a float, or a Fraction")
 
 
-def _require_float_metric(value: object, field: str) -> None:
-    if value is None:
-        raise ValueError(f"{field} is required when finite_count is positive")
+def _require_present_float(value: object, field: str) -> None:
     if type(value) is not float:
         raise TypeError(f"{field} must be a float")
     _require_finite_float(value, field)
