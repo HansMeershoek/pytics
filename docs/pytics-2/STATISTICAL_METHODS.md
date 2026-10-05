@@ -129,7 +129,44 @@ Not retained: PSI, Jensen–Shannon, Hellinger, Cramér's V of side by level, no
 
 The correction family is the available primary drift p-values of one comparison, one per tested column. It uses the relationship package's Benjamini–Hochberg and is never pooled with a relationship family. Raw and adjusted p-values are both stored.
 
-Relationship drift and target drift are not this method.
+## Relationship drift
+
+Status: **Accepted** as a descriptive foundation, with one complementary inferential test ([DEC-110](DECISIONS.md#dec-110)). Not a closed catalog.
+
+A relationship state is an effect inside one dataset. A relationship change is `comparison - reference` for that effect. Inferential evidence of change, where it exists, has a null that the effect parameter is equal across the two datasets. A within-dataset p-value crossing a threshold is not that evidence. Adjusted p-values are not subtracted. `None` is not stored as zero.
+
+Pairs align by the TSK-037 column identity: label match key plus occurrence. Physical order does not define the pair. Duplicate labels stay distinct. If the semantic family changes, the effects are not subtracted.
+
+| Family | Primary change | Complementary change | Formal change test | This slice |
+| --- | --- | --- | --- | --- |
+| Numeric × Numeric | Spearman rho, signed | Pearson r, signed. Absolute-magnitude change is kept beside each signed change. | Fisher z test that the Pearson correlations are equal. Independent samples, approximate bivariate normality, `n >= 4`, and `abs(r) < 1`. Not a test of Spearman rho. | Yes |
+| Numeric × Categorical | Eta squared | None | None. Group vocabulary is recorded as same or changed and does not block the subtraction. | Yes |
+| Numeric × Boolean | Hedges' g, signed, True minus False | Raw mean difference, signed, same orientation | None | Yes |
+| Boolean × Boolean | Phi, signed, False = 0 and True = 1 | Probability difference only when the conditioning column is the same logical column | None. Ratios are not subtracted. Fisher p-values are not compared. | Yes |
+| Categorical × Categorical | Cramér's V | None | None. Level sets and table shape are diagnostics. | Yes |
+| Categorical × Boolean | None | None | None | Unimplemented. No calculator. |
+| Datetime × Numeric, Datetime × Categorical | None | None | None | Unimplemented. Datetimes are not cast to timestamps. |
+
+Sign reversal is recorded only when both signed effects exist and are nonzero with opposite signs. Zero has no sign. There is no universal relationship-drift score and no severity.
+
+The Pearson change-test p-values do not form a Benjamini–Hochberg family. They are complementary, and the primary changes have no p-values. They are not pooled with within-dataset relationship tests or with distribution-drift tests.
+
+The cross-dataset pass reads retained effects and pair counts. It does not read source rows. Formal eta-squared, Hedges' g, phi, Cramér's V, and Spearman change tests are not implemented.
+
+## Target drift
+
+Status: **Accepted** as a projection ([DEC-110](DECISIONS.md#dec-110)). Not a closed catalog.
+
+Target drift runs only when the caller names a target. The target is the aligned column, not a physical position by itself. Four readings stay separate:
+
+| Reading | What is compared | What is not claimed |
+| --- | --- | --- |
+| Distribution | The target column's existing univariate distribution-drift record | A second target-specific distribution test |
+| Relationships | The relationship-drift records that include the target, with the target's existing role | A second correlation, ANOVA, or other relationship calculation. Not an automatic concept-drift detection. |
+| Diagnostic predictability | Held-out metric values, `comparison - reference`, for the same predictive task. Classification also requires the same class set. | A test that model performance drifted, a degradation label, or permutation-importance drift |
+| Leakage evidence | Exact-duplicate and repeated-mapping statuses for aligned predictors | A leakage verdict or a leakage score |
+
+A changed relationship between predictors and the target is target-associated structure. Pytics does not call that concept drift. Incompatible diagnostic tasks are not subtracted. Public `compare()` does not gain a target argument.
 
 ## Modes
 
@@ -141,7 +178,7 @@ Relationship drift and target drift are not this method.
 | Standard | Likely: descriptive statistics, effect sizes, primary relationships, confidence intervals where appropriate, appropriate frequentist inference, multiple-testing correction, missing analysis, duplicate analysis, univariate outliers, and controlled multivariate anomaly analysis. | Intended default. Not a closed list. Relationship correction is [DEC-102](DECISIONS.md#dec-102). Univariate numeric fences are [DEC-107](DECISIONS.md#dec-107). Multivariate anomaly analysis is not delivered. Mode contents remain [OPEN-010](DECISIONS.md#open-questions). |
 | Deep | May add further bootstrap or resampling, further robust alternatives, broader Bayesian inference, post-hoc analysis, deeper temporal analysis, more expensive anomaly analysis, and deeper drift inference. | Direction, not a closed list |
 
-Exact contents and thresholds are [OPEN-010](DECISIONS.md#open-questions). An internal exact duplicate-row pass now exists ([DEC-094](DECISIONS.md#dec-094)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Numeric × Numeric relationship pass now exists ([DEC-095](DECISIONS.md#dec-095)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Numeric × Categorical relationship pass now exists ([DEC-097](DECISIONS.md#dec-097)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Boolean × Boolean relationship pass now exists ([DEC-099](DECISIONS.md#dec-099)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Numeric × Boolean relationship pass now exists ([DEC-100](DECISIONS.md#dec-100)). It is full-frame and unsampled, and it keeps full group quartiles for every pair. Sorting for those quartiles is most of its measured cost. It does not assign that pass to one mode, and it does not set mode contents. An internal Categorical × Categorical relationship pass now exists ([DEC-101](DECISIONS.md#dec-101)). It is full-frame and unsampled. A temporary histogram is used only while the observed rectangle has at most `2**20` cells; larger rectangles are counted by sorting the paired codes. That bound is not a mode threshold. It does not assign that pass to one mode, and it does not set mode contents. The relationship pass now applies Benjamini–Hochberg to its available primary tests ([DEC-102](DECISIONS.md#dec-102)). That correction is not assigned to one mode. An internal categorical descriptive pass now retains every observed level ([DEC-104](DECISIONS.md#dec-104)). It is full-column and unsampled. It sets no cardinality cutoff and does not assign itself to one mode. An internal univariate anomaly pass now locates finite numeric values outside retained Tukey fences ([DEC-107](DECISIONS.md#dec-107)). The coefficient is the fixed rational `3/2`. The pass is exact and unsampled, retains every crossing, and does not assign itself to one mode. Multivariate anomaly analysis is not part of that pass. An internal distribution-drift pass now compares two datasets ([DEC-109](DECISIONS.md#dec-109)). It is full-population, unsampled, and has no resampling or seed. Its methods are suited to Standard mode, but it does not assign itself to a mode. A conditional permutation KS test for tied data, and exact or Monte Carlo categorical tests, are Deep-mode candidates and are not implemented.
+Exact contents and thresholds are [OPEN-010](DECISIONS.md#open-questions). An internal exact duplicate-row pass now exists ([DEC-094](DECISIONS.md#dec-094)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Numeric × Numeric relationship pass now exists ([DEC-095](DECISIONS.md#dec-095)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Numeric × Categorical relationship pass now exists ([DEC-097](DECISIONS.md#dec-097)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Boolean × Boolean relationship pass now exists ([DEC-099](DECISIONS.md#dec-099)). It is full-frame and unsampled. It does not assign that pass to one mode, and it does not set mode contents. An internal Numeric × Boolean relationship pass now exists ([DEC-100](DECISIONS.md#dec-100)). It is full-frame and unsampled, and it keeps full group quartiles for every pair. Sorting for those quartiles is most of its measured cost. It does not assign that pass to one mode, and it does not set mode contents. An internal Categorical × Categorical relationship pass now exists ([DEC-101](DECISIONS.md#dec-101)). It is full-frame and unsampled. A temporary histogram is used only while the observed rectangle has at most `2**20` cells; larger rectangles are counted by sorting the paired codes. That bound is not a mode threshold. It does not assign that pass to one mode, and it does not set mode contents. The relationship pass now applies Benjamini–Hochberg to its available primary tests ([DEC-102](DECISIONS.md#dec-102)). That correction is not assigned to one mode. An internal categorical descriptive pass now retains every observed level ([DEC-104](DECISIONS.md#dec-104)). It is full-column and unsampled. It sets no cardinality cutoff and does not assign itself to one mode. An internal univariate anomaly pass now locates finite numeric values outside retained Tukey fences ([DEC-107](DECISIONS.md#dec-107)). The coefficient is the fixed rational `3/2`. The pass is exact and unsampled, retains every crossing, and does not assign itself to one mode. Multivariate anomaly analysis is not part of that pass. An internal distribution-drift pass now compares two datasets ([DEC-109](DECISIONS.md#dec-109)). It is full-population, unsampled, and has no resampling or seed. Its methods are suited to Standard mode, but it does not assign itself to a mode. A conditional permutation KS test for tied data, and exact or Monte Carlo categorical tests, are Deep-mode candidates and are not implemented. An internal relationship-drift and target-drift pass now compares retained effects and, when a target is requested, projects target change ([DEC-110](DECISIONS.md#dec-110)). It does not assign itself to a mode. Formal tests of a change in Spearman rho, eta squared, Hedges' g, phi, or Cramér's V are not implemented.
 
 ## Bayesian work
 

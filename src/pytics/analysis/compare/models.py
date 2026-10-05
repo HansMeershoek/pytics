@@ -29,6 +29,9 @@ from pytics.analysis.compare.distribution_models import DistributionDrift
 from pytics.analysis.compare.distribution_models import DistributionDriftStatus
 from pytics.analysis.compare.distribution_models import NumericDistributionDrift
 from pytics.analysis.compare.overview import DatasetOverviewComparison
+from pytics.analysis.compare.relationship_models import RelationshipDrift
+from pytics.analysis.compare.relationship_models import RelationshipDriftCoverage
+from pytics.analysis.compare.relationship_models import coverage_from_relationships
 from pytics.analysis.compare.schema import PhysicalDtypeComparison
 from pytics.analysis.compare.schema import SemanticComparison
 from pytics.analysis.compare.values import _require_count
@@ -66,10 +69,10 @@ class DeferredComparisonFamily(Enum):
     """Comparison families this result deliberately does not contain.
 
     Their absence is not evidence that those aspects were unchanged.
+    Relationship change and target change are separate records on the
+    comparison. They are not members of this list.
     """
 
-    RELATIONSHIP_DRIFT = "relationship_drift"
-    TARGET_DRIFT = "target_drift"
     ANOMALY_COMPARISON = "anomaly_comparison"
     MISSINGNESS_PATTERN_DRIFT = "missingness_pattern_drift"
     DUPLICATE_GROUP_MATCHING = "duplicate_group_matching"
@@ -77,8 +80,6 @@ class DeferredComparisonFamily(Enum):
 
 
 DEFERRED_COMPARISON_FAMILIES: Tuple[DeferredComparisonFamily, ...] = (
-    DeferredComparisonFamily.RELATIONSHIP_DRIFT,
-    DeferredComparisonFamily.TARGET_DRIFT,
     DeferredComparisonFamily.ANOMALY_COMPARISON,
     DeferredComparisonFamily.MISSINGNESS_PATTERN_DRIFT,
     DeferredComparisonFamily.DUPLICATE_GROUP_MATCHING,
@@ -266,16 +267,23 @@ class DatasetComparison:
     """Structured comparison of two dataset analyses.
 
     ``columns`` follows the reference physical order, then comparison-only
-    columns in comparison physical order. The result does not keep either
-    analysis or either DataFrame.
+    columns in comparison physical order. ``relationships`` follows
+    ascending reference positions of aligned pairs. ``target`` is present
+    only when the caller requested a target. The result does not keep
+    either analysis or either DataFrame.
 
     The available primary drift tests form one Benjamini–Hochberg family,
-    in column order. Every member stores that family's adjusted value.
+    in column order. Relationship-change tests are not members of that
+    family. Every distribution-drift member stores that family's adjusted
+    value.
     """
 
     overview: DatasetOverviewComparison
     columns: Tuple[ColumnComparison, ...]
     coverage: ComparisonCoverage
+    relationships: Tuple[RelationshipDrift, ...]
+    relationship_coverage: RelationshipDriftCoverage
+    target: Optional["TargetDriftAnalysis"] = None
 
     def __post_init__(self) -> None:
         _require_type(self.overview, DatasetOverviewComparison, "overview")
@@ -289,6 +297,23 @@ class DatasetComparison:
             raise ValueError("coverage does not match the column comparisons")
         _require_column_order(self.columns)
         _require_drift_family(self.columns)
+        if not isinstance(self.relationships, tuple):
+            raise TypeError("relationships must be a tuple")
+        _require_type(
+            self.relationship_coverage,
+            RelationshipDriftCoverage,
+            "relationship_coverage",
+        )
+        if self.relationship_coverage != coverage_from_relationships(self.relationships):
+            raise ValueError("relationship coverage does not match the records")
+        _require_relationship_order(self.relationships)
+        if self.target is not None:
+            from pytics.analysis.compare.target import require_target_links
+            from pytics.analysis.compare.target_models import TargetDriftAnalysis
+
+            if not isinstance(self.target, TargetDriftAnalysis):
+                raise TypeError("target must be a TargetDriftAnalysis")
+            require_target_links(self.target, self.columns, self.relationships)
 
 
 def coverage_from_columns(
@@ -391,6 +416,20 @@ def coverage_from_columns(
         n_wasserstein_distances_unavailable=n_wasserstein_unavailable,
         deferred_families=DEFERRED_COMPARISON_FAMILIES,
     )
+
+
+def _require_relationship_order(relationships: Tuple[RelationshipDrift, ...]) -> None:
+    previous = (-1, -1)
+    for record in relationships:
+        if not isinstance(record, RelationshipDrift):
+            raise TypeError("relationships must contain RelationshipDrift records")
+        key = (
+            record.alignment.first.reference_position,
+            record.alignment.second.reference_position,
+        )
+        if key <= previous:
+            raise ValueError("relationship drift follows ascending reference positions")
+        previous = key
 
 
 def _require_column_order(columns: Tuple[ColumnComparison, ...]) -> None:

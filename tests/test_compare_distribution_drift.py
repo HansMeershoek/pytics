@@ -807,7 +807,12 @@ def test_drift_family_is_one_primary_p_per_tested_column() -> None:
     )
     with pytest.raises(ValueError, match="drift family"):
         DatasetComparison(
-            overview=result.overview, columns=columns, coverage=result.coverage
+            overview=result.overview,
+            columns=columns,
+            coverage=result.coverage,
+            relationships=result.relationships,
+            relationship_coverage=result.relationship_coverage,
+            target=result.target,
         )
 
 

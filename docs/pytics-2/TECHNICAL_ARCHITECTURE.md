@@ -89,14 +89,18 @@ DatasetAnalysis(reference)   DatasetAnalysis(comparison)
                            v
      distribution_models -> distribution   (Numeric reads source values here only)
                            v
-                         models            (column, coverage, dataset cross-checks)
+     relationship_models -> relationships (retained effects only; no source read)
                            v
-                        collector          (entry points, pass order, one BH call)
+     target_models -> target              (only when a target was requested)
                            v
-      future relationship and target drift, Findings, renderer
+                         models            (column, relationship, and target cross-checks)
+                           v
+                        collector          (entry points, pass order, one distribution BH call)
+                           v
+      future Findings and renderer
 ```
 
-`descriptive` owns comparison eligibility. Drift reads it and does not decide again. Categorical and Boolean drift read the retained descriptive counts. Numeric drift reads each side's finite values once, through the Numeric profile's reader, when both source frames are supplied. Without them, `compare_dataset_analyses` reads no value and records drift as not collected. Drift reuses the relationship package's Pearson chi-square and expected-count kernels, its Fisher helper, and `benjamini_hochberg`. The chi-square kernels now accept margins and positive cells, and the relationship table functions delegate to them. Single-dataset analysis does not import compare. `column_label.py` stays a separate primitive. There is no method registry. No module was created for relationship or target drift.
+`descriptive` owns comparison eligibility. Drift reads it and does not decide again. Categorical and Boolean drift read the retained descriptive counts. Numeric drift reads each side's finite values once, through the Numeric profile's reader, when both source frames are supplied. Without them, `compare_dataset_analyses` reads no value and records drift as not collected. Drift reuses the relationship package's Pearson chi-square and expected-count kernels, its Fisher helper, and `benjamini_hochberg`. The chi-square kernels now accept margins and positive cells, and the relationship table functions delegate to them. Relationship drift reads the two retained relationship analyses and the column alignment. Its only new statistic is `independent_pearson_equality` in the Numeric × Numeric calculator, a Fisher z test of two retained Pearson correlations. Target drift reads the finished column and relationship comparison plus the target diagnostic and leakage results already stored on the analyses. It does not fit a model and does not calculate a relationship. Single-dataset analysis does not import compare. `column_label.py` stays a separate primitive. There is no method registry. A target request does not change the non-target records. Public `compare()` is still the legacy function ([DEC-110](DECISIONS.md#dec-110)).
 
 The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copies diverge, that is a documentation defect. The decision is the ruling. This file is the architecture description.
 

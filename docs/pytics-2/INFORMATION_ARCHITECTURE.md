@@ -233,6 +233,8 @@ Known metadata that already exists, and is not a story: the author name Hans Mee
 
 ## Compare navigation
 
+The rendered Compare view is not delivered. TSK-039 stores the analytical relationship and target records that a later Relationships and Drift destination can read ([DEC-110](DECISIONS.md#dec-110)). It does not add navigation or Findings.
+
 ```text
 PYTICS
 DATA COMPARE

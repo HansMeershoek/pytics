@@ -1923,4 +1923,29 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
 ## After TSK-038
 
-TSK-038 records univariate distribution drift between two datasets. It leaves relationship drift, target drift, constant-value comparison, mode-dependent drift inference, Findings, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-109](DECISIONS.md#dec-109) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-038 records univariate distribution drift between two datasets. It leaves relationship drift, target drift, constant-value comparison, mode-dependent drift inference, Findings, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-109](DECISIONS.md#dec-109) records that boundary. TSK-039 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-039
+
+Slice 039, relationship drift and target drift. Approved 2026-10-05 after TSK-038. Completed the same day. No later slice is approved by this section.
+
+Compare retained relationship effects between two datasets, and project target change when a target is requested. Do not infer either change from significance transitions. Do not add Findings or public `compare()`.
+
+Acceptance checks:
+
+1. A relationship-drift method matrix and a target-drift decomposition are derived before implementation. Effect size stays ahead of any test. A significance transition is not an effect change.
+2. Pairs align by the TSK-037 column identity. Duplicate labels and reordered columns keep one logical pair. A semantic-family change is not coerced onto one statistic.
+3. Primary changes are Spearman rho, eta squared, Hedges' g, phi, and Cramér's V. Signed changes keep direction. Sign reversal is mechanical. An unavailable effect is not stored as zero change.
+4. The only formal change test is a complementary Fisher z test of equal Pearson correlations, with an explicit null and assumptions. It is not a Spearman test and it is not adjusted. Distribution-drift Benjamini–Hochberg stays a separate family.
+5. Categorical × Boolean and datetime relationships stay unimplemented. Category vocabulary and contingency shape are diagnostics, not gates and not proof of relationship change.
+6. Target drift runs only for an explicit target. Distribution drift and relationship drift are projections. Diagnostic metric changes are descriptive and stop at a task or class-set change. Leakage transitions are mechanical statuses. Permutation-importance drift is not implemented.
+7. A comparison without a target is unchanged by adding target support. No target, relationship, or concept-drift score is stored. No Findings and no renderer work are added. Legacy `pytics.compare` is unchanged.
+8. Results are source-independent. The relationship cross-pass does not reread rows. Alignment is not quadratic in the number of relationship records.
+9. Independent calculations verify each implemented family, including a significance transition with a nearly unchanged effect and a large effect change whose within-dataset p-values agree.
+10. The full suite has only the known legacy PDF failure. [DEC-110](DECISIONS.md#dec-110) records the contract.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-039
+
+TSK-039 records relationship effect changes and a target projection for an explicit target. It leaves formal Spearman, eta-squared, Hedges' g, phi, and Cramér's V change tests, permutation-importance drift, temporal drift, Findings, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-110](DECISIONS.md#dec-110) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

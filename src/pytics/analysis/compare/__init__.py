@@ -28,14 +28,19 @@ Modules, in dependency order:
 ``models``
     ``ColumnComparison``, ``ComparisonCoverage``, and
     ``DatasetComparison``, with the checks that tie them together.
+``relationship_models`` and ``relationships``
+    Relationship-drift records and the cross-dataset effect pass.
+    Effects are copied from the two relationship analyses.
+``target_models`` and ``target``
+    Target-drift projection. It runs only when a target is requested.
 ``collector``
     The two entry points and the order of the pass.
 
 Rows are not paired. The DataFrame index is not an entity key. Duplicate
-groups are not matched across datasets. Relationship drift, target
-drift, anomaly-count comparison, and missingness-pattern drift are not
-this result. There is no score, severity, threshold, or significance
-flag.
+groups are not matched across datasets. Anomaly-count comparison and
+missingness-pattern drift are not this result. Relationship change and
+target change are. There is no score, no severity threshold, and no
+flag that turns a p-value into a verdict.
 
 Nothing here is ``pytics.compare``. The legacy public function is unchanged.
 """
@@ -82,3 +87,25 @@ from pytics.analysis.compare.values import NumericDifference
 from pytics.analysis.compare.values import OptionalCountComparison
 from pytics.analysis.compare.values import ProportionDifference
 from pytics.analysis.compare.values import directional_difference
+from pytics.analysis.compare.relationship_models import ContingencyVocabulary
+from pytics.analysis.compare.relationship_models import EffectChange
+from pytics.analysis.compare.relationship_models import EffectChangeReason
+from pytics.analysis.compare.relationship_models import GroupingVocabulary
+from pytics.analysis.compare.relationship_models import PearsonChangeNull
+from pytics.analysis.compare.relationship_models import PearsonChangeReason
+from pytics.analysis.compare.relationship_models import PearsonCorrelationChangeTest
+from pytics.analysis.compare.relationship_models import RelationshipChangeMeasure
+from pytics.analysis.compare.relationship_models import RelationshipDrift
+from pytics.analysis.compare.relationship_models import RelationshipDriftCoverage
+from pytics.analysis.compare.relationship_models import RelationshipPairStatus
+from pytics.analysis.compare.relationship_models import RelationshipSideKind
+from pytics.analysis.compare.relationship_models import VocabularyStatus
+from pytics.analysis.compare.target_models import DiagnosticComparisonStatus
+from pytics.analysis.compare.target_models import DiagnosticMetricChange
+from pytics.analysis.compare.target_models import DiagnosticPredictabilityComparison
+from pytics.analysis.compare.target_models import LeakageComparisonStatus
+from pytics.analysis.compare.target_models import LeakageEvidenceComparison
+from pytics.analysis.compare.target_models import TargetAlignmentStatus
+from pytics.analysis.compare.target_models import TargetColumnRole
+from pytics.analysis.compare.target_models import TargetDriftAnalysis
+from pytics.analysis.compare.target_models import TargetDriftCoverage

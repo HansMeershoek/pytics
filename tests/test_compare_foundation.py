@@ -1148,8 +1148,10 @@ def test_naming_a_target_does_not_change_the_comparison(monkeypatch) -> None:
     plain = compare_dataset_analyses(plain_reference, plain_comparison)
     targeted = compare_dataset_analyses(targeted_reference, targeted_comparison)
     assert plain == targeted
-    assert not hasattr(plain, "target")
-    assert DeferredComparisonFamily.TARGET_DRIFT in plain.coverage.deferred_families
+    assert plain.target is None
+    assert (
+        DeferredComparisonFamily.ANOMALY_COMPARISON in plain.coverage.deferred_families
+    )
 
 
 def test_source_frames_and_analyses_are_unchanged() -> None:
@@ -1190,7 +1192,7 @@ def test_result_has_no_score_severity_or_unselected_drift_method() -> None:
         assert banned not in lowered
     assert re.search(r"\bpsi\b", lowered) is None
     assert result.coverage.deferred_families[0] is (
-        DeferredComparisonFamily.RELATIONSHIP_DRIFT
+        DeferredComparisonFamily.ANOMALY_COMPARISON
     )
     assert "statistical_distribution_drift" not in {
         family.value for family in DeferredComparisonFamily

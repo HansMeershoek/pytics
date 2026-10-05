@@ -10,14 +10,23 @@ family never depends on which entry point was used.
 
 The pass is: dataset counts, column alignment, schema and semantic
 snapshots, missingness and descriptive comparison, distribution drift
-for descriptively compared columns, then one Benjamini–Hochberg
-adjustment of the available primary drift tests before the result is
-frozen. Neither analysis and neither frame is modified or retained.
+for descriptively compared columns, one Benjamini–Hochberg adjustment
+of the available primary drift tests, relationship drift from the
+retained relationship records, then target drift when a target was
+requested. Relationship drift does not read source values. Target drift
+does not calculate a second distribution test or a second relationship.
+Neither analysis and neither frame is modified or retained.
+
+A target argument is optional. Omitting it leaves target drift unset.
+Passing one resolves that column on each frame. A label that matches
+more than one column still fails. A label that matches neither column
+is an explicit missing target, not a guessed column.
 """
 
 from __future__ import annotations
 
 from typing import Optional
+from typing import Sequence
 
 import pandas as pd
 
@@ -40,11 +49,16 @@ from pytics.analysis.compare.models import ColumnComparison
 from pytics.analysis.compare.models import DatasetComparison
 from pytics.analysis.compare.models import coverage_from_columns
 from pytics.analysis.compare.overview import overview_comparison
+from pytics.analysis.compare.relationship_models import coverage_from_relationships
+from pytics.analysis.compare.relationships import compare_relationships
 from pytics.analysis.compare.schema import physical_comparison
 from pytics.analysis.compare.schema import semantic_comparison
+from pytics.analysis.compare.target import compare_target
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.relationships.collector import _labels_match
+from pytics.analysis.target import TargetPosition
+from pytics.analysis.target import _labels_equal
 
 _DRIFT_STATUS = {
     DescriptiveComparisonStatus.NUMERIC: DistributionDriftStatus.NUMERIC,
@@ -59,17 +73,25 @@ def compare_dataset_analyses(
     *,
     reference_frame: Optional[pd.DataFrame] = None,
     comparison_frame: Optional[pd.DataFrame] = None,
+    target_reference_position: Optional[int] = None,
+    target_comparison_position: Optional[int] = None,
+    target_requested: bool = False,
 ) -> DatasetComparison:
     """Compare two finished dataset analyses.
 
-    The analyses are not modified. Target, leakage, diagnostic,
-    relationship, and anomaly results are not read. No row index is
-    available on either analysis, and none is inferred.
+    The analyses are not modified. Anomaly results are not read.
+    Relationship drift reads the retained relationship records only.
+    No row index is available on either analysis, and none is inferred.
 
     The source frames are optional and go together. When given, each
     must be the frame its analysis was built from: same shape, same
     labels by position, and the same finite Numeric counts. Only Numeric
     distribution drift reads them.
+
+    ``target_requested`` is the only switch for target drift. Positions
+    are the columns already resolved on each side. A target stored on an
+    analysis is not used unless this switch is set, and a stored target
+    at a different position is rejected when the switch is set.
     """
     if not isinstance(reference, DatasetAnalysis) or not isinstance(
         comparison, DatasetAnalysis
@@ -80,6 +102,12 @@ def compare_dataset_analyses(
     if reference_frame is not None:
         _require_source_frame(reference_frame, reference)
         _require_source_frame(comparison_frame, comparison)  # type: ignore[arg-type]
+    if type(target_requested) is not bool:
+        raise TypeError("target_requested must be a bool")
+    if not target_requested and (
+        target_reference_position is not None or target_comparison_position is not None
+    ):
+        raise ValueError("target positions require a target request")
     overview = overview_comparison(reference, comparison)
     aligned = align_columns(reference.columns, comparison.columns)
     descriptive = tuple(_descriptive_part(item) for item in aligned)
@@ -93,35 +121,93 @@ def compare_dataset_analyses(
         _column_comparison(item, part, record, sourced=reference_frame is not None)
         for item, part, record in zip(aligned, descriptive, drift)
     )
+    relationships = compare_relationships(reference, comparison, aligned)
+    target = None
+    if target_requested:
+        target = compare_target(
+            reference_position=target_reference_position,
+            comparison_position=target_comparison_position,
+            columns=columns,
+            relationships=relationships,
+            reference=reference,
+            comparison=comparison,
+        )
     return DatasetComparison(
         overview=overview,
         columns=columns,
         coverage=coverage_from_columns(columns),
+        relationships=relationships,
+        relationship_coverage=coverage_from_relationships(relationships),
+        target=target,
     )
 
 
 def compare_dataframes(
     reference: pd.DataFrame,
     comparison: pd.DataFrame,
+    *,
+    target: object = None,
 ) -> DatasetComparison:
     """Analyze two DataFrames independently, then compare those analyses.
 
-    Neither frame is modified. No target is requested. Distribution drift
-    is collected. This function is not the public ``pytics.compare``
-    entry point, and its result is not passed to the legacy renderer.
+    Neither frame is modified. ``target`` requests target drift for one
+    column. ``None`` requests none. Distribution drift is collected.
+    This function is not the public ``pytics.compare`` entry point, and
+    its result is not passed to the legacy renderer.
     """
     if not isinstance(reference, pd.DataFrame) or not isinstance(
         comparison, pd.DataFrame
     ):
         raise TypeError("compare_dataframes expects two pandas DataFrames")
-    reference_analysis = analyze_dataframe(reference)
-    comparison_analysis = analyze_dataframe(comparison)
+    reference_position = None
+    comparison_position = None
+    if target is not None:
+        reference_position = _target_position(reference.columns, target)
+        comparison_position = _target_position(comparison.columns, target)
+    reference_analysis = analyze_dataframe(
+        reference,
+        target=None
+        if reference_position is None
+        else TargetPosition(reference_position),
+    )
+    comparison_analysis = analyze_dataframe(
+        comparison,
+        target=None
+        if comparison_position is None
+        else TargetPosition(comparison_position),
+    )
     return compare_dataset_analyses(
         reference_analysis,
         comparison_analysis,
         reference_frame=reference,
         comparison_frame=comparison,
+        target_reference_position=reference_position,
+        target_comparison_position=comparison_position,
+        target_requested=target is not None,
     )
+
+
+def _target_position(labels: Sequence[object], target: object) -> Optional[int]:
+    """Resolve one requested target, or return None when it is absent.
+
+    A label that matches more than one column fails. A position outside
+    the axis is absence, not a guessed neighbor.
+    """
+    if isinstance(labels, (str, bytes)):
+        raise TypeError("target resolution expects a column axis")
+    count = len(labels)
+    if isinstance(target, TargetPosition):
+        if target.position >= count:
+            return None
+        return target.position
+    matches = [
+        index for index in range(count) if _labels_equal(labels[index], target)
+    ]
+    if len(matches) > 1:
+        raise ValueError("target label matches more than one column")
+    if not matches:
+        return None
+    return matches[0]
 
 
 def _require_source_frame(frame: pd.DataFrame, analysis: DatasetAnalysis) -> None:

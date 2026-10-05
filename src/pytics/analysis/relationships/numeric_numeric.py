@@ -304,6 +304,55 @@ def _fisher_z_bounds(estimate: float, n_paired: int) -> Optional[Tuple[float, fl
     return lower, upper
 
 
+def independent_pearson_equality(
+    reference_correlation: float,
+    reference_n: int,
+    comparison_correlation: float,
+    comparison_n: int,
+) -> Optional[Tuple[float, float]]:
+    """Two-sided test that two independent Pearson correlations are equal.
+
+    The null is equality of the population Pearson correlations. The
+    statistic is ``(atanh(r_comparison) - atanh(r_reference))`` divided
+    by ``sqrt(1/(n_comparison - 3) + 1/(n_reference - 3))``. The returned
+    probability is the two-sided standard-normal tail. This is not a test
+    that a Spearman coefficient changed, and it does not read paired
+    values.
+
+    ``None`` means the transformation is not a finite float. ``n < 4``
+    and ``|r| >= 1`` are that case: the standard error or ``atanh`` is
+    undefined there.
+    """
+    if reference_n < _MIN_PEARSON_INTERVAL_N or comparison_n < _MIN_PEARSON_INTERVAL_N:
+        return None
+    if abs(reference_correlation) >= 1.0 or abs(comparison_correlation) >= 1.0:
+        return None
+    try:
+        reference_z = math.atanh(reference_correlation)
+        comparison_z = math.atanh(comparison_correlation)
+    except ValueError:
+        return None
+    if not math.isfinite(reference_z) or not math.isfinite(comparison_z):
+        return None
+    variance = (1.0 / (reference_n - 3)) + (1.0 / (comparison_n - 3))
+    scale = math.sqrt(variance)
+    if scale == 0.0 or not math.isfinite(scale):
+        return None
+    statistic = (comparison_z - reference_z) / scale
+    if statistic == 0.0:
+        statistic = 0.0
+    if not math.isfinite(statistic):
+        return None
+    probability = float(norm.sf(abs(statistic))) * 2.0
+    if not math.isfinite(probability):
+        return None
+    if probability > 1.0:
+        probability = 1.0
+    if probability == 0.0:
+        probability = 0.0
+    return statistic, probability
+
+
 def _bound_endpoint(value: float) -> Optional[float]:
     if not math.isfinite(value):
         return None

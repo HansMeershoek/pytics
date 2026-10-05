@@ -172,6 +172,9 @@ def test_direct_records_reject_inconsistent_fields() -> None:
             overview=result.overview,
             columns=swapped,
             coverage=result.coverage,
+            relationships=result.relationships,
+            relationship_coverage=result.relationship_coverage,
+            target=result.target,
         )
     with pytest.raises(ValueError, match="SemanticType order"):
         type(result.overview)(
