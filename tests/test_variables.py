@@ -277,7 +277,8 @@ def test_common_summary_uses_basic_evidence_and_source_order():
     assert amount.unique_ratio_non_missing == pytest.approx(2 / 3)
     assert amount.unique_ratio_non_missing != pytest.approx(2 / 4)
     city = summary.variables[1]
-    assert city.resolution_status is ResolutionStatus.INSUFFICIENT_EVIDENCE
+    assert city.resolution_status is ResolutionStatus.RESOLVED
+    assert city.selected_type is SemanticType.CATEGORICAL
     assert city.n_unique_non_missing == 2
     assert city.unique_ratio_non_missing == pytest.approx(2 / 3)
 
@@ -309,11 +310,11 @@ def test_candidate_selections_are_resolved_without_an_interpretation():
         assert variable.detail is not None
 
 
-def test_ordinary_strings_stay_unresolved_without_specialized_detail():
+def test_unique_strings_stay_unresolved_without_specialized_detail():
     frame = pd.DataFrame(
         {
             "city": pd.Series(
-                ["Amsterdam", "Berlin", "Amsterdam"],
+                ["Amsterdam", "Berlin", "Paris"],
                 dtype="string",
             )
         }
@@ -327,7 +328,7 @@ def test_ordinary_strings_stay_unresolved_without_specialized_detail():
     assert variable.resolution_status is ResolutionStatus.INSUFFICIENT_EVIDENCE
     assert variable.selected_type is None
     assert variable.detail is None
-    assert variable.n_unique_non_missing == 2
+    assert variable.n_unique_non_missing == 3
 
 
 def test_ambiguous_column_keeps_common_facts_and_no_detail():
@@ -743,8 +744,8 @@ def test_semantic_first_detail_follows_the_selected_type():
     assert by_label["ordered"].selected_type is SemanticType.CATEGORICAL
     assert isinstance(by_label["ordered"].detail, CategoricalVariableDetail)
     assert by_label["ordered"].physical.categorical_ordered is True
-    assert by_label["city"].resolution_status is ResolutionStatus.INSUFFICIENT_EVIDENCE
-    assert by_label["city"].detail is None
+    assert by_label["city"].selected_type is SemanticType.CATEGORICAL
+    assert isinstance(by_label["city"].detail, CategoricalVariableDetail)
     assert by_label["prose"].detail is None
     assert by_label["prose"].selected_type is None
     address = next(column for column in analysis.columns if column.label == "address")
@@ -761,10 +762,9 @@ def test_semantic_first_detail_follows_the_selected_type():
     assert by_label["period"].physical.family is PhysicalDtypeFamily.PERIOD
     assert isinstance(by_label["codes"].detail, CategoricalVariableDetail)
     assert by_label["codes"].selected_type is SemanticType.CATEGORICAL
-    assert by_label["yes_no"].detail is None
-    assert by_label["yes_no"].resolution_status is (
-        ResolutionStatus.INSUFFICIENT_EVIDENCE
-    )
+    assert by_label["yes_no"].selected_type is SemanticType.CATEGORICAL
+    assert by_label["yes_no"].selected_type is not SemanticType.BOOLEAN
+    assert isinstance(by_label["yes_no"].detail, CategoricalVariableDetail)
 
 
 def test_duplicate_labels_keep_distinct_variable_details():

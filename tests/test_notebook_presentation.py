@@ -354,7 +354,7 @@ def test_zero_column_one_column_and_non_numeric_profiles() -> None:
     assert "0 calculated · 0 unimplemented · 0 ineligible" in one_html
     strings = profile_result(
         pd.DataFrame(
-            {"city": pd.Series(["Amsterdam", "Berlin", "Amsterdam"], dtype="string")}
+            {"city": pd.Series(["Amsterdam", "Berlin", "Paris"], dtype="string")}
         )
     )
     strings_html = _html(strings)
@@ -515,7 +515,7 @@ def test_requested_targets_distinguish_unsupported_and_unresolved() -> None:
     unresolved = profile_result(
         pd.DataFrame(
             {
-                "city": pd.Series(["Amsterdam", "Berlin", "Amsterdam"], dtype="string"),
+                "city": pd.Series(["Amsterdam", "Berlin", "Paris"], dtype="string"),
                 "x": [1.0, 2.0, 3.0],
             }
         ),

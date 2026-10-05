@@ -20,9 +20,11 @@ of those facts. Complex storage is outside this rule. Numeric-looking
 strings are not parsed.
 
 Categorical means values primarily function as a classification
-vocabulary. Non-empty, non-constant physical categorical storage is that
-positive evidence. Ordered categorical metadata stays on the physical
-dtype. Repetition and low cardinality are not a vocabulary rule.
+vocabulary. Non-empty, non-constant physical categorical storage is one
+positive rule. A reused vocabulary of unpunctuated letter-bearing labels
+is another, and it lives in ``repeated_alphabetic_label_support``.
+Ordered categorical metadata stays on the physical dtype. Numeric
+storage is not a categorical rule.
 
 Text means values primarily function as textual content. Current
 observations do not contain an approved positive rule for that reading,
@@ -45,6 +47,7 @@ from pytics.semantics.pattern_evidence import PatternEvidence
 from pytics.semantics.physical import PhysicalDtype
 from pytics.semantics.physical import PhysicalDtypeFamily
 from pytics.semantics.string_structure_evidence import StringStructureEvidence
+from pytics.semantics.string_vocabulary import repeated_alphabetic_label_support
 
 _NUMERIC_FAMILIES = frozenset(
     {
@@ -102,8 +105,9 @@ def assess_categorical_candidate(
     """Assess Categorical from one consistent evidence bundle.
 
     The return value is always a Categorical candidate assessment. It is
-    not a semantic interpretation. Physical categorical storage is the
-    positive rule. Empty and Constant stay unsupported.
+    not a semantic interpretation. Physical categorical storage is one
+    positive rule. A reused alphabetic label vocabulary is the other.
+    Empty and Constant stay unsupported.
     """
     _require_bundle(
         basic,
@@ -124,6 +128,17 @@ def assess_categorical_candidate(
                     "Physical categorical storage supports a Categorical reading."
                 ),
             ),
+        )
+    support = repeated_alphabetic_label_support(
+        basic,
+        string_structure,
+        pattern,
+    )
+    if support:
+        return CandidateAssessment(
+            semantic_type=SemanticType.CATEGORICAL,
+            disposition=CandidateDisposition.SUPPORTED,
+            supporting_evidence=support,
         )
     return _not_supported(SemanticType.CATEGORICAL)
 

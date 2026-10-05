@@ -38,6 +38,10 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+
+from pytics.analysis.categorical import _label_storage_codes
+from pytics.semantics.physical import PhysicalDtypeFamily
+from pytics.semantics.physical import classify_physical_dtype
 from scipy.stats import f_oneway
 
 from pytics.analysis.numeric import _FLOAT64_EXACT_INTEGER_LIMIT
@@ -114,13 +118,21 @@ def _read_categorical_column(
     Index. Unused levels remain in that temporary tuple so codes keep
     their original indexes; relationship records later keep only levels
     that have paired observations. Values are not stringified.
+
+    String and object storage is coded in first-appearance order. That
+    coding does not replace the source dtype. Integer, floating, and
+    boolean storage are not cast into categories.
     """
     if not isinstance(series, pd.Series):
         raise TypeError("categorical relationship values must be a pandas Series")
     if not isinstance(series.dtype, pd.CategoricalDtype):
-        raise TypeError(
-            "numeric-categorical analysis reads a physical categorical column"
-        )
+        family = classify_physical_dtype(series).family
+        if family not in (PhysicalDtypeFamily.STRING, PhysicalDtypeFamily.OBJECT):
+            raise TypeError(
+                "numeric-categorical analysis reads a physical categorical column "
+                "or string or object label storage"
+            )
+        return _label_storage_codes(series)
     codes = np.asarray(series.cat.codes.to_numpy(copy=True))
     if codes.ndim != 1:
         raise ValueError("category codes must be one-dimensional")

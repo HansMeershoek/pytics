@@ -232,14 +232,19 @@ def test_selected_categorical_pairs_are_calculated_and_other_types_are_not() -> 
     assert analysis.columns[6].inferred.selected_type is SemanticType.EMPTY
     assert analysis.columns[7].inferred.selected_type is SemanticType.IDENTIFIER
     assert analysis.columns[8].inferred.selected_type is None
-    assert analysis.columns[9].inferred.selected_type is None
+    assert analysis.columns[9].inferred.selected_type is SemanticType.CATEGORICAL
+    assert analysis.columns[9].inferred.selected_type is not SemanticType.BOOLEAN
     categorical = [
         item
         for item in summary.relationships
         if isinstance(item, CategoricalCategoricalRelationship)
     ]
-    assert len(categorical) == 1
-    pair = categorical[0]
+    assert len(categorical) == 3
+    pair = next(
+        item
+        for item in categorical
+        if (item.left_position, item.right_position) == (0, 1)
+    )
     assert (pair.left_position, pair.right_position) == (0, 1)
     assert pair.family is RelationshipFamily.CATEGORICAL_CATEGORICAL
     assert (
@@ -264,8 +269,10 @@ def test_selected_categorical_pairs_are_calculated_and_other_types_are_not() -> 
     } == {
         (2, 0),
         (2, 1),
+        (2, 9),
         (4, 0),
         (4, 1),
+        (4, 9),
     }
     numeric_boolean = [
         item
@@ -284,7 +291,7 @@ def test_selected_categorical_pairs_are_calculated_and_other_types_are_not() -> 
     assert RelationshipFamily.CATEGORICAL_CATEGORICAL in RelationshipFamily
     assert summary.unimplemented_family_counts == (
         UnimplementedFamilyCount(
-            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 2
+            UnimplementedRelationshipFamily.CATEGORICAL_BOOLEAN, 3
         ),
     )
 

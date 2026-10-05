@@ -619,16 +619,20 @@ def test_empty_or_constant_categorical_storage_is_not_supported(series: pd.Serie
     assert physical.categorical_ordered is ordered
 
 
-def test_repeated_strings_are_not_categorical_without_a_vocabulary_rule():
+def test_repeated_letter_labels_support_categorical_not_text():
     series = pd.Series(["red", "blue", "red", "green"], dtype="string")
     inputs = _inputs(series)
     basic, _physical, frequency, _numeric, structure, _pattern = inputs
     assert basic.n_unique_non_missing == 3
     assert frequency.most_frequent_count == 2
     assert structure is not None
-    _assert_not(
+    _assert_supported(
         _call(assess_categorical_candidate, inputs),
         SemanticType.CATEGORICAL,
+        (
+            "A reused vocabulary of unpunctuated letter-bearing labels "
+            "supports a Categorical reading."
+        ),
     )
     _assert_not(_call(assess_text_candidate, inputs), SemanticType.TEXT)
 
@@ -639,16 +643,6 @@ def test_repeated_strings_are_not_categorical_without_a_vocabulary_rule():
         pytest.param(
             pd.Series(["Amsterdam", "Berlin", "Paris", "London"], dtype="string"),
             id="unique-labels",
-        ),
-        pytest.param(pd.Series(["yes", "no", "yes"], dtype="string"), id="yes-no"),
-        pytest.param(pd.Series(["Y", "N", "Y"], dtype="string"), id="y-n"),
-        pytest.param(
-            pd.Series(["true", "false", "true"], dtype="string"),
-            id="true-false",
-        ),
-        pytest.param(
-            pd.Series(["low", "medium", "high", "low"], dtype="string"),
-            id="ordered-looking-labels",
         ),
         pytest.param(pd.Series([1, 2, 1, 3, 2]), id="repeated-integers"),
         pytest.param(pd.Series([0, 1, 0, 1]), id="zero-one-integers"),

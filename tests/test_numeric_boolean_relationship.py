@@ -274,7 +274,7 @@ def test_selected_types_decide_the_family() -> None:
             "binary": [0, 1, 0, 1, 1, 0],
             "group": pd.Categorical([True, False, True, False, True, False]),
             "text": pd.Series(
-                ["True", "False", "True", "False", "True", "False"],
+                ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"],
                 dtype="string",
             ),
             "fixed": pd.Series([True] * 6, dtype="boolean"),

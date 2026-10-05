@@ -242,7 +242,9 @@ def test_unsupported_and_ineligible_targets_have_no_task() -> None:
             "code": pd.Series(
                 [str(uuid.UUID(int=index + 1)) for index in range(n)], dtype="string"
             ),
-            "words": pd.Series(["red", "blue"] * (n // 2), dtype="string"),
+            "words": pd.Series(
+                [f"word{index:03d}" for index in range(n)], dtype="string"
+            ),
             "amount": np.arange(n, dtype=np.float64),
         }
     )
@@ -495,7 +497,9 @@ def test_semantic_predictor_exclusions_are_recorded() -> None:
             "constant": np.ones(n),
             "when": pd.date_range("2020-01-01", periods=n),
             "span": pd.to_timedelta(np.arange(n), unit="h"),
-            "words": pd.Series(rng.choice(["red", "blue"], size=n), dtype="string"),
+            "words": pd.Series(
+                [f"word{index:03d}" for index in range(n)], dtype="string"
+            ),
             "y": signal + rng.normal(size=n),
             "signal": signal,
         }
@@ -1602,7 +1606,9 @@ def test_dataset_attachment_checks_population_classes_and_predictor_state() -> N
             {
                 "y": target,
                 "flat": flat,
-                "words": pd.Series(rng.choice(["red", "blue"], size=n), dtype="string"),
+                "words": pd.Series(
+                    [f"word{index:03d}" for index in range(n)], dtype="string"
+                ),
                 "signal": rng.normal(size=n),
             }
         ),

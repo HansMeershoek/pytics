@@ -11,11 +11,13 @@ are not levels. Unused physical categorical levels are not levels. Counts
 sum to that non-missing population. Proportions divide by it, not by the
 row count.
 
-Level order is the physical categorical vocabulary with unused levels
-removed. ``ordered`` is that dtype's ``ordered`` flag. ``True`` does not
-create an Ordinal semantic type. ``False`` means the vocabulary order is
-storage order, not a ranking. This collector does not invent an order for
-a representation that is not a pandas categorical.
+Level order for a pandas categorical is the physical vocabulary with
+unused levels removed. ``ordered`` is that dtype's ``ordered`` flag.
+``True`` does not create an Ordinal semantic type. ``False`` means the
+vocabulary order is storage order, not a ranking. String and object
+storage have no physical vocabulary. Their observed values are listed in
+first-appearance order, and ``ordered`` is ``None``. That is not a
+ranking and not a claim that the dtype is an unordered categorical.
 
 Category identity is the identity pandas already used to build the
 vocabulary. Pandas category uniqueness uses equality, so values such as
@@ -35,6 +37,9 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+
+from pytics.semantics.physical import PhysicalDtypeFamily
+from pytics.semantics.physical import classify_physical_dtype
 
 
 @dataclass(frozen=True)
@@ -63,9 +68,8 @@ class CategoricalDescriptiveAnalysis:
     the level counts. ``levels`` lists each observed value once. When the
     source is a pandas categorical, that sequence is the physical
     vocabulary with unused levels removed. ``ordered`` is the dtype flag
-    for that vocabulary. It is ``None`` only when a directly constructed
-    result was not given a source order flag. The collector does not
-    produce ``None``.
+    for that vocabulary. For string or object storage the collector sets
+    ``ordered`` to ``None``, because that storage has no ordered flag.
 
     Proportions, the most frequent count, the least frequent count, and
     the singleton count are read from ``levels``. They are not stored, so
@@ -75,7 +79,8 @@ class CategoricalDescriptiveAnalysis:
 
     A proportion is ``None`` when the population is empty. A stored
     proportion is never NaN or infinite, because proportions are not
-    stored.
+    stored. ``ordered`` is ``None`` when the source is string or object
+    storage rather than a pandas categorical.
     """
 
     n_non_missing: int
@@ -198,26 +203,34 @@ def collect_categorical_descriptive_analysis(
 ) -> CategoricalDescriptiveAnalysis:
     """Describe the observed non-missing levels of one categorical Series.
 
-    The Series must already use pandas categorical storage. String,
-    object, integer, floating, and boolean storage are rejected even
-    when the values look like labels. A categorical whose values are
-    boolean stays categorical. The Series is not modified, and its dtype
-    is not changed.
+    Pandas categorical storage keeps its vocabulary order and its
+    ``ordered`` flag. String and object storage are described in
+    first-appearance order with ``ordered`` left unset. Integer,
+    floating, and boolean storage are rejected. The Series is not
+    modified, and its dtype is not changed.
 
-    Counts come from category codes. Missing codes are excluded. A code
-    that never occurs is an unused level and is omitted. The remaining
-    levels follow the physical vocabulary. ``ordered`` is copied from
-    the dtype. Values are not stringified. There is no sampling and no
+    Counts for a pandas categorical come from category codes. Missing
+    codes are excluded. A code that never occurs is an unused level and
+    is omitted. Values are not stringified. There is no sampling and no
     cardinality cutoff.
     """
     if not isinstance(series, pd.Series):
         raise TypeError(
             "collect_categorical_descriptive_analysis expects a pandas Series"
         )
-    if not isinstance(series.dtype, pd.CategoricalDtype):
-        raise TypeError(
-            "categorical descriptive analysis applies only to categorical storage"
-        )
+    if isinstance(series.dtype, pd.CategoricalDtype):
+        return _from_physical_categorical(series)
+    family = classify_physical_dtype(series).family
+    if family in (PhysicalDtypeFamily.STRING, PhysicalDtypeFamily.OBJECT):
+        return _from_label_storage(series)
+    raise TypeError(
+        "categorical descriptive analysis applies only to categorical "
+        "storage or to string or object label storage"
+    )
+
+
+def _from_physical_categorical(series: pd.Series) -> CategoricalDescriptiveAnalysis:
+    """Describe one pandas categorical without changing its dtype."""
     counts = _observed_code_counts(series)
     categories = series.cat.categories
     levels = []
@@ -235,6 +248,51 @@ def collect_categorical_descriptive_analysis(
         ordered=bool(series.dtype.ordered),
         levels=tuple(levels),
     )
+
+
+def _from_label_storage(series: pd.Series) -> CategoricalDescriptiveAnalysis:
+    """Describe string or object values in first-appearance order.
+
+    The source Series is not converted and is not modified. Missing
+    values are not levels. There is no unused-level slot and no ordered
+    flag.
+    """
+    codes, categories = _label_storage_codes(series)
+    observed = codes[codes >= 0]
+    if observed.size == 0:
+        return CategoricalDescriptiveAnalysis(
+            n_non_missing=0,
+            ordered=None,
+            levels=(),
+        )
+    counts = np.bincount(observed, minlength=len(categories))
+    levels = tuple(
+        ObservedCategoryCount(value=categories[index], count=int(count))
+        for index, count in enumerate(counts.tolist())
+        if count > 0
+    )
+    return CategoricalDescriptiveAnalysis(
+        n_non_missing=int(observed.size),
+        ordered=None,
+        levels=levels,
+    )
+
+
+def _label_storage_codes(series: pd.Series) -> tuple[np.ndarray, tuple[object, ...]]:
+    """Return first-appearance codes for one string or object Series.
+
+    Pandas missing values are ``-1``. The code array is a copy. The
+    source Series is not modified and is not cast to a categorical dtype.
+    """
+    codes, uniques = pd.factorize(series, sort=False, use_na_sentinel=True)
+    coded = np.asarray(codes)
+    if coded.ndim != 1:
+        raise ValueError("label codes must be one-dimensional")
+    if coded.dtype.kind not in {"i", "u"}:
+        coded = coded.astype(np.intp, copy=False)
+    coded = np.array(coded, dtype=np.intp, copy=True)
+    categories = tuple(_retain_category(value) for value in uniques)
+    return coded, categories
 
 
 def copy_categorical_descriptive_analysis(

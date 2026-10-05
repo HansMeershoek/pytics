@@ -6,9 +6,11 @@ object that this path actually produces. ``None`` means that family was not
 collected. It does not mean the underlying count was zero.
 
 Frequency evidence is collected for a non-structural physical categorical
-column, which is the population a Categorical variable summary reads. It is
-not an assessor input. String-content evidence is not collected. Structural
-precedence still returns before that collection.
+column, and for a string or object column whose selected semantic type is
+Categorical. It is not an assessor input. The label-vocabulary rule reads
+basic counts, string structure, and pattern evidence. String-content
+evidence is not collected. Structural precedence still returns before
+candidate collection.
 
 Numeric descriptive statistics are not evidence. After resolution, a column
 whose selected semantic type is Numeric is described from its finite
@@ -255,6 +257,8 @@ def analyze_series(
         )
         resolution = resolve_semantics(candidates=candidates)
     inferred = build_inferred_semantic_result(physical, resolution)
+    if inferred.selected_type is SemanticType.CATEGORICAL and frequency is None:
+        frequency = collect_frequency_evidence(series, basic)
     numeric_analysis = _descriptive_after_resolution(series, inferred)
     boolean_analysis = _boolean_descriptive_after_resolution(series, inferred)
     categorical_analysis = _categorical_descriptive_after_resolution(series, inferred)
@@ -316,9 +320,10 @@ def _categorical_descriptive_after_resolution(
 
     Physical categorical storage is not enough. Constant and Empty
     categorical columns have already resolved, and this function does not
-    describe them. Numeric, Boolean, and unresolved columns are not
-    described. Whether the column is later named as a target is not an
-    argument.
+    describe them. A string or object column is described only after it
+    has been selected as Categorical. Numeric, Boolean, and unresolved
+    columns are not described. Whether the column is later named as a
+    target is not an argument.
     """
     if inferred.selected_type is not SemanticType.CATEGORICAL:
         return None

@@ -126,20 +126,24 @@ def test_binary_looking_values_do_not_receive_boolean_analysis():
         assert analyzed.inferred.selected_type is SemanticType.NUMERIC
         assert analyzed.boolean_analysis is None
         assert isinstance(analyzed.numeric_analysis, NumericDescriptiveAnalysis)
-    unresolved = (
+    label_cases = (
         pd.Series(["true", "false", "true"], dtype="string"),
         pd.Series(["yes", "no", "yes"], dtype="string"),
         pd.Series(["male", "female", "male"], dtype="string"),
-        pd.Series([True, False, True], dtype=object),
     )
-    for series in unresolved:
+    for series in label_cases:
         analyzed = analyze_series(series)
-        assert analyzed.inferred.resolution.status is (
-            ResolutionStatus.INSUFFICIENT_EVIDENCE
-        )
-        assert analyzed.inferred.selected_type is None
+        assert analyzed.inferred.selected_type is SemanticType.CATEGORICAL
+        assert analyzed.inferred.selected_type is not SemanticType.BOOLEAN
         assert analyzed.boolean_analysis is None
         assert analyzed.numeric_analysis is None
+    unresolved = analyze_series(pd.Series([True, False, True], dtype=object))
+    assert unresolved.inferred.resolution.status is (
+        ResolutionStatus.INSUFFICIENT_EVIDENCE
+    )
+    assert unresolved.inferred.selected_type is None
+    assert unresolved.boolean_analysis is None
+    assert unresolved.numeric_analysis is None
     categorical = analyze_series(pd.Series(pd.Categorical([True, False, True])))
     assert categorical.inferred.selected_type is SemanticType.CATEGORICAL
     assert categorical.physical.family is PhysicalDtypeFamily.CATEGORICAL

@@ -470,10 +470,8 @@ def test_summary_reads_the_distribution_after_collectors_fail(
     _walk(analysis.target_analysis)
 
 
-def test_collector_rejects_non_categorical_storage():
+def test_collector_rejects_non_label_storage():
     rejected = [
-        pd.Series(["a", "b"], dtype="string"),
-        pd.Series(["a", "b"], dtype=object),
         pd.Series([1, 2], dtype="int64"),
         pd.Series([True, False]),
         pd.Series([1.0, 2.0]),
@@ -484,6 +482,14 @@ def test_collector_rejects_non_categorical_storage():
     for value in rejected:
         with pytest.raises(TypeError):
             collect_categorical_descriptive_analysis(value)  # type: ignore[arg-type]
+    labels = collect_categorical_descriptive_analysis(
+        pd.Series(["b", "a", "b"], dtype="string")
+    )
+    assert labels.ordered is None
+    assert [(level.value, level.count) for level in labels.levels] == [
+        ("b", 2),
+        ("a", 1),
+    ]
 
 
 def test_models_reject_inconsistent_distributions():

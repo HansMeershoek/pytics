@@ -2026,6 +2026,24 @@ Acceptance checks:
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
-## After TSK-043
+## TSK-044
 
-TSK-043 records the notebook presentation contract v0.1. It leaves Investigate and Verify interaction, charts, standalone HTML, Markdown, PDF, JSON serialization, replacement of legacy `profile()` and `compare()`, and Python 3.15 migration unselected. [DEC-114](DECISIONS.md#dec-114) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+Slice 044, core semantic inference hardening. Approved 2026-10-05 after TSK-043. Completed the same day. No later slice is approved by this section.
+
+Make ordinary, unambiguous string and object columns eligible for Categorical when the evidence supports a reused label vocabulary. Do not special-case a dataset. Do not clean, coerce, or mutate the source. Do not redesign the notebook. Do not parse mixed dates, currencies, or other dirty representations.
+
+Acceptance checks:
+
+1. A clean low-cardinality object or string column of repeated letter labels resolves as Categorical, including when some values are missing.
+2. Two letter labels such as yes/no stay Categorical and do not become Boolean.
+3. Continuous numeric columns stay Numeric. Low-cardinality integers, including `{0, 1}` and a three-valued year, stay Numeric.
+4. Unique strings, near-unique strings, full-population UUID or hexadecimal syntax, prose, multi-word labels, and mixed date or currency text do not resolve as high-confidence Categorical.
+5. Constant and Empty stay structural. The source Series and DataFrame are unchanged.
+6. A mixed frame of numeric columns and newly categorical labels activates the existing Numeric × Categorical and Categorical × Categorical readers.
+7. The full suite has only the known legacy PDF failure, total coverage stays at least 97%, and [DEC-115](DECISIONS.md#dec-115) records the rule.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-044
+
+TSK-044 records the reused letter-label Categorical rule. It leaves mixed representations, explainable uncertainty, notebook information density, charts, standalone HTML, Markdown, PDF, JSON serialization, replacement of legacy `profile()` and `compare()`, and Python 3.15 migration unselected. [DEC-115](DECISIONS.md#dec-115) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
