@@ -2278,6 +2278,24 @@ The baseline before this slice was 1786 passed and the same PDF failure, at 97% 
 
 Column-only inference, median of three runs, before to after, on constructed frames: the 344-row mixed table's one string column moved from 0.009 s to 0.009 s; a 10,000-row, 17-column short-string table moved from 2.072 s to 2.698 s; a 5,000-row, 6-column high-cardinality string table moved from 0.416 s to 0.717 s; a 10,000-row prose column moved from 0.199 s to 0.255 s; a 10,000-row mixed-representation column moved from 0.122 s to 0.164 s. Full nalyze_dataframe on the real messy file took 3.715 s, of which column inference was 3.386 s. That file was not timed before the change.
 
+### TSK-046 — Legacy surface, export, and dependency cleanup
+
+Completed 2026-10-05. Decision: [DEC-117](DECISIONS.md#dec-117).
+
+`import pytics` imported the 1.1.5 renderer, and that renderer imported Plotly, Jinja2, and xhtml2pdf. xhtml2pdf imported ReportLab. The same stack loaded for `from pytics.results import profile_result`, because the package init imported the renderer. Kaleido was used only to rasterize Plotly figures. Matplotlib was used only by the legacy `compare()` density plot. IPython was declared and was not imported by runtime code. The three Jinja templates belonged only to that renderer. There was no Markdown report exporter. The analytical engine does not call this path.
+
+The renderer, `visualizations.py`, the templates, `profiler.py`, and the tests and root scripts that only exercised them were removed. `pytics.profile(frame, *, target=None)` returns `ProfileResult`. `pytics.compare(reference, comparison, *, target=None)` returns `ComparisonResult`. Both delegate to `profile_result` and `comparison_result`, which remain. The analysis stack loads when those functions are called. `import pytics` does not load it. [OPEN-004](DECISIONS.md#open-questions) is narrowed to the configuration object, semantic-override representation, further public parameters, and the later status of the transitional helpers. Plotly, Jinja2, xhtml2pdf, Matplotlib, and Kaleido left the runtime dependencies. IPython moved to the development extra for the notebook formatter test. SciPy and scikit-learn stay. The notebook landing view was not redesigned. No analytical threshold or statistic changed.
+
+Requirement states. `REQ-T-01` is advanced and not completed. `REQ-P-13` and `REQ-P-14` are not completed. No row is Completed.
+
+Verification, 2026-10-05, local `.venv`, Python 3.14.8. HEAD remained `d026566`. Nothing was committed or staged.
+
+| Command | Result |
+| --- | --- |
+| `pytest tests -q` | 1894 passed. Total coverage 97% (423 missed of 14,772). |
+
+The baseline before this slice was 1908 passed and 1 failed, at 97% coverage (440 missed of 14,981). The failed test was `tests/test_profiler.py::test_pdf_export`. That file was removed because it tested the retired renderer. The failure was not skipped. A clean virtual environment installed from this tree pulled pandas, NumPy, SciPy, and scikit-learn, and did not pull Plotly, Jinja2, xhtml2pdf, ReportLab, Kaleido, Matplotlib, or IPython. After the top-level facade correction, `import pytics` took 0.027 s and loaded 55 modules. It did not load the result package, the analysis package, pandas, SciPy, or the retired export stack. `pytics.profile` on the penguins-shaped control matched `profile_result`: 5 Numeric, 3 Categorical, 28 calculated relationships, and 0 ineligible. The same call on the real messy-company file matched `profile_result`: 1 Numeric, 4 Categorical, 12 unresolved, 10 calculated relationships, 126 ineligible, and 13,387 missing cells, with the source frame unchanged. `pytics.compare` on a two-column pair matched `comparison_result`. The notebook landing view of the object returned by `pytics.profile` still contains the profile heading.
+
 ## Documentation record — semantic foundation consolidation
 
 Recorded 2026-10-03, after TSK-005. Documentation only. No production file was changed. No test was changed. No dependency file was changed. No `TSK-###` was created. Nothing in this record marks a requirement Implemented.

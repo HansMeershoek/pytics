@@ -836,11 +836,10 @@ def test_pair_classification_rejects_inconsistent_family_metadata() -> None:
 
 def test_public_profile_is_not_the_target_analysis_entry_point() -> None:
     import pytics
-    from pytics.profiler import profile
 
     assert "analyze_dataframe" not in pytics.__all__
-    assert "target" in profile.__code__.co_varnames
-    assert not hasattr(pytics.profiler, "analyze_dataframe")
+    assert "target" in pytics.profile.__code__.co_varnames
+    assert pytics.profile is not analyze_dataframe
 
 
 def test_summaries_for_each_supported_kind_copy_only_that_kind() -> None:

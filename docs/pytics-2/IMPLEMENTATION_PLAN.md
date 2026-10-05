@@ -2063,6 +2063,23 @@ Acceptance checks:
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
-## After TSK-045
+## TSK-046
 
-TSK-045 records representation evidence and the short-label Categorical rule. It leaves notebook information density, charts, standalone HTML, Markdown, PDF, JSON serialization, replacement of legacy `profile()` and `compare()`, Text selection, and Python 3.15 migration unselected. [DEC-116](DECISIONS.md#dec-116) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+Slice 046, legacy presentation and export cleanup. Approved 2026-10-05 after TSK-045. Completed the same day. No later slice is approved by this section.
+
+Remove the 1.1.5 HTML and PDF renderer where ownership is limited to that renderer. Make `pytics.profile` and `pytics.compare` delegate to the existing result constructors. Do not build a replacement presentation. Do not change analytical behavior.
+
+Acceptance checks:
+
+1. `import pytics` and `from pytics.results import profile_result, comparison_result` do not import Plotly, Jinja2, xhtml2pdf, ReportLab, Kaleido, or Matplotlib.
+2. `pytics.profile` and `pytics.compare` remain the only names in `pytics.__all__`. `profile(frame, *, target=None)` returns `ProfileResult`. `compare(reference, comparison, *, target=None)` returns `ComparisonResult`. Both match `profile_result` and `comparison_result`. `import pytics` does not load the analysis stack.
+3. The notebook landing view, findings, and result objects are unchanged.
+4. The penguins-shaped control and the messy-company control stay at their accepted counts.
+5. The known `test_pdf_export` failure is gone because that test and the renderer were removed, not because the test was skipped.
+6. [DEC-117](DECISIONS.md#dec-117) records the removal and the minimal top-level facade. [OPEN-004](DECISIONS.md#open-questions) stays open for configuration, semantic override, further parameters, and the transitional helpers.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-046
+
+TSK-046 removes the 1.1.5 HTML and PDF renderer and the dependencies that only it imported, and makes `profile()` and `compare()` the minimal top-level facade over the existing results. It leaves notebook redesign, charts, standalone HTML, Markdown export, PDF, JSON serialization, the configuration object, semantic-override representation, Text selection, and Python 3.15 migration unselected. [DEC-117](DECISIONS.md#dec-117) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

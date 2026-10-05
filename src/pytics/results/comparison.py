@@ -2,8 +2,8 @@
 
 ``ComparisonResult`` references one finished ``DatasetComparison`` and
 the findings read from it. It does not compare the frames again.
-``pytics.compare`` is still the legacy renderer. :func:`comparison_result`
-is the entry point that returns this object.
+:func:`pytics.compare` delegates to :func:`comparison_result`. This
+function is the construction path.
 
 ``ComparisonResult._repr_html_`` delegates to the notebook presentation
 layer. The HTML is not stored on the result.
@@ -405,8 +405,7 @@ def comparison_result(
     target-drift record whose alignment status says so. It is not treated
     as an omitted request.
 
-    This is not :func:`pytics.compare`. That function still renders the
-    legacy report.
+    :func:`pytics.compare` delegates to this function.
     """
     if not isinstance(reference, pd.DataFrame) or not isinstance(
         comparison, pd.DataFrame

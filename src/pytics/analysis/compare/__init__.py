@@ -42,7 +42,7 @@ missingness-pattern drift are not this result. Relationship change and
 target change are. There is no score, no severity threshold, and no
 flag that turns a p-value into a verdict.
 
-Nothing here is ``pytics.compare``. The legacy public function is unchanged.
+Nothing here is the public ``pytics.compare`` function. That function delegates to ``comparison_result``.
 """
 
 from pytics.analysis.compare.alignment import ColumnAlignment

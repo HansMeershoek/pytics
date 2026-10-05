@@ -152,8 +152,7 @@ def compare_dataframes(
 
     Neither frame is modified. ``target`` requests target drift for one
     column. ``None`` requests none. Distribution drift is collected.
-    This function is not the public ``pytics.compare`` entry point, and
-    its result is not passed to the legacy renderer.
+    This function is not the public ``pytics.compare`` entry point.
     """
     if not isinstance(reference, pd.DataFrame) or not isinstance(
         comparison, pd.DataFrame

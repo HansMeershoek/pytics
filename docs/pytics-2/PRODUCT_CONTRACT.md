@@ -70,7 +70,7 @@ pytics.compare(df_a, df_b)
 
 Core does not take responsibility for CSV parsing, separators, encodings, Parquet engines, remote file loading, or generic path detection. The user loads data with pandas and passes a DataFrame.
 
-`pytics.profile` and `pytics.compare` are still the legacy 1.1.5 renderers. The structured result is `profile_result` and `comparison_result` in `pytics.results` ([DEC-113](DECISIONS.md#dec-113)). Displaying that result in a notebook uses the landing view in [DEC-114](DECISIONS.md#dec-114). Replacing the legacy functions, the configuration object, and semantic-override representation remain [OPEN-004](DECISIONS.md#open-questions).
+`pytics.profile` and `pytics.compare` are the top-level entry points ([DEC-117](DECISIONS.md#dec-117)). Each returns the structured result: `ProfileResult` or `ComparisonResult`. `profile_result` and `comparison_result` remain the constructors those functions call ([DEC-113](DECISIONS.md#dec-113)). Displaying that result in a notebook uses the landing view in [DEC-114](DECISIONS.md#dec-114). The configuration object, semantic-override representation, and any further public parameters remain [OPEN-004](DECISIONS.md#open-questions).
 
 Do not design a Polars or Arrow abstraction at this stage merely for theoretical future compatibility.
 
@@ -171,23 +171,16 @@ The seed's place in the public configuration is [OPEN-009](DECISIONS.md#open-que
 
 ## How a result is used
 
-Intended direction, not yet the installed call:
-
 ```python
+import pytics
+
 report = pytics.profile(df)
 report
 ```
 
-That call is still the legacy 1.1.5 renderer. The 2.0 result, until those functions are replaced ([OPEN-004](DECISIONS.md#open-questions)), is:
+`report` is a `ProfileResult` ([DEC-117](DECISIONS.md#dec-117)). In a notebook it renders the Observe landing view ([DEC-114](DECISIONS.md#dec-114)). It does not dump charts. A comparison is `pytics.compare(df_a, df_b)` and uses a different landing view. The same object remains the programmatic result: `report.variables`, `report.findings`, `report.relationships`, and `report.target`. Label lookup is `by_label`, not a dict keyed by label.
 
-```python
-from pytics.results import profile_result
-
-report = profile_result(df)
-report
-```
-
-`report` is a `ProfileResult`. In a notebook it renders the Observe landing view ([DEC-114](DECISIONS.md#dec-114)). It does not dump charts. A comparison uses `comparison_result` and a different landing view. The same object remains the programmatic result: `report.variables`, `report.findings`, `report.relationships`, and `report.target`. Label lookup is `by_label`, not a dict keyed by label.
+`profile_result` and `comparison_result` remain available in `pytics.results`. The top-level functions delegate to them. Their later public or private status is still [OPEN-004](DECISIONS.md#open-questions), together with the configuration object and semantic-override representation.
 
 Explicit file rendering may eventually look approximately like:
 

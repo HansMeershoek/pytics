@@ -37,7 +37,6 @@ from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.duplicate import DuplicateAnalysis
 from pytics.analysis.relationship import relationship_analysis_for_columns
-from pytics.profiler import compare as legacy_compare
 from pytics.semantics.candidate import CandidateAssessment
 from pytics.semantics.candidate import CandidateDisposition
 from pytics.semantics.column_evidence import BasicColumnEvidence
@@ -1199,10 +1198,10 @@ def test_result_has_no_score_severity_or_unselected_drift_method() -> None:
     }
 
 
-def test_legacy_public_compare_is_not_replaced() -> None:
-    assert pytics.compare is legacy_compare
+def test_public_compare_is_not_the_internal_collector() -> None:
     assert pytics.__all__ == ["profile", "compare"]
     assert not hasattr(pytics, "compare_dataframes")
+    assert pytics.compare is not compare_collector.compare_dataframes
 
 
 def test_wide_unique_labels_align_after_reorder_add_and_remove() -> None:

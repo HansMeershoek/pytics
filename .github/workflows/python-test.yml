@@ -28,7 +28,7 @@ jobs:
         
     - name: Install development dependencies
       run: |
-        pip install -v pytest black mypy pytest-cov
+        pip install -v pytest black mypy pytest-cov "IPython>=7.0.0"
         
     - name: Run tests
       run: |

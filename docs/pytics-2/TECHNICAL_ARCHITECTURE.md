@@ -137,7 +137,7 @@ DatasetAnalysis                       DatasetComparison
               (not implemented; they must read this result)
 ```
 
-`profile_result` and `comparison_result` analyze once and return a frozen facade. The facade retains the canonical result by reference. `_repr_html_` delegates to `pytics.presentation.notebook` and does not store HTML on the result ([DEC-114](DECISIONS.md#dec-114)). `pytics.profile` and `pytics.compare` are still the legacy renderers and do not return this object. The notebook renderer reads `variables`, `columns`, `relationships`, `findings`, `target`, `coverage`, `metadata`, and the profile's `missing`, `duplicates`, and `anomalies`. It does not import a collector to rebuild those facts.
+`profile_result` and `comparison_result` analyze once and return a frozen facade. The facade retains the canonical result by reference. `_repr_html_` delegates to `pytics.presentation.notebook` and does not store HTML on the result ([DEC-114](DECISIONS.md#dec-114)). `pytics.profile` and `pytics.compare` are the top-level entry points. TSK-046 removed their HTML and PDF renderer and delegates the names to `profile_result` and `comparison_result` ([DEC-117](DECISIONS.md#dec-117)). They return this object. The configuration object and semantic-override representation stay [OPEN-004](DECISIONS.md#open-questions). The notebook renderer reads `variables`, `columns`, `relationships`, `findings`, `target`, `coverage`, `metadata`, and the profile's `missing`, `duplicates`, and `anomalies`. It does not import a collector to rebuild those facts.
 
 The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copies diverge, that is a documentation defect. The decision is the ruling. This file is the architecture description.
 
@@ -334,12 +334,12 @@ Ordinary report generation does not require Dash, a web server, React, Vue, or a
 
 Plotly is a rendering engine. It is not the visual design system. The report's restrained grammar is [INFORMATION_ARCHITECTURE.md](INFORMATION_ARCHITECTURE.md).
 
-xhtml2pdf is not the 2.0 PDF architecture. WeasyPrint is the leading candidate for HTML and CSS PDF layout and is not a final dependency ([OPEN-035](DECISIONS.md#open-questions)).
+xhtml2pdf is not the 2.0 PDF architecture. TSK-046 also removed it from the package, because only the retired 1.1.5 renderer imported it ([DEC-117](DECISIONS.md#dec-117)). WeasyPrint is the leading candidate for HTML and CSS PDF layout and is not a final dependency ([OPEN-035](DECISIONS.md#open-questions)). PDF itself is not a current product requirement.
 
 HTML and PDF share a design language. They are not required to use identical markup.
 
 How Plotly figures become reliable static PDF graphics, without fragile system dependencies, is [OPEN-041](DECISIONS.md#open-questions). Kaleido is neither selected nor rejected.
 
-## What 1.1.5 does instead
+## What 1.1.5 did instead
 
-`src/pytics/profiler.py` computes statistics and emits HTML or PDF in the same functions. That conflicts with `REQ-T-01`. It is recorded as baseline fact, not as a pattern to extend. See [BASELINE_1_1_5.md](BASELINE_1_1_5.md).
+`src/pytics/profiler.py` used to compute statistics and emit HTML or PDF in the same functions. That conflicted with `REQ-T-01`. TSK-046 removed that renderer, its templates, the module, and the export dependencies that only it imported ([DEC-117](DECISIONS.md#dec-117)). `pytics.profile` and `pytics.compare` now delegate to the result constructors in `pytics.results`. See [BASELINE_1_1_5.md](BASELINE_1_1_5.md) for the 1.1.5 behavior. xhtml2pdf, Plotly, Jinja2, and Kaleido are not current runtime dependencies. Future HTML and PDF library choices stay [OPEN-035](DECISIONS.md#open-questions) and [OPEN-041](DECISIONS.md#open-questions).

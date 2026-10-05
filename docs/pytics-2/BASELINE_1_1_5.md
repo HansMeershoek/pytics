@@ -2,7 +2,7 @@
 
 Status of this document: historical record.
 
-Pytics 1.1.5 is the current released codebase and the functional reference for ideas that 2.0 may later reuse on purpose. Nothing in this file is a 2.0 requirement. Nothing here is rewritten to look like the 2.0 contract.
+Pytics 1.1.5 is the released codebase this record describes. Nothing in this file is a 2.0 requirement. Nothing here is rewritten to look like the 2.0 contract. TSK-046 later removed the HTML and PDF renderer described below. This file stays the record of that 1.1.5 behavior.
 
 This record was made by inspecting the repository on 2026-10-03. The test-run figures below come from the bootstrap briefing. They were **not** re-executed while this memory was written.
 

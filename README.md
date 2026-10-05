@@ -5,26 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://github.com/HansMeershoek/pytics/actions/workflows/python-test.yml/badge.svg?branch=main)](https://github.com/HansMeershoek/pytics/actions/workflows/python-test.yml)
 
-An interactive data profiling library for Python that generates comprehensive HTML reports with rich visualizations and PDF export capabilities.
+Data profiling for pandas DataFrames.
 
-## Features
-
-- 📊 **Interactive Visualizations**: Built with Plotly for dynamic, interactive charts
-- 📱 **Responsive Design**: Reports adapt to different screen sizes
-- 📄 **PDF Export**: Generate publication-ready PDF reports
-- 🎯 **Target Analysis**: Special insights for classification/regression tasks
-- 🔍 **Comprehensive Profiling**: Detailed statistics and distributions
-- ⚡ **Performance Optimized**: Efficient handling of large datasets
-- 🛠️ **Customizable**: Configure sections and visualization options
-- ↔️ **DataFrame Comparison**: Compare two datasets for differences in schema, stats, and distributions
-
-## Example Reports
-
-### Full Profile Report
-![Full Profile Report](examples/full_report.png)
-
-### Targeted Analysis Report
-![Targeted Analysis Report](examples/targeted_report.png)
+The released version number is still 1.1.5. The working tree is the Pytics 2.0 analytical system: semantic inference, dataset analysis, and a structured result. A notebook display of that result is a compact HTML view. Interactive HTML and PDF are not current export features.
 
 ## Installation
 
@@ -32,215 +15,38 @@ An interactive data profiling library for Python that generates comprehensive HT
 pip install pytics
 ```
 
-## Quick Start
+Runtime dependencies are pandas, NumPy, SciPy, and scikit-learn. Plotly, Jinja2, xhtml2pdf, ReportLab, Kaleido, and Matplotlib are not installed with Pytics.
+
+## Current use
+
+Load a DataFrame yourself, then profile it:
 
 ```python
 import pandas as pd
-from pytics import profile, compare
+import pytics
 
-# --- Basic Profiling ---
-# Method 1: Profile a DataFrame object
-df = pd.read_csv('your_data.csv')
-profile(df, output_file='report.html')
-
-# Method 2: Profile directly from a file path
-# Supports CSV and Parquet files
-profile('path/to/your_data.csv', output_file='report.html')
-profile('path/to/your_data.parquet', output_file='report.html')
-
-# --- Advanced Profiling ---
-# Generate a PDF report
-profile(df, output_format='pdf', output_file='report.pdf')
-
-# Profile with a target variable for enhanced analysis
-profile(
-    df,
-    target='target_column',  # Enables target-specific analysis
-    output_file='targeted_report.html'
-)
-
-# Select specific sections to include/exclude
-profile(
-    df,
-    include_sections=['overview', 'correlations'],
-    exclude_sections=['target_analysis'],
-    output_file='custom_report.html'
-)
-
-# --- DataFrame Comparison ---
-# Method 1: Compare two DataFrame objects
-df_train = pd.read_csv('train_data.csv')
-df_test = pd.read_csv('test_data.csv')
-
-compare(
-    df_train, 
-    df_test,
-    name1='Train Set',    # Optional: Custom names for the datasets
-    name2='Test Set',
-    output_file='comparison.html'
-)
-
-# Method 2: Compare directly from file paths
-compare(
-    'path/to/train_data.csv',
-    'path/to/test_data.csv',
-    name1='Train Set',
-    name2='Test Set',
-    output_file='comparison.html'
-)
+df = pd.read_csv("your_data.csv")
+report = pytics.profile(df)
+report
+comparison = pytics.compare(df, df)
 ```
 
-## Target Variable Analysis
+`report` is a `ProfileResult`. `comparison` is a `ComparisonResult`. In Jupyter or Colab, displaying either object uses `_repr_html_()`. That view reads the result. It does not recompute the analysis, and it does not write a file.
 
-When you specify a target variable using the `target` parameter, pytics enhances the analysis with:
+`profile_result` and `comparison_result` remain in `pytics.results`. The top-level functions call them. A keyword-only `target` is passed through when one is supplied. File export arguments from the 1.1.5 renderer are not accepted.
 
-- Target distribution visualization
-- Feature importance analysis
-- Target-specific correlations
-- Conditional distributions of features
-- Statistical tests for feature-target relationships
+The configuration object and semantic overrides are still open, recorded as OPEN-004 in `docs/pytics-2/DECISIONS.md`.
 
-Example:
-```python
-# Profile with target variable analysis
-profile(
-    df,
-    target='target_column',
-    output_file='targeted_report.html'
-)
-```
+## What changed from the 1.1.5 report
 
-## Configuration Options
+Pytics 1.1.5 generated an HTML report, and it attempted a PDF report, from `profile()` and `compare()`. That renderer analyzed the DataFrame on its own, with Plotly charts, Jinja templates, and xhtml2pdf. It is not the 2.0 analysis. It has been removed, including its templates and its PDF test. There is no Markdown report exporter.
 
-### Profile Configuration
-```python
-profile(
-    df,
-    target='target_column',           # Target variable for supervised learning
-    include_sections=['overview'],    # Sections to include
-    exclude_sections=['correlations'],# Sections to exclude
-    output_format='pdf',             # 'html' or 'pdf'
-    output_file='report.html',       # Output file path
-    theme='light',                   # Report theme ('light' or 'dark')
-    title='Custom Report Title'      # Report title
-)
-```
-
-### Compare Configuration
-```python
-compare(
-    df1,
-    df2,
-    name1='First Dataset',           # Custom name for first dataset
-    name2='Second Dataset',          # Custom name for second dataset
-    output_file='comparison.html',   # Output file path
-    theme='light',                   # Report theme ('light' or 'dark')
-    title='Dataset Comparison'       # Report title
-)
-```
-
-### Available Sections
-- `overview`: Dataset summary and memory usage
-- `variables`: Detailed variable analysis
-- `correlations`: Correlation analysis
-- `target_analysis`: Target-specific insights (requires target parameter)
-- `interactions`: Feature interaction analysis
-- `missing_values`: Missing value patterns
-- `duplicates`: Duplicate record analysis
-
-## Report Sections
-
-1. **Overview**
-   - Dataset summary
-   - Memory usage
-   - Data types distribution
-   - Missing values summary
-
-2. **DataFrame Summary**
-   - Complete DataFrame info output
-   - Numerical and categorical statistics
-   - Data preview (head/tail)
-   - Memory usage details
-
-3. **Variable Analysis**
-   - Detailed statistics
-   - Distribution plots
-   - Missing value patterns
-   - Unique values analysis
-
-4. **Correlations**
-   - Correlation matrix
-   - Feature relationships
-   - Interactive heatmaps
-
-5. **Target Analysis** (when target specified)
-   - Target distribution
-   - Feature importance
-   - Target correlations
-
-6. **Missing Values**
-   - Missing value patterns
-   - Distribution analysis
-   - Correlation with other features
-
-7. **Duplicates**
-   - Duplicate record analysis
-   - Pattern identification
-   - Impact assessment
-
-8. **About**
-   - Project information
-   - Feature overview
-   - GitHub repository links
-
-## Edge Cases and Limitations
-
-### Data Size Limits
-- Recommended maximum rows: 1 million
-- Recommended maximum columns: 1000
-- Large datasets may require increased memory allocation
-
-### PDF Export Limitations
-
-When exporting reports to PDF format:
-- Plots are intentionally omitted due to a known issue with Kaleido version >= 0.2.1 that causes PDF export to hang indefinitely
-- A message is displayed in place of each plot indicating it has been omitted
-- All other report content (statistics, tables, etc.) remains fully functional
-- For viewing plots, use the HTML export format which provides fully interactive visualizations
-- If PDF plots are required, consider using pytics version 1.1.3 which supports them
-
-### Special Cases
-- Missing Values: Automatically handled and reported
-- Categorical Variables: Limited to 1000 unique values by default
-- Date/Time: Automatically detected and analyzed
-- Mixed Data Types: Handled with appropriate warnings
-
-### Error Handling
-- Custom exceptions for clear error reporting
-- Warning system for non-critical issues
-- Graceful degradation for memory constraints
-
-## Best Practices
-
-1. **Memory Management**
-   - Sample large datasets if needed
-   - Use section selection for focused analysis
-   - Monitor memory usage for big datasets
-
-2. **Performance Optimization**
-   - Limit categorical variables when possible
-   - Use targeted section selection
-   - Consider data sampling for initial exploration
-
-3. **Report Generation**
-   - Choose appropriate output format
-   - Use meaningful report titles
-   - Save reports with descriptive filenames
+The durable 2.0 design notes are in `docs/pytics-2/`. They are documentation, not a report format.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. See the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License. See the LICENSE file for details.

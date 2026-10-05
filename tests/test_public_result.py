@@ -712,13 +712,10 @@ def test_construction_guards_and_lookup_edges() -> None:
         )
 
 
-def test_legacy_entry_points_are_not_the_public_result() -> None:
+def test_result_helpers_stay_off_the_package_export() -> None:
     import pytics
-    from pytics.profiler import compare as legacy_compare
-    from pytics.profiler import profile as legacy_profile
 
-    assert pytics.profile is legacy_profile
-    assert pytics.compare is legacy_compare
     assert pytics.__all__ == ["profile", "compare"]
     assert not hasattr(pytics, "profile_result")
+    assert not hasattr(pytics, "comparison_result")
     assert not hasattr(pytics, "plugin")

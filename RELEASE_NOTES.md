@@ -1,3 +1,7 @@
+# Development note
+
+The HTML reports and PDF export described in the 1.0.0 notes below were removed from the working tree during Pytics 2.0 development (TSK-046). The package version is still 1.1.5. Those notes are the historical release record. They are not the current feature list. The current result API is `pytics.results.profile_result` and `pytics.results.comparison_result`.
+
 # pytics v1.0.0 Release Notes 🎉
 
 We're excited to announce the first stable release of pytics, an interactive data profiling library designed for Python notebooks with rich reporting capabilities.

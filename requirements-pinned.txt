@@ -1,16 +1,15 @@
-# Core dependencies from Cursor's list
+# Runtime dependencies still declared by pyproject.toml.
+# Floors live in pyproject.toml. These pins are historical and are not a 2.0 lock.
 pandas==2.0.0
 numpy==1.24.0
-plotly==5.18.0
-jinja2==3.1.0
-xhtml2pdf==0.2.11
 scikit-learn==1.3.0
 scipy==1.7.0
-IPython==7.0.0
-matplotlib==3.3.0
-kaleido==0.2.1
 
-# Testing dependencies (add others if needed)
-pytest>=4.6 
-pytest-cov>=2.5 
-jsonschema 
+# Testing and development. IPython is not a runtime dependency.
+# The notebook formatter test imports it when it is installed.
+pytest>=4.6
+pytest-cov>=2.5
+IPython==7.0.0
+
+# Not a Pytics dependency. Left from an older pin file.
+jsonschema

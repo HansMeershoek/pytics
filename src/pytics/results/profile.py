@@ -5,8 +5,8 @@ findings read from it. Building the result does not analyze the frame
 again, and reading the result does not either. The DataFrame is not
 retained.
 
-``pytics.profile`` is still the legacy renderer. It does not return this
-object. :func:`profile_result` is the entry point that does.
+:func:`pytics.profile` delegates to :func:`profile_result`. This function
+is the construction path.
 
 ``ProfileResult._repr_html_`` delegates to the notebook presentation
 layer. The HTML is not stored on the result.
@@ -511,8 +511,7 @@ def profile_result(
     or ambiguous target raises from that analysis and does not return a
     result with the target quietly disabled.
 
-    This is not :func:`pytics.profile`. That function still renders the
-    legacy report.
+    :func:`pytics.profile` delegates to this function.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("profile_result expects a pandas DataFrame")

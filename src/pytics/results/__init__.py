@@ -1,9 +1,8 @@
 """Public result contract for Pytics 2.0.
 
 ``profile_result`` and ``comparison_result`` return read-only views of
-the canonical analysis. They do not replace :func:`pytics.profile` or
-:func:`pytics.compare`. Those two functions are still the legacy 1.1.5
-renderers.
+the canonical analysis. :func:`pytics.profile` and :func:`pytics.compare`
+delegate to these functions. The helpers remain importable here.
 
 A notebook display of these results delegates to
 :mod:`pytics.presentation.notebook`. That layer is not exported from
