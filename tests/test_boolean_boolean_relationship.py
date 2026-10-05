@@ -26,6 +26,7 @@ from pytics.analysis.relationship import BooleanDirectionalMethod
 from pytics.analysis.relationship import BooleanIndependenceMethod
 from pytics.analysis.relationship import BooleanLevel
 from pytics.analysis.relationship import CorrelationEstimate
+from pytics.analysis.relationship import InferentialValidity
 from pytics.analysis.relationship import MultipleTestingAdjustment
 from pytics.analysis.relationship import NumericBooleanRelationship
 from pytics.analysis.relationship import NumericNumericRelationship
@@ -1098,7 +1099,11 @@ def test_boolean_invariants_reject_inconsistent_components() -> None:
                     ordinary.independence.frequentist,
                     availability=ResultAvailability.UNAVAILABLE,
                     p_value=None,
+                    adjusted_p_value=None,
+                    adjustment=MultipleTestingAdjustment.NOT_APPLIED,
                     reason=UnavailabilityReason.CONSTANT_PAIRED_VALUES,
+                    inferential_validity=InferentialValidity.NOT_APPLICABLE,
+                    invalidity_reason=None,
                 ),
             ),
         )

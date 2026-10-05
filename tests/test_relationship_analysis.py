@@ -36,6 +36,7 @@ from pytics.analysis.relationship import CorrelationInterval
 from pytics.analysis.relationship import CorrelationIntervalMethod
 from pytics.analysis.relationship import EffectDirection
 from pytics.analysis.relationship import FrequentistEvidence
+from pytics.analysis.relationship import InferentialValidity
 from pytics.analysis.relationship import MultipleTestingAdjustment
 from pytics.analysis.relationship import NumericBooleanRelationship
 from pytics.analysis.relationship import NumericCategoricalRelationship
@@ -118,8 +119,12 @@ def _assert_adjustment(
     *,
     complementary: bool = False,
 ) -> None:
-    """Primary available tests are adjusted. Complementary and missing ones are not."""
-    if complementary or frequentist.availability is ResultAvailability.UNAVAILABLE:
+    """Valid primary tests are adjusted. Complementary, missing, and invalid ones are not."""
+    if (
+        complementary
+        or frequentist.availability is ResultAvailability.UNAVAILABLE
+        or frequentist.inferential_validity is not InferentialValidity.VALID
+    ):
         assert frequentist.adjustment is MultipleTestingAdjustment.NOT_APPLIED
         assert frequentist.adjusted_p_value is None
         return

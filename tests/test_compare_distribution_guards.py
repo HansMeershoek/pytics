@@ -29,6 +29,7 @@ from pytics.analysis.compare import compare_dataframes
 from pytics.analysis.compare.distribution import boolean_distribution_drift
 from pytics.analysis.compare.distribution import categorical_distribution_drift
 from pytics.analysis.compare.distribution import numeric_distribution_drift
+from pytics.analysis.relationships.models import InferentialValidity
 from pytics.analysis.relationships.models import MultipleTestingAdjustment
 from pytics.analysis.relationships.models import ResultAvailability
 
@@ -276,6 +277,8 @@ def test_family_records_reject_inconsistent_components() -> None:
                 adjusted_p_value=None,
                 adjustment=NOT_APPLIED,
                 reason=DriftUnavailabilityReason.BOTH_POPULATIONS_EMPTY,
+                inferential_validity=InferentialValidity.NOT_APPLICABLE,
+                invalidity_reason=None,
             ),
         )
     with pytest.raises(ValueError, match="empty side"):

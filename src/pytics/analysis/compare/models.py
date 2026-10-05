@@ -38,8 +38,10 @@ from pytics.analysis.compare.values import _require_count
 from pytics.analysis.compare.values import _require_optional
 from pytics.analysis.compare.values import _require_type
 from pytics.analysis.relationships.adjustment import benjamini_hochberg
+from pytics.analysis.relationships.models import InferentialValidity
 from pytics.analysis.relationships.models import MultipleTestingAdjustment
 from pytics.analysis.relationships.models import ResultAvailability
+from pytics.analysis.relationships.models import inferential_p_value_eligible
 
 _DRIFT_PAYLOAD = {
     DistributionDriftStatus.NUMERIC: (
@@ -85,6 +87,7 @@ DEFERRED_COMPARISON_FAMILIES: Tuple[DeferredComparisonFamily, ...] = (
     DeferredComparisonFamily.DUPLICATE_GROUP_MATCHING,
     DeferredComparisonFamily.ROW_ALIGNMENT,
 )
+
 
 @dataclass(frozen=True)
 class ColumnComparison:
@@ -155,9 +158,12 @@ class ComparisonCoverage:
     Distribution-drift columns, not-eligible columns, and columns whose
     source values were not supplied sum to ``n_columns``. Among the drift
     records, an unavailable primary effect or test is counted, not
-    hidden. ``n_distribution_tests`` is the size of the drift correction
-    family: one available primary p-value per tested column. No p-value
-    does not mean no drift.
+    hidden. ``n_distribution_tests`` counts computationally available
+    primary p-values, including an asymptotic chi-square tail whose
+    Cochran convention failed. The drift correction family is the
+    inferentially valid subset of those p-values, which can be smaller.
+    No p-value does not mean no drift. An invalid p-value does not mean
+    the distance is absent.
     """
 
     n_columns: int
@@ -304,7 +310,9 @@ class DatasetComparison:
             RelationshipDriftCoverage,
             "relationship_coverage",
         )
-        if self.relationship_coverage != coverage_from_relationships(self.relationships):
+        if self.relationship_coverage != coverage_from_relationships(
+            self.relationships
+        ):
             raise ValueError("relationship coverage does not match the records")
         _require_relationship_order(self.relationships)
         if self.target is not None:
@@ -454,17 +462,32 @@ def _require_column_order(columns: Tuple[ColumnComparison, ...]) -> None:
 
 
 def _require_drift_family(columns: Tuple[ColumnComparison, ...]) -> None:
-    """Every available primary drift test holds this family's BH value."""
-    tests = [
-        column.distribution.test
-        for column in columns
-        if column.distribution is not None
-        and column.distribution.test.availability is ResultAvailability.AVAILABLE
-    ]
-    adjusted = benjamini_hochberg(tuple(test.p_value for test in tests))
-    for test, expected in zip(tests, adjusted):
+    """Every inferentially valid primary drift test holds this family's BH value."""
+    eligible = []
+    for column in columns:
+        record = column.distribution
+        if record is None:
+            continue
+        test = record.test
+        if test.availability is not ResultAvailability.AVAILABLE:
+            continue
+        if inferential_p_value_eligible(
+            test.availability,
+            test.inferential_validity,  # type: ignore[arg-type]
+        ):
+            eligible.append(test)
+            continue
+        if test.inferential_validity is not InferentialValidity.INVALID:
+            raise ValueError("a computed drift p-value is valid or invalid")
+        if (
+            test.adjustment is not MultipleTestingAdjustment.NOT_APPLIED
+            or test.adjusted_p_value is not None
+        ):
+            raise ValueError("an inferentially invalid drift test is not adjusted")
+    adjusted = benjamini_hochberg(tuple(test.p_value for test in eligible))
+    for test, expected in zip(eligible, adjusted):
         if test.adjustment is not MultipleTestingAdjustment.BENJAMINI_HOCHBERG:
-            raise ValueError("an available drift test belongs to the drift family")
+            raise ValueError("a valid drift test belongs to the drift family")
         if test.adjusted_p_value != expected:
             raise ValueError("adjusted drift p-values must match the drift family")
 
@@ -526,7 +549,10 @@ def _require_distribution_payload(column: ColumnComparison) -> None:
         eligible = column.descriptive_status in _DESCRIBED
         if status is DistributionDriftStatus.NOT_ELIGIBLE and eligible:
             raise ValueError("a described column is eligible for distribution drift")
-        if status is DistributionDriftStatus.SOURCE_VALUES_NOT_SUPPLIED and not eligible:
+        if (
+            status is DistributionDriftStatus.SOURCE_VALUES_NOT_SUPPLIED
+            and not eligible
+        ):
             raise ValueError("only an eligible column waits for source values")
         return
     record_type, descriptive_status = expected
@@ -549,7 +575,9 @@ def _require_distribution_payload(column: ColumnComparison) -> None:
             or population.n_comparison
             != boolean.true_count.comparison + boolean.false_count.comparison  # type: ignore[union-attr]
         ):
-            raise ValueError("boolean drift population must match the descriptive counts")
+            raise ValueError(
+                "boolean drift population must match the descriptive counts"
+            )
         effect = record.true_proportion_difference
         if (
             effect.availability is ResultAvailability.AVAILABLE

@@ -7,8 +7,9 @@ p-value is not copied here and is not a change.
 
 The primary change is one measure per implemented family: Spearman rho,
 eta squared, Hedges' g, phi, or Cramér's V. Complementary changes stay
-beside that measure. Nothing in this module combines those measures
-into one score.
+beside that measure, including epsilon squared and bias-corrected
+Cramér's V. Nothing in this module combines those measures into one
+score.
 """
 
 from __future__ import annotations
@@ -78,6 +79,8 @@ class RelationshipChangeMeasure(Enum):
     PEARSON_R = "pearson_r"
     MEAN_DIFFERENCE = "mean_difference"
     PROBABILITY_DIFFERENCE = "probability_difference"
+    EPSILON_SQUARED = "epsilon_squared"
+    BIAS_CORRECTED_CRAMERS_V = "bias_corrected_cramers_v"
 
 
 _PRIMARY_MEASURE = {
@@ -89,9 +92,13 @@ _PRIMARY_MEASURE = {
 }
 _COMPLEMENTARY_MEASURE = {
     RelationshipFamily.NUMERIC_NUMERIC: RelationshipChangeMeasure.PEARSON_R,
+    RelationshipFamily.NUMERIC_CATEGORICAL: (RelationshipChangeMeasure.EPSILON_SQUARED),
     RelationshipFamily.NUMERIC_BOOLEAN: RelationshipChangeMeasure.MEAN_DIFFERENCE,
     RelationshipFamily.BOOLEAN_BOOLEAN: (
         RelationshipChangeMeasure.PROBABILITY_DIFFERENCE
+    ),
+    RelationshipFamily.CATEGORICAL_CATEGORICAL: (
+        RelationshipChangeMeasure.BIAS_CORRECTED_CRAMERS_V
     ),
 }
 _SIGNED_MEASURES = frozenset(
@@ -108,8 +115,10 @@ _BOUNDED_UNIT = frozenset(
     {
         RelationshipChangeMeasure.ETA_SQUARED,
         RelationshipChangeMeasure.CRAMERS_V,
+        RelationshipChangeMeasure.BIAS_CORRECTED_CRAMERS_V,
     }
 )
+_EPSILON_SQUARED = frozenset({RelationshipChangeMeasure.EPSILON_SQUARED})
 _CLOSED_CORRELATION = frozenset(
     {
         RelationshipChangeMeasure.SPEARMAN_RHO,
@@ -286,6 +295,8 @@ class NumericCategoricalState:
     categories: Tuple[object, ...]
     eta_squared: Optional[float]
     eta_squared_reason: Optional[UnavailabilityReason]
+    epsilon_squared: Optional[float]
+    epsilon_squared_reason: Optional[UnavailabilityReason]
 
     def __post_init__(self) -> None:
         _require_count(self.n_paired, "n_paired")
@@ -297,6 +308,12 @@ class NumericCategoricalState:
             self.eta_squared_reason,
             RelationshipChangeMeasure.ETA_SQUARED,
             "eta_squared",
+        )
+        _require_effect(
+            self.epsilon_squared,
+            self.epsilon_squared_reason,
+            RelationshipChangeMeasure.EPSILON_SQUARED,
+            "epsilon_squared",
         )
 
 
@@ -382,6 +399,9 @@ class CategoricalCategoricalState:
     n_positive_cells: int
     cramers_v: Optional[float]
     cramers_v_reason: Optional[UnavailabilityReason]
+    bias_corrected_cramers_v: Optional[float]
+    bias_corrected_cramers_v_reason: Optional[UnavailabilityReason]
+    bias_correction_numerator_floored: Optional[bool]
 
     def __post_init__(self) -> None:
         _require_count(self.n_paired, "n_paired")
@@ -396,6 +416,16 @@ class CategoricalCategoricalState:
             self.cramers_v_reason,
             RelationshipChangeMeasure.CRAMERS_V,
             "cramers_v",
+        )
+        _require_effect(
+            self.bias_corrected_cramers_v,
+            self.bias_corrected_cramers_v_reason,
+            RelationshipChangeMeasure.BIAS_CORRECTED_CRAMERS_V,
+            "bias_corrected_cramers_v",
+        )
+        _require_numerator_floor(
+            self.bias_corrected_cramers_v,
+            self.bias_correction_numerator_floored,
         )
 
 
@@ -937,6 +967,21 @@ def _require_complementary_values(record: RelationshipDrift) -> None:
         ):
             raise ValueError("mean-difference change must copy the two differences")
         return
+    if isinstance(reference, NumericCategoricalState):
+        if (
+            change.reference != reference.epsilon_squared
+            or change.comparison != comparison.epsilon_squared  # type: ignore[attr-defined]
+        ):
+            raise ValueError("epsilon-squared change must copy the two corrections")
+        return
+    if isinstance(reference, CategoricalCategoricalState):
+        if (
+            change.reference != reference.bias_corrected_cramers_v
+            or change.comparison
+            != comparison.bias_corrected_cramers_v  # type: ignore[attr-defined]
+        ):
+            raise ValueError("bias-corrected V change must copy the two corrections")
+        return
     if not isinstance(reference, BooleanBooleanState):
         raise ValueError("this family has no complementary change")
     shared = reference.conditioning_is_first is comparison.conditioning_is_first  # type: ignore[attr-defined]
@@ -984,6 +1029,9 @@ def _require_measure_value(
     if measure in _BOUNDED_UNIT:
         _require_unit_interval(value, field)
         return
+    if measure in _EPSILON_SQUARED:
+        _require_epsilon_squared(value, field)
+        return
     if measure in _CLOSED_CORRELATION:
         _require_closed_interval(value, -1.0, 1.0, field)
         return
@@ -991,6 +1039,30 @@ def _require_measure_value(
         raise ValueError(f"{field} must be a finite float")
     if value == 0.0 and math.copysign(1.0, value) < 0.0:
         raise ValueError(f"{field} must not be negative zero")
+
+
+def _require_epsilon_squared(value: float, field: str) -> None:
+    """Epsilon squared is finite and at most 1. A negative estimate is kept."""
+    if type(value) is not float or not math.isfinite(value):
+        raise ValueError(f"{field} must be a finite float")
+    if value > 1.0:
+        raise ValueError(f"{field} cannot exceed 1")
+    if value == 0.0 and math.copysign(1.0, value) < 0.0:
+        raise ValueError(f"{field} must not be negative zero")
+
+
+def _require_numerator_floor(
+    value: Optional[float],
+    floored: Optional[bool],
+) -> None:
+    if value is None:
+        if floored is not None:
+            raise ValueError("an unavailable bias correction has no numerator floor")
+        return
+    if type(floored) is not bool:
+        raise ValueError("an available bias correction records its numerator floor")
+    if floored and value != 0.0:
+        raise ValueError("a floored bias-corrected V is zero")
 
 
 def _require_signed_companions(

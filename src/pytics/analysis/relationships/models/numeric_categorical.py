@@ -1,13 +1,14 @@
 """Numeric × Categorical relationship records.
 
-These records retain observed groups, eta squared, and classical
-one-way ANOVA. They do not calculate those facts and they do not import
-a statistical library. Group descriptions reuse the Numeric descriptive
-model.
+These records retain observed groups, eta squared, epsilon squared, and
+classical one-way ANOVA. They do not calculate those facts and they do
+not import a statistical library. Group descriptions reuse the Numeric
+descriptive model.
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -47,11 +48,18 @@ _ANOVA_COMPONENT_REASONS = _GROUP_EFFECT_REASONS | {
 class GroupEffectMethod(Enum):
     """Omnibus effect identity for Numeric × Categorical.
 
-    This is a descriptive ratio of observed variation. It is not a
-    causal share and not a strength label.
+    ``ETA_SQUARED`` is the descriptive ratio of observed variation.
+    ``EPSILON_SQUARED`` is Kelley's bias-corrected companion of that
+    ratio. Neither is a causal share and neither is a strength label.
     """
 
     ETA_SQUARED = "eta_squared"
+    EPSILON_SQUARED = "epsilon_squared"
+
+
+# The same absolute tolerance the calculator uses when a float ratio
+# sits just outside its mathematical bound.
+_EFFECT_TOLERANCE = 1e-8
 
 
 class OmnibusTestMethod(Enum):
@@ -86,12 +94,15 @@ class CategoryGroupOrder(Enum):
 
 @dataclass(frozen=True)
 class GroupEffectEstimate:
-    """Overall between-group effect for one Numeric × Categorical pair.
+    """One between-group effect for a Numeric × Categorical pair.
 
-    ``value`` is eta squared on ``[0, 1]`` when available: the proportion
-    of observed numeric variation associated with differences among group
-    means. It is never NaN. ``reason`` is set only when the effect is
-    unavailable. Unavailable is not stored as zero.
+    Eta squared lies on ``[0, 1]``. It is the proportion of observed
+    numeric variation associated with differences among group means.
+    Epsilon squared uses the same denominator and subtracts the
+    between-group degrees of freedom times the within-group mean square
+    from the numerator. That correction can be negative. It is never
+    stored above 1, and it is never NaN. ``reason`` is set only when the
+    effect is unavailable. Unavailable is not stored as zero.
     """
 
     method: GroupEffectMethod
@@ -103,13 +114,21 @@ class GroupEffectEstimate:
         _require_enum(self.method, GroupEffectMethod, "method")
         _require_enum(self.availability, ResultAvailability, "availability")
         if self.availability is ResultAvailability.AVAILABLE:
-            _require_unit_interval(self.value, "effect")
+            if self.method is GroupEffectMethod.EPSILON_SQUARED:
+                _require_epsilon_squared(self.value)
+            else:
+                _require_unit_interval(self.value, "effect")
             if self.reason is not None:
                 raise ValueError("an available effect has no unavailability reason")
             return
         if self.value is not None:
             raise ValueError("an unavailable effect has no value")
-        _require_reason(self.reason, _GROUP_EFFECT_REASONS, "reason")
+        allowed = _GROUP_EFFECT_REASONS
+        if self.method is GroupEffectMethod.EPSILON_SQUARED:
+            allowed = _GROUP_EFFECT_REASONS | {
+                UnavailabilityReason.INSUFFICIENT_WITHIN_GROUP_DEGREES_OF_FREEDOM,
+            }
+        _require_reason(self.reason, allowed, "reason")
 
 
 @dataclass(frozen=True)
@@ -201,10 +220,12 @@ class NumericCategoricalRelationship:
     in physical categorical vocabulary order. The paired arrays are not
     stored.
 
-    ``effect`` is eta squared. ``omnibus`` is classical one-way ANOVA.
-    Those are separate components. This record has no correlation method,
-    no confidence interval, and no primary-method field. Either component
-    can be unavailable without discarding the record.
+    ``effect`` is eta squared, the descriptive ratio. ``corrected_effect``
+    is epsilon squared, the bias-corrected companion of that same ratio.
+    ``omnibus`` is classical one-way ANOVA. Those are separate components.
+    This record has no correlation method, no confidence interval, and no
+    primary-method field. A component can be unavailable without
+    discarding the record.
 
     ``population`` is the finite-numeric, observed-category rule.
     ``n_total_rows``, ``n_paired``, and ``n_excluded`` are the pair counts
@@ -222,6 +243,7 @@ class NumericCategoricalRelationship:
     n_paired: int
     groups: Tuple[CategoricalGroupSummary, ...]
     effect: GroupEffectEstimate
+    corrected_effect: GroupEffectEstimate
     omnibus: OmnibusAnovaResult
 
     def __post_init__(self) -> None:
@@ -241,6 +263,7 @@ class NumericCategoricalRelationship:
         if counted != self.n_paired:
             raise ValueError("group sizes must sum to n_paired")
         _require_type(self.effect, GroupEffectEstimate, "effect")
+        _require_type(self.corrected_effect, GroupEffectEstimate, "corrected_effect")
         _require_type(self.omnibus, OmnibusAnovaResult, "omnibus")
         _require_numeric_categorical_components(self)
 
@@ -283,6 +306,8 @@ def _require_numeric_categorical_components(
     effect = relationship.effect
     omnibus = relationship.omnibus
     frequentist = omnibus.frequentist
+    if effect.method is not GroupEffectMethod.ETA_SQUARED:
+        raise ValueError("the descriptive effect is eta squared")
     if effect.availability is ResultAvailability.UNAVAILABLE:
         if omnibus.statistic_availability is not ResultAvailability.UNAVAILABLE:
             raise ValueError("an undefined effect has no F statistic")
@@ -292,8 +317,10 @@ def _require_numeric_categorical_components(
             raise ValueError("an undefined effect has no omnibus p-value")
         if frequentist.reason is not effect.reason:
             raise ValueError("an undefined effect and its p-value share a reason")
+        _require_epsilon_companion(relationship)
         return
     if omnibus.statistic_availability is ResultAvailability.AVAILABLE:
+        _require_epsilon_companion(relationship)
         return
     reason = omnibus.statistic_reason
     if reason is UnavailabilityReason.INSUFFICIENT_WITHIN_GROUP_DEGREES_OF_FREEDOM:
@@ -313,6 +340,7 @@ def _require_numeric_categorical_components(
             raise ValueError("that degree-of-freedom state has no p-value")
         if frequentist.reason is not reason:
             raise ValueError("the missing p-value uses the F statistic's reason")
+        _require_epsilon_companion(relationship)
         return
     if reason is UnavailabilityReason.ZERO_WITHIN_GROUP_VARIATION:
         if relationship.n_paired <= relationship.n_groups:
@@ -327,6 +355,13 @@ def _require_numeric_categorical_components(
             raise ValueError("zero within-group variation has no ANOVA p-value")
         if frequentist.reason is not reason:
             raise ValueError("the missing p-value uses the F statistic's reason")
+        corrected = relationship.corrected_effect
+        if (
+            corrected.availability is not ResultAvailability.AVAILABLE
+            or corrected.value != 1.0
+        ):
+            raise ValueError("zero within-group variation leaves epsilon squared at 1")
+        _require_epsilon_companion(relationship)
         return
     if reason is not UnavailabilityReason.NON_FINITE_RESULT:
         raise ValueError("an available effect has an unsupported F-statistic state")
@@ -334,6 +369,54 @@ def _require_numeric_categorical_components(
         raise ValueError("an unavailable F statistic has no p-value")
     if frequentist.reason is not UnavailabilityReason.NON_FINITE_RESULT:
         raise ValueError("a non-finite omnibus result stays non-finite")
+    _require_epsilon_companion(relationship)
+
+
+def _require_epsilon_squared(value: Optional[float]) -> None:
+    """Epsilon squared is finite and not above 1. A negative value is kept."""
+    if type(value) is not float or not math.isfinite(value):
+        raise ValueError("epsilon squared must be a finite float")
+    if value > 1.0:
+        raise ValueError("epsilon squared cannot exceed 1")
+    if value == 0.0 and math.copysign(1.0, value) < 0.0:
+        raise ValueError("epsilon squared must not be negative zero")
+
+
+def _require_epsilon_companion(relationship: NumericCategoricalRelationship) -> None:
+    """Keep epsilon squared as the companion of the same sums of squares.
+
+    An undefined eta squared has no epsilon squared. One observation in
+    every group leaves the within-group mean square undefined, so epsilon
+    squared is absent while eta squared can still be 1. A defined epsilon
+    squared cannot exceed eta squared: the correction subtracts a
+    non-negative term.
+    """
+    effect = relationship.effect
+    corrected = relationship.corrected_effect
+    if corrected.method is not GroupEffectMethod.EPSILON_SQUARED:
+        raise ValueError("the corrected effect is epsilon squared")
+    if effect.availability is ResultAvailability.UNAVAILABLE:
+        if (
+            corrected.availability is not ResultAvailability.UNAVAILABLE
+            or corrected.reason is not effect.reason
+        ):
+            raise ValueError("an undefined eta squared has no epsilon squared")
+        return
+    if corrected.availability is ResultAvailability.UNAVAILABLE:
+        if (
+            corrected.reason
+            is UnavailabilityReason.INSUFFICIENT_WITHIN_GROUP_DEGREES_OF_FREEDOM
+        ):
+            if relationship.n_paired != relationship.n_groups:
+                raise ValueError(
+                    "epsilon squared needs within-group degrees of freedom"
+                )
+            return
+        if corrected.reason is not UnavailabilityReason.NON_FINITE_RESULT:
+            raise ValueError("epsilon squared is unavailable only when it is undefined")
+        return
+    if corrected.value > effect.value + _EFFECT_TOLERANCE:  # type: ignore[operator]
+        raise ValueError("epsilon squared cannot exceed eta squared")
 
 
 install_column_label_equality(NumericCategoricalRelationship)

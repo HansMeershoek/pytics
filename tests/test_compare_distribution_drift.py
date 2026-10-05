@@ -39,6 +39,7 @@ from pytics.analysis.compare import compare_dataframes
 from pytics.analysis.compare import compare_dataset_analyses
 from pytics.analysis.compare.distribution import numeric_distribution_drift
 from pytics.analysis.dataset import analyze_dataframe
+from pytics.analysis.relationships.models import InferentialValidity
 from pytics.analysis.relationships.models import MultipleTestingAdjustment
 from pytics.analysis.relationships.models import ResultAvailability
 
@@ -766,16 +767,33 @@ def test_drift_family_is_one_primary_p_per_tested_column() -> None:
         }
     )
     result = compare_dataframes(reference, comparison)
-    tested = [
+    computed = [
         column
         for column in result.columns
         if column.distribution is not None
         and column.distribution.test.availability is AVAILABLE
     ]
-    assert [column.alignment.reference_label.value for column in tested] == [
+    assert [column.alignment.reference_label.value for column in computed] == [
         "a",
         "b",
         "c",
+        "f",
+    ]
+    categorical = _column(result, "c").distribution
+    assert categorical.test.inferential_validity is InferentialValidity.INVALID
+    assert categorical.expected_counts.minimum_expected_count < 1.0
+    assert categorical.test.p_value is not None
+    assert categorical.test.adjustment is MultipleTestingAdjustment.NOT_APPLIED
+    assert categorical.test.adjusted_p_value is None
+    tested = [
+        column
+        for column in computed
+        if column.distribution.test.adjustment
+        is MultipleTestingAdjustment.BENJAMINI_HOCHBERG
+    ]
+    assert [column.alignment.reference_label.value for column in tested] == [
+        "a",
+        "b",
         "f",
     ]
     raw = [column.distribution.test.p_value for column in tested]

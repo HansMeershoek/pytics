@@ -3,7 +3,7 @@
 Pairs align by the column identities already built for the comparison.
 The pass reads those identities and the retained effects. It does not
 read a DataFrame, and it does not calculate Spearman, eta squared,
-Hedges' g, phi, or Cramér's V again.
+epsilon squared, Hedges' g, phi, or Cramér's V again.
 
 A same-family numeric pair also receives a complementary Fisher z test
 of Pearson equality. That test uses the retained correlations and pair
@@ -254,6 +254,8 @@ def _payload(
                 categories=tuple(group.category for group in record.groups),
                 eta_squared=_component_value(record.effect),
                 eta_squared_reason=_component_reason(record.effect),
+                epsilon_squared=_component_value(record.corrected_effect),
+                epsilon_squared_reason=_component_reason(record.corrected_effect),
             )
         }
     if record.family is RelationshipFamily.NUMERIC_BOOLEAN:
@@ -300,6 +302,13 @@ def _payload(
             n_positive_cells=table.n_observed_cells,
             cramers_v=_component_value(record.association),
             cramers_v_reason=_component_reason(record.association),
+            bias_corrected_cramers_v=_component_value(record.corrected_association),
+            bias_corrected_cramers_v_reason=_component_reason(
+                record.corrected_association
+            ),
+            bias_correction_numerator_floored=(
+                record.corrected_association.numerator_floored
+            ),
         )
     }
 
@@ -389,12 +398,28 @@ def _complementary_changes(
                 comparison.pearson,  # type: ignore[attr-defined]
             ),
         )
+    if isinstance(reference, NumericCategoricalState):
+        return (
+            _effect_change(
+                RelationshipChangeMeasure.EPSILON_SQUARED,
+                reference.epsilon_squared,
+                comparison.epsilon_squared,  # type: ignore[attr-defined]
+            ),
+        )
     if isinstance(reference, NumericBooleanState):
         return (
             _effect_change(
                 RelationshipChangeMeasure.MEAN_DIFFERENCE,
                 reference.mean_difference,
                 comparison.mean_difference,  # type: ignore[attr-defined]
+            ),
+        )
+    if isinstance(reference, CategoricalCategoricalState):
+        return (
+            _effect_change(
+                RelationshipChangeMeasure.BIAS_CORRECTED_CRAMERS_V,
+                reference.bias_corrected_cramers_v,
+                comparison.bias_corrected_cramers_v,  # type: ignore[attr-defined]
             ),
         )
     if isinstance(reference, BooleanBooleanState):

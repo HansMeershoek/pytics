@@ -2,9 +2,11 @@
 
 Pair calculators store raw p-values. This module runs after those
 records exist and before ``RelationshipAnalysis`` is frozen. It adjusts
-one primary p-value per calculated pair when that p-value is available.
-Complementary p-values stay raw. Unavailable p-values are not counted.
-The summary builder does not call this module.
+one primary p-value per calculated pair when that p-value was computed
+and is inferentially valid. Complementary p-values stay raw. An
+unavailable p-value is not counted. A computed chi-square p-value whose
+Cochran convention failed is not counted. The summary builder does not
+call this module.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ from pytics.analysis.relationships.models import OmnibusTestMethod
 from pytics.analysis.relationships.models import RelationshipFamily
 from pytics.analysis.relationships.models import RelationshipRecord
 from pytics.analysis.relationships.models import ResultAvailability
+from pytics.analysis.relationships.models import inferential_p_value_eligible
 
 _PrimaryTestMethod = Union[
     AssociationMethod,
@@ -100,12 +103,14 @@ def adjust_primary_p_values(
 
     Each calculated pair contributes at most one hypothesis: Spearman,
     one-way ANOVA, Welch, Fisher exact, or Pearson chi-square, and only
-    when that raw p-value is available. Pearson correlation is
-    complementary and stays raw. ``m`` is the number of those available
-    primary p-values, not the number of physical pairs. Records with an
-    unavailable primary test are returned unchanged. The replacement is
-    a new frozen record; nested tables and group summaries are not
-    rebuilt.
+    when that raw p-value is available and inferentially valid. Pearson
+    correlation is complementary and stays raw. A chi-square p-value
+    that was computed but failed Cochran's expected-count convention
+    stays on its record and is not a member. ``m`` is the number of
+    eligible primary p-values, not the number of physical pairs and not
+    the number of computed tails. Records outside the family are
+    returned unchanged. The replacement is a new frozen record; nested
+    tables and group summaries are not rebuilt.
     """
     if not isinstance(relationships, tuple):
         raise TypeError("relationships must be a tuple")
@@ -113,7 +118,10 @@ def adjust_primary_p_values(
     p_values = []
     for record in relationships:
         hypothesis, evidence = _primary_hypothesis(record)
-        if evidence.availability is not ResultAvailability.AVAILABLE:
+        if not inferential_p_value_eligible(
+            evidence.availability,
+            evidence.inferential_validity,  # type: ignore[arg-type]
+        ):
             continue
         if hypothesis in included:
             raise ValueError("a primary hypothesis was recorded twice")

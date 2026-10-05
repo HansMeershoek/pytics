@@ -1,10 +1,11 @@
 """Categorical × Categorical relationship records.
 
 These records retain the observed contingency table, classical
-Cramér's V, expected-count diagnostics, and the Pearson chi-square
-test of independence. They do not calculate those facts and they do
-not import a statistical library. Boolean × Boolean keeps its own 2×2
-table. This is not a generic contingency model.
+Cramér's V, the Bergsma bias-corrected companion, expected-count
+diagnostics, and the Pearson chi-square test of independence. They do
+not calculate those facts and they do not import a statistical library.
+Boolean × Boolean keeps its own 2×2 table. This is not a generic
+contingency model.
 """
 
 from __future__ import annotations
@@ -17,9 +18,11 @@ from typing import Tuple
 
 from pytics.analysis.column_label import install_column_label_equality
 from pytics.analysis.relationships.models.common import FrequentistEvidence
+from pytics.analysis.relationships.models.common import InferentialValidity
 from pytics.analysis.relationships.models.common import RelationshipFamily
 from pytics.analysis.relationships.models.common import ResultAvailability
 from pytics.analysis.relationships.models.common import UnavailabilityReason
+from pytics.analysis.relationships.models.common import chi_square_inferential_status
 from pytics.analysis.relationships.models.common import _require_canonical_positions
 from pytics.analysis.relationships.models.common import _require_category_scalar
 from pytics.analysis.relationships.models.common import _require_enum
@@ -30,8 +33,9 @@ from pytics.analysis.relationships.models.common import _require_type
 from pytics.analysis.relationships.models.common import _require_unit_interval
 
 # A constant paired margin has no association and no independence test.
-# A non-finite chi-square removes V with it. A non-finite p-value does
-# not remove a finite chi-square or a finite V.
+# A non-finite chi-square removes both V estimates with it. A non-finite
+# p-value does not remove a finite chi-square or a finite V. The bias
+# correction can also be undefined while classical V remains finite.
 _ASSOCIATION_REASONS = frozenset(
     {
         UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS,
@@ -39,6 +43,9 @@ _ASSOCIATION_REASONS = frozenset(
         UnavailabilityReason.NON_FINITE_RESULT,
     }
 )
+_CORRECTED_ASSOCIATION_REASONS = _ASSOCIATION_REASONS | {
+    UnavailabilityReason.BIAS_CORRECTION_UNDEFINED,
+}
 # Expected counts are defined for every non-empty table, including a
 # table with one observed level. They are not an independence result.
 _DIAGNOSTIC_REASONS = frozenset(
@@ -73,11 +80,13 @@ class CategoricalAxisOrder(Enum):
 class CategoricalAssociationMethod(Enum):
     """Symmetric association for two categorical variables.
 
-    This is classical Cramér's V. It is not a bias-corrected variant
-    and it has no sign.
+    ``CRAMERS_V`` is the classical descriptive coefficient. It has no
+    sign. ``BIAS_CORRECTED_CRAMERS_V`` is the Bergsma companion. It has
+    no sign either.
     """
 
     CRAMERS_V = "cramers_v"
+    BIAS_CORRECTED_CRAMERS_V = "bias_corrected_cramers_v"
 
 
 class CategoricalIndependenceMethod(Enum):
@@ -153,31 +162,52 @@ class CategoricalContingencyTable:
 
 @dataclass(frozen=True)
 class CategoricalAssociationEstimate:
-    """Classical Cramér's V for one categorical pair.
+    """One symmetric association for a categorical pair.
 
-    ``value`` lies on ``[0, 1]`` when the denominator is positive and the
-    ratio is finite. It is unsigned. It is never NaN. ``reason`` is set
-    only when V is unavailable. Unavailable is not stored as zero.
+    Classical Cramér's V lies on ``[0, 1]`` when its denominator is
+    positive and the ratio is finite. The Bergsma correction lies on
+    the same interval when its corrected denominator is positive. A
+    negative phi-squared adjustment is part of that published estimator:
+    the numerator is floored at zero and ``numerator_floored`` is true.
+    That zero is the estimate, not an unavailable result. ``reason`` is
+    set only when the association is unavailable. Unavailable is not
+    stored as zero. ``numerator_floored`` is set only for an available
+    bias-corrected value.
     """
 
     method: CategoricalAssociationMethod
     availability: ResultAvailability
     value: Optional[float]
     reason: Optional[UnavailabilityReason]
+    numerator_floored: Optional[bool] = None
 
     def __post_init__(self) -> None:
         _require_enum(self.method, CategoricalAssociationMethod, "method")
         _require_enum(self.availability, ResultAvailability, "availability")
+        corrected = self.method is CategoricalAssociationMethod.BIAS_CORRECTED_CRAMERS_V
         if self.availability is ResultAvailability.AVAILABLE:
             _require_unit_interval(self.value, "Cramér's V")
             if self.reason is not None:
                 raise ValueError(
                     "an available association has no unavailability reason"
                 )
+            if not corrected:
+                if self.numerator_floored is not None:
+                    raise ValueError("classical Cramér's V has no numerator floor")
+                return
+            if type(self.numerator_floored) is not bool:
+                raise ValueError(
+                    "a bias-corrected V records whether its numerator was floored"
+                )
+            if self.numerator_floored and self.value != 0.0:
+                raise ValueError("a floored bias-corrected V is zero")
             return
         if self.value is not None:
             raise ValueError("an unavailable association has no value")
-        _require_reason(self.reason, _ASSOCIATION_REASONS, "reason")
+        if self.numerator_floored is not None:
+            raise ValueError("an unavailable association has no numerator floor")
+        allowed = _CORRECTED_ASSOCIATION_REASONS if corrected else _ASSOCIATION_REASONS
+        _require_reason(self.reason, allowed, "reason")
 
 
 @dataclass(frozen=True)
@@ -190,8 +220,11 @@ class ExpectedCountDiagnostics:
     Cochran checkpoints. A cell below one is also below five. The fraction
     uses the full rectangle, including observed zeros, as its denominator.
 
-    These facts do not decide whether Pearson's test is available. An
-    expected count below 5 is not a failed test.
+    These facts do not decide whether the chi-square statistic or its
+    tail can be computed. They do decide whether that computed tail is
+    inferentially valid, by Cochran's convention: no expected count
+    below 1, and no more than 20 percent of expected counts below 5.
+    An expected count below 5 is not, by itself, a failed convention.
     """
 
     availability: ResultAvailability
@@ -237,12 +270,13 @@ class CategoricalIndependenceTest:
     ``statistic`` is the uncorrected Pearson statistic. ``degrees_of_freedom``
     is ``(r - 1) * (c - 1)`` for the observed levels when that statistic
     exists. Yates's correction is not used, including for a 2×2 table.
-    ``frequentist`` holds the upper-tail chi-square p-value. The
-    calculator stores that raw p-value. Dataset-level correction may
-    later set the adjusted companion of the same test. The statistic
-    and the p-value do not share one availability flag: a non-finite
-    tail does not erase a finite statistic. The p-value is not a
-    significance flag.
+    ``frequentist`` holds the upper-tail chi-square p-value. A computed
+    tail whose expected counts fail Cochran's convention stays on this
+    record and is marked inferentially invalid. Dataset-level correction
+    may later set the adjusted companion only when that tail is
+    inferentially valid. The statistic and the p-value do not share one
+    availability flag: a non-finite tail does not erase a finite
+    statistic. The p-value is not a significance flag.
     """
 
     method: CategoricalIndependenceMethod
@@ -305,7 +339,8 @@ class CategoricalCategoricalRelationship:
     not imputed and are not a table level. ``table`` stores the observed
     positive cells and both margins. The paired codes are not stored.
 
-    ``association`` is classical Cramér's V. ``expected_counts`` diagnoses
+    ``association`` is classical Cramér's V. ``corrected_association`` is
+    the Bergsma bias-corrected companion. ``expected_counts`` diagnoses
     the chi-square approximation without storing every expected cell.
     ``independence`` is Pearson's chi-square test. Those components do
     not share one availability flag. This record has no sign, no
@@ -320,6 +355,7 @@ class CategoricalCategoricalRelationship:
     n_paired: int
     table: CategoricalContingencyTable
     association: CategoricalAssociationEstimate
+    corrected_association: CategoricalAssociationEstimate
     expected_counts: ExpectedCountDiagnostics
     independence: CategoricalIndependenceTest
 
@@ -328,6 +364,11 @@ class CategoricalCategoricalRelationship:
         _require_population_counts(self.n_total_rows, self.n_paired)
         _require_type(self.table, CategoricalContingencyTable, "table")
         _require_type(self.association, CategoricalAssociationEstimate, "association")
+        _require_type(
+            self.corrected_association,
+            CategoricalAssociationEstimate,
+            "corrected_association",
+        )
         _require_type(self.expected_counts, ExpectedCountDiagnostics, "expected_counts")
         _require_type(self.independence, CategoricalIndependenceTest, "independence")
         if self.table.grand_total != self.n_paired:
@@ -446,11 +487,17 @@ def _require_categorical_components(
     n_right = table.n_right_levels
     n_paired = relationship.n_paired
     association = relationship.association
+    corrected = relationship.corrected_association
     independence = relationship.independence
     diagnostics = relationship.expected_counts
+    if association.method is not CategoricalAssociationMethod.CRAMERS_V:
+        raise ValueError("the descriptive association is classical Cramér's V")
+    if corrected.method is not CategoricalAssociationMethod.BIAS_CORRECTED_CRAMERS_V:
+        raise ValueError("the corrected association is bias-corrected Cramér's V")
     if n_paired == 0:
         _require_same_reason(
             association,
+            corrected,
             independence,
             UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS,
         )
@@ -458,28 +505,43 @@ def _require_categorical_components(
             diagnostics,
             UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS,
         )
+        _require_inferential_validity(independence, diagnostics, n_left, n_right)
         return
     if n_left < 2 or n_right < 2:
         _require_same_reason(
             association,
+            corrected,
             independence,
             UnavailabilityReason.CONSTANT_PAIRED_VALUES,
         )
     else:
-        _require_defined_chi_square(association, independence, n_left, n_right)
+        _require_defined_chi_square(
+            association,
+            corrected,
+            independence,
+            n_left,
+            n_right,
+            n_paired,
+        )
     _require_diagnostics_for_populated_table(diagnostics, n_left, n_right)
+    _require_inferential_validity(independence, diagnostics, n_left, n_right)
 
 
 def _require_same_reason(
     association: CategoricalAssociationEstimate,
+    corrected: CategoricalAssociationEstimate,
     independence: CategoricalIndependenceTest,
     reason: UnavailabilityReason,
 ) -> None:
-    if (
-        association.availability is not ResultAvailability.UNAVAILABLE
-        or association.reason is not reason
+    for estimate, name in (
+        (association, "association"),
+        (corrected, "corrected association"),
     ):
-        raise ValueError(f"association must be unavailable because {reason.value}")
+        if (
+            estimate.availability is not ResultAvailability.UNAVAILABLE
+            or estimate.reason is not reason
+        ):
+            raise ValueError(f"{name} must be unavailable because {reason.value}")
     if (
         independence.statistic_availability is not ResultAvailability.UNAVAILABLE
         or independence.statistic_reason is not reason
@@ -502,20 +564,26 @@ def _require_diagnostic_reason(
 
 def _require_defined_chi_square(
     association: CategoricalAssociationEstimate,
+    corrected: CategoricalAssociationEstimate,
     independence: CategoricalIndependenceTest,
     n_left: int,
     n_right: int,
+    n_paired: int,
 ) -> None:
     if independence.statistic_availability is ResultAvailability.UNAVAILABLE:
         if independence.statistic_reason is not UnavailabilityReason.NON_FINITE_RESULT:
             raise ValueError(
                 "a non-degenerate table loses chi-square only when it is not finite"
             )
-        if (
-            association.availability is not ResultAvailability.UNAVAILABLE
-            or association.reason is not UnavailabilityReason.NON_FINITE_RESULT
+        for estimate, name in (
+            (association, "Cramér's V"),
+            (corrected, "bias-corrected Cramér's V"),
         ):
-            raise ValueError("an undefined chi-square has no Cramér's V")
+            if (
+                estimate.availability is not ResultAvailability.UNAVAILABLE
+                or estimate.reason is not UnavailabilityReason.NON_FINITE_RESULT
+            ):
+                raise ValueError(f"an undefined chi-square has no {name}")
         return
     expected = (n_left - 1) * (n_right - 1)
     if independence.degrees_of_freedom != expected:
@@ -525,6 +593,7 @@ def _require_defined_chi_square(
             raise ValueError(
                 "a defined chi-square leaves V unavailable only when that value is not finite"
             )
+    _require_corrected_for_defined_chi_square(corrected, n_left, n_right, n_paired)
 
 
 def _require_diagnostics_for_populated_table(
@@ -542,6 +611,65 @@ def _require_diagnostics_for_populated_table(
     below_5 = diagnostics.n_cells_expected_below_5
     if below_5 is None or below_5 > n_cells:
         raise ValueError("cells below 5 cannot exceed the contingency rectangle")
+
+
+def _bias_correction_degenerate(n_left: int, n_right: int, n_paired: int) -> bool:
+    """Whether Bergsma's corrected denominator is not strictly positive."""
+    if n_paired < 2:
+        return True
+    left_span = (n_left - 1) * (n_paired - n_left)
+    right_span = (n_right - 1) * (n_paired - n_right)
+    return min(left_span, right_span) <= 0
+
+
+def _require_corrected_for_defined_chi_square(
+    corrected: CategoricalAssociationEstimate,
+    n_left: int,
+    n_right: int,
+    n_paired: int,
+) -> None:
+    degenerate = _bias_correction_degenerate(n_left, n_right, n_paired)
+    if degenerate:
+        if (
+            corrected.availability is not ResultAvailability.UNAVAILABLE
+            or corrected.reason is not UnavailabilityReason.BIAS_CORRECTION_UNDEFINED
+        ):
+            raise ValueError(
+                "a vanishing corrected dimension leaves bias-corrected V unavailable"
+            )
+        return
+    if corrected.availability is ResultAvailability.UNAVAILABLE:
+        if corrected.reason is not UnavailabilityReason.NON_FINITE_RESULT:
+            raise ValueError(
+                "a defined correction is unavailable only when its value is not finite"
+            )
+
+
+def _require_inferential_validity(
+    independence: CategoricalIndependenceTest,
+    diagnostics: ExpectedCountDiagnostics,
+    n_left: int,
+    n_right: int,
+) -> None:
+    """A computed chi-square tail is valid only when Cochran's convention holds."""
+    frequentist = independence.frequentist
+    if frequentist.availability is not ResultAvailability.AVAILABLE:
+        if frequentist.inferential_validity is not InferentialValidity.NOT_APPLICABLE:
+            raise ValueError("an absent chi-square tail is not an inferential p-value")
+        return
+    validity, reason = chi_square_inferential_status(
+        diagnostics_available=diagnostics.availability is ResultAvailability.AVAILABLE,
+        minimum_expected_count=diagnostics.minimum_expected_count,
+        n_cells_expected_below_5=diagnostics.n_cells_expected_below_5,
+        n_cells=n_left * n_right,
+    )
+    if (
+        frequentist.inferential_validity is not validity
+        or frequentist.invalidity_reason is not reason
+    ):
+        raise ValueError(
+            "chi-square inferential validity must follow Cochran's convention"
+        )
 
 
 install_column_label_equality(CategoricalCategoricalRelationship)

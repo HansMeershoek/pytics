@@ -527,6 +527,7 @@ def test_components_reject_another_familys_reason() -> None:
             n_paired=pair.n_paired,
             groups=pair.groups,
             effect=pair.effect,
+            corrected_effect=pair.corrected_effect,
             omnibus=pair.omnibus,
         )
     with pytest.raises(ValueError, match="less than right_position"):

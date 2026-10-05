@@ -182,8 +182,26 @@ def _assert_pearson(relationship: CategoricalCategoricalRelationship) -> None:
     assert test.frequentist.p_value == pytest.approx(
         float(reference.pvalue), rel=1e-12, abs=1e-12
     )
-    assert test.frequentist.adjustment is MultipleTestingAdjustment.BENJAMINI_HOCHBERG
-    assert test.frequentist.adjusted_p_value == test.frequentist.p_value
+    from pytics.analysis.relationships.models import InferentialValidity
+    from pytics.analysis.relationships.models import cochran_expected_counts_hold
+
+    diagnostics = relationship.expected_counts
+    n_cells = table.n_left_levels * table.n_right_levels
+    valid = cochran_expected_counts_hold(
+        minimum_expected_count=diagnostics.minimum_expected_count,
+        n_cells_expected_below_5=diagnostics.n_cells_expected_below_5,
+        n_cells=n_cells,
+    )
+    if valid:
+        assert test.frequentist.inferential_validity is InferentialValidity.VALID
+        assert test.frequentist.adjustment is (
+            MultipleTestingAdjustment.BENJAMINI_HOCHBERG
+        )
+        assert test.frequentist.adjusted_p_value == test.frequentist.p_value
+    else:
+        assert test.frequentist.inferential_validity is InferentialValidity.INVALID
+        assert test.frequentist.adjustment is MultipleTestingAdjustment.NOT_APPLIED
+        assert test.frequentist.adjusted_p_value is None
     if int(reference.dof) == 1:
         assert test.statistic != pytest.approx(float(yates.statistic))
     assert relationship.association.method is CategoricalAssociationMethod.CRAMERS_V

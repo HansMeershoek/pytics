@@ -32,8 +32,11 @@ from pytics.analysis.compare.values import _require_count
 from pytics.analysis.compare.values import _require_optional
 from pytics.analysis.compare.values import _require_type
 from pytics.analysis.relationships.models import ExpectedCountDiagnostics
+from pytics.analysis.relationships.models import InferentialInvalidityReason
+from pytics.analysis.relationships.models import InferentialValidity
 from pytics.analysis.relationships.models import MultipleTestingAdjustment
 from pytics.analysis.relationships.models import ResultAvailability
+from pytics.analysis.relationships.models import chi_square_inferential_status
 
 # A float evaluation of a bounded quantity, or of the same rational
 # number reached by two roundings, may differ from it by a few ulps.
@@ -252,8 +255,7 @@ class KolmogorovSmirnovLocation:
     def cumulative_difference(self) -> float:
         """``comparison_cumulative_proportion - reference_cumulative_proportion``."""
         return (
-            self.comparison_cumulative_proportion
-            - self.reference_cumulative_proportion
+            self.comparison_cumulative_proportion - self.reference_cumulative_proportion
         )
 
 
@@ -262,12 +264,20 @@ class DriftTest:
     """The primary frequentist test of one drift record.
 
     ``p_value`` is the raw p-value. ``0.0`` is kept when the library
-    tail underflows. ``adjusted_p_value`` is the Benjamini–Hochberg
-    companion of that same raw p-value inside one dataset comparison.
+    tail underflows. ``availability`` says the tail was computed.
+    ``inferential_validity`` says whether that tail may be read as an
+    inferential probability. A chi-square tail that fails Cochran's
+    expected-count convention stays computed and is not valid.
+    ``adjusted_p_value`` is the Benjamini–Hochberg companion of an
+    inferentially valid raw p-value inside one dataset comparison.
     Neither is a significance flag. ``statistic`` and
     ``degrees_of_freedom`` are kept for the chi-square test only: the KS
     statistic is the KS distance effect, and the Fisher test has no
     separate statistic.
+
+    Omitting ``inferential_validity`` means ``NOT_APPLICABLE`` when no
+    p-value was computed and ``VALID`` when one was. The chi-square
+    calculator passes ``INVALID`` when Cochran's convention fails.
     """
 
     method: DriftTestMethod
@@ -279,11 +289,14 @@ class DriftTest:
     adjusted_p_value: Optional[float]
     adjustment: MultipleTestingAdjustment
     reason: Optional[DriftUnavailabilityReason]
+    inferential_validity: Optional[InferentialValidity] = None
+    invalidity_reason: Optional[InferentialInvalidityReason] = None
 
     def __post_init__(self) -> None:
         _require_type(self.method, DriftTestMethod, "method")
         _require_type(self.availability, ResultAvailability, "availability")
         _require_type(self.adjustment, MultipleTestingAdjustment, "adjustment")
+        _resolve_drift_validity(self)
         if self.availability is ResultAvailability.UNAVAILABLE:
             if (
                 self.computation is not None
@@ -295,10 +308,32 @@ class DriftTest:
                 raise ValueError("an unavailable test has no values")
             if self.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
                 raise ValueError("an unavailable test is not adjusted")
+            if self.inferential_validity is not InferentialValidity.NOT_APPLICABLE:
+                raise ValueError("an unavailable test has no inferential p-value")
+            if self.invalidity_reason is not None:
+                raise ValueError("an unavailable test has no invalidity reason")
             _require_type(self.reason, DriftUnavailabilityReason, "reason")
             return
         if self.reason is not None:
             raise ValueError("an available test has no unavailability reason")
+        if self.inferential_validity is InferentialValidity.NOT_APPLICABLE:
+            raise ValueError("a computed p-value has an inferential status")
+        if self.inferential_validity is InferentialValidity.INVALID:
+            _require_type(
+                self.invalidity_reason,
+                InferentialInvalidityReason,
+                "invalidity_reason",
+            )
+            if self.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
+                raise ValueError("an inferentially invalid p-value is not adjusted")
+            if self.adjusted_p_value is not None:
+                raise ValueError(
+                    "an inferentially invalid p-value has no adjusted p-value"
+                )
+        elif self.inferential_validity is not InferentialValidity.VALID:
+            raise ValueError("inferential validity is not recognized")
+        elif self.invalidity_reason is not None:
+            raise ValueError("a valid p-value has no invalidity reason")
         _require_type(self.computation, PValueComputation, "computation")
         if self.computation not in _TEST_COMPUTATIONS[self.method]:
             raise ValueError("p-value computation does not fit the test method")
@@ -311,6 +346,8 @@ class DriftTest:
         elif self.statistic is not None or self.degrees_of_freedom is not None:
             raise ValueError("only the chi-square test keeps a statistic")
         _require_unit(self.p_value, "p_value")
+        if self.inferential_validity is InferentialValidity.INVALID:
+            return
         if self.adjustment is MultipleTestingAdjustment.NOT_APPLIED:
             if self.adjusted_p_value is not None:
                 raise ValueError("an unadjusted test has no adjusted p-value")
@@ -420,8 +457,10 @@ class CategoricalDistributionDrift:
 
     The test is Pearson's chi-square of homogeneity. ``expected_counts``
     are the Cochran checkpoints of the 2 by k table, with the same rules
-    as Categorical × Categorical relationships. They do not turn the test
-    on or off. A sparse table keeps its asymptotic p-value.
+    as Categorical × Categorical relationships. They do not suppress the
+    computed asymptotic p-value. They do mark that p-value inferentially
+    invalid when Cochran's convention fails, and an invalid p-value does
+    not enter the drift correction family.
     """
 
     population: DriftPopulation
@@ -480,6 +519,7 @@ class CategoricalDistributionDrift:
         if self.test.availability is ResultAvailability.AVAILABLE:
             if self.test.degrees_of_freedom != self.n_levels - 1:
                 raise ValueError("homogeneity degrees of freedom are n_levels - 1")
+            _require_homogeneity_validity(self)
         elif self.n_levels == 1:
             if self.test.reason is not DriftUnavailabilityReason.SINGLE_POOLED_LEVEL:
                 raise ValueError("one pooled level has no homogeneity test")
@@ -548,6 +588,44 @@ DistributionDrift = Union[
     CategoricalDistributionDrift,
     BooleanDistributionDrift,
 ]
+
+
+def _resolve_drift_validity(test: DriftTest) -> None:
+    """Fill an omitted status. An explicit status is left unchanged."""
+    if test.inferential_validity is not None:
+        _require_type(
+            test.inferential_validity, InferentialValidity, "inferential_validity"
+        )
+        return
+    if test.invalidity_reason is not None:
+        raise ValueError("an unspecified inferential status has no invalidity reason")
+    validity = (
+        InferentialValidity.NOT_APPLICABLE
+        if test.availability is ResultAvailability.UNAVAILABLE
+        else InferentialValidity.VALID
+    )
+    object.__setattr__(test, "inferential_validity", validity)
+
+
+def _require_homogeneity_validity(record: CategoricalDistributionDrift) -> None:
+    """The stored chi-square status must be the Cochran reading of the diagnostics."""
+    diagnostics = record.expected_counts
+    if diagnostics is None:
+        raise ValueError("a computed homogeneity test has expected counts")
+    validity, reason = chi_square_inferential_status(
+        diagnostics_available=diagnostics.availability is ResultAvailability.AVAILABLE,
+        minimum_expected_count=diagnostics.minimum_expected_count,
+        n_cells_expected_below_5=diagnostics.n_cells_expected_below_5,
+        n_cells=2 * record.n_levels,
+    )
+    test = record.test
+    if (
+        test.inferential_validity is not validity
+        or test.invalidity_reason is not reason
+    ):
+        raise ValueError(
+            "chi-square inferential validity must follow Cochran's convention"
+        )
 
 
 def _require_method(effect: DriftEffect, expected: DriftEffectMethod) -> None:

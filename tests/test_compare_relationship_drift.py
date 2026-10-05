@@ -336,7 +336,8 @@ def test_eta_squared_change_records_vocabulary_without_blocking_subtraction() ->
     assert same.primary.magnitude_change is None
     assert same.grouping_vocabulary is not None
     assert same.grouping_vocabulary.status is VocabularyStatus.SAME
-    assert same.complementary == ()
+    assert len(same.complementary) == 1
+    assert same.complementary[0].measure is RelationshipChangeMeasure.EPSILON_SQUARED
     assert same.pearson_change_test is None
 
     added = _pair(

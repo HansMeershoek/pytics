@@ -64,7 +64,12 @@ from pytics.analysis.relationships.models.categorical_categorical import (
 )
 from pytics.analysis.relationships.models.common import BooleanLevel
 from pytics.analysis.relationships.models.common import FrequentistEvidence
+from pytics.analysis.relationships.models.common import InferentialInvalidityReason
+from pytics.analysis.relationships.models.common import InferentialValidity
 from pytics.analysis.relationships.models.common import MultipleTestingAdjustment
+from pytics.analysis.relationships.models.common import chi_square_inferential_status
+from pytics.analysis.relationships.models.common import cochran_expected_counts_hold
+from pytics.analysis.relationships.models.common import inferential_p_value_eligible
 from pytics.analysis.relationships.models.common import RelationshipFamily
 from pytics.analysis.relationships.models.common import ResultAvailability
 from pytics.analysis.relationships.models.common import UnavailabilityReason
@@ -162,6 +167,8 @@ __all__ = [
     "CorrelationIntervalMethod",
     "EffectDirection",
     "FrequentistEvidence",
+    "InferentialInvalidityReason",
+    "InferentialValidity",
     "GroupEffectEstimate",
     "GroupEffectMethod",
     "MeanDifferenceEstimate",
@@ -189,4 +196,7 @@ __all__ = [
     "UnavailabilityReason",
     "UnimplementedFamilyCount",
     "UnimplementedRelationshipFamily",
+    "chi_square_inferential_status",
+    "cochran_expected_counts_hold",
+    "inferential_p_value_eligible",
 ]

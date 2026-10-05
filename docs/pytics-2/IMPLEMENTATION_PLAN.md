@@ -2080,6 +2080,23 @@ Acceptance checks:
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
-## After TSK-046
+## TSK-047
 
-TSK-046 removes the 1.1.5 HTML and PDF renderer and the dependencies that only it imported, and makes `profile()` and `compare()` the minimal top-level facade over the existing results. It leaves notebook redesign, charts, standalone HTML, Markdown export, PDF, JSON serialization, the configuration object, semantic-override representation, Text selection, and Python 3.15 migration unselected. [DEC-117](DECISIONS.md#dec-117) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+Slice 047, statistical validity hardening. Approved 2026-10-05 after TSK-046. Completed the same day. No later slice is approved by this section.
+
+Keep classical eta squared and classical Cramér's V, add bias-corrected companions, and stop treating a computed chi-square tail as inferential when Cochran's expected-count convention fails. Do not add a cardinality cutoff, collapse categories, or replace chi-square with another test.
+
+Acceptance checks:
+
+1. Under seeded high-cardinality noise, naive eta squared and naive Cramér's V stay inflated, and epsilon squared and Bergsma's V are materially smaller without being forced to zero.
+2. A chi-square tail with an expected count below 1, a tail with more than 20 percent of expected counts below 5, and a dense control are marked with the Cochran status. An invalid tail keeps its computed p-value and has no adjusted p-value.
+3. A mixed family adjusts only the valid hypotheses, and the adjustment matches Benjamini–Hochberg on that reduced family.
+4. Categorical distribution drift uses the same validity rule. Total variation distance is unchanged. Relationship drift keeps the naive effects as primary changes and copies the corrected effects beside them.
+5. Semantic counts on the penguins-shaped control and the messy-company control stay at their accepted values. Source frames are unchanged.
+6. The full suite passes, total coverage stays at least 97%, and [DEC-118](DECISIONS.md#dec-118) records the rule.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-047
+
+TSK-047 adds epsilon squared, Bergsma's bias-corrected Cramér's V, and Cochran's chi-square validity gate. It leaves notebook redesign, charts, standalone HTML, Markdown export, PDF, JSON serialization, the configuration object, semantic-override representation, Text selection, exact categorical tests, and Python 3.15 migration unselected. [DEC-118](DECISIONS.md#dec-118) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

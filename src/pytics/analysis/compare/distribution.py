@@ -77,8 +77,11 @@ from pytics.analysis.relationships.categorical_categorical import (
     _pearson_chi_square_from_counts,
 )
 from pytics.analysis.relationships.categorical_categorical import _pearson_p_value
+from pytics.analysis.relationships.models import ExpectedCountDiagnostics
 from pytics.analysis.relationships.models import MultipleTestingAdjustment
 from pytics.analysis.relationships.models import ResultAvailability
+from pytics.analysis.relationships.models import chi_square_inferential_status
+from pytics.analysis.relationships.models import inferential_p_value_eligible
 
 # SciPy's ``ks_2samp(method="auto")`` attempts the exact distribution when
 # neither sample is larger than this.
@@ -141,7 +144,9 @@ def numeric_distribution_drift(
             wasserstein_distance=_unavailable_effect(
                 DriftEffectMethod.WASSERSTEIN_1_DISTANCE, empty
             ),
-            test=_unavailable_test(DriftTestMethod.KOLMOGOROV_SMIRNOV_TWO_SAMPLE, empty),
+            test=_unavailable_test(
+                DriftTestMethod.KOLMOGOROV_SMIRNOV_TWO_SAMPLE, empty
+            ),
         )
     n_reference = population.n_reference
     n_comparison = population.n_comparison
@@ -223,7 +228,9 @@ def categorical_distribution_drift(
     for index, level in enumerate(levels):
         reference_count = level.reference_count or 0
         comparison_count = level.comparison_count or 0
-        numerator += abs(reference_count * n_comparison - comparison_count * n_reference)
+        numerator += abs(
+            reference_count * n_comparison - comparison_count * n_reference
+        )
         if reference_count:
             cells.append((0, index, reference_count))
         if comparison_count:
@@ -231,6 +238,14 @@ def categorical_distribution_drift(
         pooled_totals.append(reference_count + comparison_count)
     side_totals = (n_reference, n_comparison)
     n_pooled = n_reference + n_comparison
+    expected_counts = _expected_count_diagnostics(
+        side_totals, tuple(pooled_totals), n_pooled
+    )
+    test = _with_homogeneity_validity(
+        _homogeneity_test(tuple(cells), side_totals, tuple(pooled_totals), n_pooled),
+        expected_counts,
+        n_cells=2 * len(levels),
+    )
     return CategoricalDistributionDrift(
         population=population,
         n_levels=len(levels),
@@ -240,12 +255,8 @@ def categorical_distribution_drift(
             DriftEffectMethod.TOTAL_VARIATION_DISTANCE,
             _unit_quotient(numerator, 2 * n_reference * n_comparison),
         ),
-        expected_counts=_expected_count_diagnostics(
-            side_totals, tuple(pooled_totals), n_pooled
-        ),
-        test=_homogeneity_test(
-            tuple(cells), side_totals, tuple(pooled_totals), n_pooled
-        ),
+        expected_counts=expected_counts,
+        test=test,
     )
 
 
@@ -304,18 +315,23 @@ def boolean_distribution_drift(
 def adjust_drift_tests(
     records: Tuple[Optional[DistributionDrift], ...],
 ) -> Tuple[Optional[DistributionDrift], ...]:
-    """Benjamini–Hochberg over the available primary drift tests.
+    """Benjamini–Hochberg over the inferentially valid primary drift tests.
 
     Each record contributes its one primary test when the raw p-value is
-    available. Effects do not enter. An unavailable test stays
-    unadjusted. ``m`` is the number of available p-values. Records keep
-    their order.
+    available and inferentially valid. Effects do not enter. An
+    unavailable test stays unadjusted. A computed chi-square p-value
+    whose Cochran convention failed stays unadjusted. ``m`` is the
+    number of eligible p-values. Records keep their order. This family
+    is not pooled with a relationship family.
     """
     members = [
         index
         for index, record in enumerate(records)
         if record is not None
-        and record.test.availability is ResultAvailability.AVAILABLE
+        and inferential_p_value_eligible(
+            record.test.availability,
+            record.test.inferential_validity,  # type: ignore[arg-type]
+        )
     ]
     if not members:
         return records
@@ -374,7 +390,9 @@ def _common_image(
                 target, copy=False
             )
         signed, unsigned = (
-            (reference, comparison) if reference_kind == "i" else (comparison, reference)
+            (reference, comparison)
+            if reference_kind == "i"
+            else (comparison, reference)
         )
         if int(signed.min()) >= 0:
             target = np.uint64
@@ -590,6 +608,29 @@ def _asymptotic_ks_p_value(
     except (ValueError, FloatingPointError, OverflowError):
         return None
     return _as_p_value(raw)
+
+
+def _with_homogeneity_validity(
+    test: DriftTest,
+    diagnostics: ExpectedCountDiagnostics,
+    *,
+    n_cells: int,
+) -> DriftTest:
+    """Attach Cochran's reading to a computed homogeneity p-value."""
+    if test.availability is not ResultAvailability.AVAILABLE:
+        return test
+    available = diagnostics.availability is ResultAvailability.AVAILABLE
+    validity, reason = chi_square_inferential_status(
+        diagnostics_available=available,
+        minimum_expected_count=diagnostics.minimum_expected_count,
+        n_cells_expected_below_5=diagnostics.n_cells_expected_below_5,
+        n_cells=n_cells,
+    )
+    return replace(
+        test,
+        inferential_validity=validity,
+        invalidity_reason=reason,
+    )
 
 
 def _homogeneity_test(

@@ -35,6 +35,7 @@ from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationships.adjustment import adjust_primary_p_values
+from pytics.analysis.relationships.models import InferentialValidity
 from pytics.analysis.relationships.adjustment import benjamini_hochberg
 from pytics.analysis.relationships.collector import _Eligibility
 from pytics.analysis.relationships.collector import _pair_class
@@ -230,6 +231,7 @@ def test_correction_family_contains_each_primary_test_once() -> None:
         for name, evidence in _parts(record):
             if name == "pearson":
                 assert evidence.availability is AVAILABLE
+                assert evidence.inferential_validity is InferentialValidity.VALID
                 assert evidence.adjustment is NOT_APPLIED
                 assert evidence.adjusted_p_value is None
                 pearson_raw += 1
@@ -237,6 +239,12 @@ def test_correction_family_contains_each_primary_test_once() -> None:
                     pearson_adjusted += 1
                 continue
             assert evidence.availability is AVAILABLE
+            if evidence.inferential_validity is not InferentialValidity.VALID:
+                assert name == "chi_square"
+                assert evidence.inferential_validity is InferentialValidity.INVALID
+                assert evidence.adjustment is NOT_APPLIED
+                assert evidence.adjusted_p_value is None
+                continue
             assert evidence.adjustment is BH
             assert evidence.adjusted_p_value is not None
             assert evidence.adjusted_p_value + 1e-12 >= evidence.p_value
@@ -246,9 +254,8 @@ def test_correction_family_contains_each_primary_test_once() -> None:
         RelationshipFamily.NUMERIC_CATEGORICAL: 4,
         RelationshipFamily.NUMERIC_BOOLEAN: 4,
         RelationshipFamily.BOOLEAN_BOOLEAN: 1,
-        RelationshipFamily.CATEGORICAL_CATEGORICAL: 1,
     }
-    assert sum(adjusted.values()) == 11
+    assert sum(adjusted.values()) == 10
     assert pearson_raw == 1
     assert pearson_adjusted == 0
     assert retained.n_supported_pairs == 11
@@ -385,7 +392,7 @@ def test_unavailable_primary_p_values_do_not_enter_m() -> None:
     assert short.n_paired == 2
 
 
-def test_sparse_chi_square_still_enters_the_correction_family() -> None:
+def test_sparse_chi_square_does_not_enter_the_correction_family() -> None:
     frame = pd.DataFrame(
         {
             "left": pd.Categorical(["a"] * 5 + ["b"]),
@@ -394,11 +401,13 @@ def test_sparse_chi_square_still_enters_the_correction_family() -> None:
     )
     relationship = _analysis(frame).relationships[0]
     assert isinstance(relationship, CategoricalCategoricalRelationship)
-    assert relationship.expected_counts.n_cells_expected_below_5 > 0
+    assert relationship.expected_counts.minimum_expected_count < 1.0
     evidence = relationship.independence.frequentist
     assert evidence.availability is AVAILABLE
-    assert evidence.adjustment is BH
-    assert evidence.adjusted_p_value == evidence.p_value
+    assert evidence.p_value is not None
+    assert evidence.inferential_validity is InferentialValidity.INVALID
+    assert evidence.adjustment is NOT_APPLIED
+    assert evidence.adjusted_p_value is None
 
 
 def test_perfect_and_null_p_values_stay_inside_the_unit_interval() -> None:

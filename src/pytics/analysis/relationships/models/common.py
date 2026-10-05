@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import FrozenSet
 from typing import Optional
+from typing import Tuple
 
 
 class RelationshipFamily(Enum):
@@ -70,21 +71,23 @@ class UnavailabilityReason(Enum):
     CONDITIONING_LEVEL_ABSENT = "conditioning_level_absent"
     MATHEMATICALLY_UNBOUNDED = "mathematically_unbounded"
     UNDEFINED_RATIO = "undefined_ratio"
+    BIAS_CORRECTION_UNDEFINED = "bias_correction_undefined"
 
 
 class MultipleTestingAdjustment(Enum):
     """What happened to one stored p-value.
 
     ``NOT_APPLIED`` means this p-value was not adjusted. That covers an
-    unavailable p-value, which never enters a correction family, and an
-    available complementary p-value that the correction policy leaves
-    raw. It does not mean a correction was attempted and failed.
+    unavailable p-value, a computed p-value whose inferential validity
+    failed, and an available complementary p-value that the correction
+    policy leaves raw. It does not mean a correction was attempted and
+    failed.
 
-    ``BENJAMINI_HOCHBERG`` means this p-value was one available primary
-    test in the exploratory family of the result that stores it, and it
-    received that family's Benjamini–Hochberg adjustment. A relationship
-    record belongs to the dataset-level relationship family. A
-    distribution-drift record belongs to the univariate drift family of
+    ``BENJAMINI_HOCHBERG`` means this p-value was one inferentially valid
+    primary test in the exploratory family of the result that stores it,
+    and it received that family's Benjamini–Hochberg adjustment. A
+    relationship record belongs to the dataset-level relationship family.
+    A distribution-drift record belongs to the univariate drift family of
     one dataset comparison. The two families are never pooled. A
     complementary test that two Pearson correlations are equal is not a
     member of either family. The adjusted value is evidence about that
@@ -95,17 +98,121 @@ class MultipleTestingAdjustment(Enum):
     BENJAMINI_HOCHBERG = "benjamini_hochberg"
 
 
+class InferentialValidity(Enum):
+    """Whether a stored p-value may be read as inferential evidence.
+
+    ``NOT_APPLICABLE`` means no p-value was computed.
+    ``VALID`` means a p-value was computed and every validity gate
+    required for its method passed. A method with no separate gate in
+    this version is valid whenever its p-value is available.
+    ``INVALID`` means a p-value was computed and a required gate failed.
+    The raw number remains. It is not an ordinary inferential p-value,
+    it does not enter a correction family, and it has no adjusted value.
+    """
+
+    NOT_APPLICABLE = "not_applicable"
+    VALID = "valid"
+    INVALID = "invalid"
+
+
+class InferentialInvalidityReason(Enum):
+    """Why a computed p-value is not inferentially valid.
+
+    ``CHI_SQUARE_EXPECTED_COUNTS`` means Cochran's expected-count
+    convention failed, or the expected-count diagnostics needed to
+    apply that convention were not available. The computed chi-square
+    tail is still stored on the p-value.
+    """
+
+    CHI_SQUARE_EXPECTED_COUNTS = "chi_square_expected_counts"
+
+
+# Cochran (1954): no expected count below 1, and no more than 20% of
+# expected counts below 5. The share is an exact integer comparison,
+# ``5 * n_below_5 <= n_cells``, so one fifth of the cells passes.
+_CHI_SQUARE_MINIMUM_EXPECTED_COUNT = 1.0
+_CHI_SQUARE_LOW_EXPECTED_CELL_FACTOR = 5
+
+
+def cochran_expected_counts_hold(
+    *,
+    minimum_expected_count: Optional[float],
+    n_cells_expected_below_5: Optional[int],
+    n_cells: int,
+) -> bool:
+    """Whether retained expected counts meet Cochran's chi-square convention."""
+    if type(n_cells) is not int or n_cells < 1:
+        return False
+    if (
+        type(minimum_expected_count) is not float
+        or not math.isfinite(minimum_expected_count)
+        or minimum_expected_count < _CHI_SQUARE_MINIMUM_EXPECTED_COUNT
+    ):
+        return False
+    if type(n_cells_expected_below_5) is not int or n_cells_expected_below_5 < 0:
+        return False
+    return n_cells_expected_below_5 * _CHI_SQUARE_LOW_EXPECTED_CELL_FACTOR <= n_cells
+
+
+def chi_square_inferential_status(
+    *,
+    diagnostics_available: bool,
+    minimum_expected_count: Optional[float],
+    n_cells_expected_below_5: Optional[int],
+    n_cells: int,
+) -> Tuple[InferentialValidity, Optional[InferentialInvalidityReason]]:
+    """Validity of one computed asymptotic chi-square p-value.
+
+    A missing diagnostic is not treated as valid. The returned reason
+    is set only when the status is ``INVALID``.
+    """
+    if diagnostics_available and cochran_expected_counts_hold(
+        minimum_expected_count=minimum_expected_count,
+        n_cells_expected_below_5=n_cells_expected_below_5,
+        n_cells=n_cells,
+    ):
+        return InferentialValidity.VALID, None
+    return (
+        InferentialValidity.INVALID,
+        InferentialInvalidityReason.CHI_SQUARE_EXPECTED_COUNTS,
+    )
+
+
+def inferential_p_value_eligible(
+    availability: ResultAvailability,
+    inferential_validity: InferentialValidity,
+) -> bool:
+    """Whether one p-value may enter its correction family.
+
+    The p-value must have been computed and its method's validity gates
+    must have passed. A computed value whose assumptions failed is not
+    eligible. An absent p-value is not eligible.
+    """
+    return (
+        availability is ResultAvailability.AVAILABLE
+        and inferential_validity is InferentialValidity.VALID
+    )
+
+
 @dataclass(frozen=True)
 class FrequentistEvidence:
     """Frequentist evidence for one inferential result.
 
     A correlation test, a one-way ANOVA p-value, a Boolean exact
     test, and a Pearson chi-square p-value all use this record.
+    ``availability`` says whether a raw p-value was computed. It does
+    not say that the number is an inferential probability.
+    ``inferential_validity`` makes that second distinction.
     ``adjustment`` belongs to this result. It is not a dataset-wide
     correction status. ``NOT_APPLIED`` keeps ``adjusted_p_value`` empty.
     ``BENJAMINI_HOCHBERG`` stores the adjusted companion of this same
-    raw p-value. An unavailable test is not adjusted. The p-value is
-    not a significance flag.
+    raw p-value and is allowed only when the p-value is inferentially
+    valid. An unavailable test is not adjusted. The p-value is not a
+    significance flag.
+
+    Omitting ``inferential_validity`` means ``NOT_APPLICABLE`` when no
+    p-value was computed and ``VALID`` when one was. Chi-square callers
+    pass ``INVALID`` explicitly when Cochran's convention fails.
     """
 
     availability: ResultAvailability
@@ -113,10 +220,13 @@ class FrequentistEvidence:
     adjusted_p_value: Optional[float]
     adjustment: MultipleTestingAdjustment
     reason: Optional[UnavailabilityReason]
+    inferential_validity: Optional[InferentialValidity] = None
+    invalidity_reason: Optional[InferentialInvalidityReason] = None
 
     def __post_init__(self) -> None:
         _require_enum(self.availability, ResultAvailability, "availability")
         _require_enum(self.adjustment, MultipleTestingAdjustment, "adjustment")
+        _resolve_inferential_validity(self)
         if self.availability is ResultAvailability.UNAVAILABLE:
             if self.p_value is not None:
                 raise ValueError("an unavailable test has no p-value")
@@ -124,11 +234,34 @@ class FrequentistEvidence:
                 raise ValueError("an unavailable test has no adjusted p-value")
             if self.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
                 raise ValueError("an unavailable test is not adjusted")
+            if self.inferential_validity is not InferentialValidity.NOT_APPLICABLE:
+                raise ValueError("an unavailable test has no inferential p-value")
+            if self.invalidity_reason is not None:
+                raise ValueError("an unavailable test has no invalidity reason")
             _require_enum(self.reason, UnavailabilityReason, "reason")
             return
         _require_p_value(self.p_value)
         if self.reason is not None:
             raise ValueError("an available test has no unavailability reason")
+        if self.inferential_validity is InferentialValidity.NOT_APPLICABLE:
+            raise ValueError("a computed p-value has an inferential status")
+        if self.inferential_validity is InferentialValidity.INVALID:
+            _require_enum(
+                self.invalidity_reason,
+                InferentialInvalidityReason,
+                "invalidity_reason",
+            )
+            if self.adjustment is not MultipleTestingAdjustment.NOT_APPLIED:
+                raise ValueError("an inferentially invalid p-value is not adjusted")
+            if self.adjusted_p_value is not None:
+                raise ValueError(
+                    "an inferentially invalid p-value has no adjusted p-value"
+                )
+            return
+        if self.inferential_validity is not InferentialValidity.VALID:
+            raise ValueError("inferential validity is not recognized")
+        if self.invalidity_reason is not None:
+            raise ValueError("a valid p-value has no invalidity reason")
         if self.adjustment is MultipleTestingAdjustment.NOT_APPLIED:
             if self.adjusted_p_value is not None:
                 raise ValueError("an unadjusted test has no adjusted p-value")
@@ -140,6 +273,25 @@ class FrequentistEvidence:
         _require_p_value(self.adjusted_p_value)
         if self.adjusted_p_value + 1e-12 < self.p_value:  # type: ignore[operator]
             raise ValueError("an adjusted p-value cannot be less than its raw p-value")
+
+
+def _resolve_inferential_validity(evidence: FrequentistEvidence) -> None:
+    """Fill an omitted status. An explicit status is left unchanged."""
+    if evidence.inferential_validity is not None:
+        _require_enum(
+            evidence.inferential_validity,
+            InferentialValidity,
+            "inferential_validity",
+        )
+        return
+    if evidence.invalidity_reason is not None:
+        raise ValueError("an unspecified inferential status has no invalidity reason")
+    validity = (
+        InferentialValidity.NOT_APPLICABLE
+        if evidence.availability is ResultAvailability.UNAVAILABLE
+        else InferentialValidity.VALID
+    )
+    object.__setattr__(evidence, "inferential_validity", validity)
 
 
 def _require_p_value(value: Optional[float]) -> None:

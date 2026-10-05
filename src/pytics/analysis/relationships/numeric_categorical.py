@@ -5,8 +5,22 @@ the observed groups of a Categorical variable, how large that overall
 group effect is, and what omnibus evidence accompanies it. It does not
 say which category pairs differ.
 
-The effect is eta squared, the ratio of between-group sum of squares to
-total sum of squares. The omnibus test is classical one-way ANOVA from
+The descriptive effect is eta squared, the ratio of between-group sum of
+squares to total sum of squares. The bias-corrected companion is
+Kelley's epsilon squared,
+
+    epsilon² = (SS_between - (k - 1) * MS_within) / SS_total
+
+with ``MS_within = SS_within / (N - k)``. It estimates the same ratio
+with the null expectation of the between-group sum removed. A negative
+value is retained: the correction exceeded the observed between-group
+sum, and that is not stored as zero. Epsilon squared is unavailable when
+``N = k``, because the within-group mean square is then undefined.
+Omega squared was not selected. It changes the denominator as well as
+the numerator, so it is not a correction of the ratio eta squared
+already stores, and it is slightly more biased for that ratio.
+
+The omnibus test is classical one-way ANOVA from
 ``scipy.stats.f_oneway`` with no keyword arguments, so the call stays
 within the declared SciPy 1.7 floor. Equal variances are an assumption
 of that test. They are not tested, and the test is not replaced when
@@ -61,7 +75,7 @@ from pytics.analysis.relationships.models import UnavailabilityReason
 # departure is not eta squared.
 _ETA_TOLERANCE = 1e-8
 
-_EffectAndTest = Tuple[GroupEffectEstimate, OmnibusAnovaResult]
+_EffectAndTest = Tuple[GroupEffectEstimate, GroupEffectEstimate, OmnibusAnovaResult]
 
 
 def analyze(
@@ -93,7 +107,9 @@ def analyze(
         n_total_rows,
     )
     groups = _group_summaries(paired_values, paired_codes, categories)
-    effect, omnibus = _effect_and_test(paired_values, paired_codes, groups)
+    effect, corrected_effect, omnibus = _effect_and_test(
+        paired_values, paired_codes, groups
+    )
     return NumericCategoricalRelationship(
         left_position=left_position,
         left_label=left_label,
@@ -105,6 +121,7 @@ def analyze(
         n_paired=int(paired_values.size),
         groups=groups,
         effect=effect,
+        corrected_effect=corrected_effect,
         omnibus=omnibus,
     )
 
@@ -467,23 +484,36 @@ def _from_sums(
     if ss_within == 0.0:
         effect = _available_effect(1.0)
         if df_within == 0:
-            return effect, _unavailable_anova(
-                UnavailabilityReason.INSUFFICIENT_WITHIN_GROUP_DEGREES_OF_FREEDOM
+            return (
+                effect,
+                _unavailable_corrected(
+                    UnavailabilityReason.INSUFFICIENT_WITHIN_GROUP_DEGREES_OF_FREEDOM
+                ),
+                _unavailable_anova(
+                    UnavailabilityReason.INSUFFICIENT_WITHIN_GROUP_DEGREES_OF_FREEDOM
+                ),
             )
-        return effect, _unavailable_anova(
-            UnavailabilityReason.ZERO_WITHIN_GROUP_VARIATION
+        return (
+            effect,
+            _available_corrected(1.0),
+            _unavailable_anova(UnavailabilityReason.ZERO_WITHIN_GROUP_VARIATION),
         )
     eta = _eta_squared(ss_between, ss_total)
     if eta is None:
         return _unavailable_pair(UnavailabilityReason.NON_FINITE_RESULT)
     if df_within <= 0:
         return _unavailable_pair(UnavailabilityReason.NON_FINITE_RESULT)
+    corrected = _corrected_effect(
+        ss_between, ss_within, ss_total, df_between, df_within
+    )
     statistic = (ss_between / df_between) / (ss_within / df_within)
     if statistic < 0.0 and -statistic <= _ETA_TOLERANCE:
         statistic = 0.0
     if not math.isfinite(statistic) or statistic < 0.0:
-        return _available_effect(eta), _unavailable_anova(
-            UnavailabilityReason.NON_FINITE_RESULT
+        return (
+            _available_effect(eta),
+            corrected,
+            _unavailable_anova(UnavailabilityReason.NON_FINITE_RESULT),
         )
     if statistic == 0.0:
         statistic = 0.0
@@ -496,13 +526,66 @@ def _from_sums(
         if p_value is not None
         else _unavailable_frequentist(UnavailabilityReason.NON_FINITE_RESULT)
     )
-    return _available_effect(eta), OmnibusAnovaResult(
-        method=OmnibusTestMethod.ONE_WAY_ANOVA,
-        statistic_availability=ResultAvailability.AVAILABLE,
-        statistic=statistic,
-        statistic_reason=None,
-        frequentist=frequentist,
+    return (
+        _available_effect(eta),
+        corrected,
+        OmnibusAnovaResult(
+            method=OmnibusTestMethod.ONE_WAY_ANOVA,
+            statistic_availability=ResultAvailability.AVAILABLE,
+            statistic=statistic,
+            statistic_reason=None,
+            frequentist=frequentist,
+        ),
     )
+
+
+def _corrected_effect(
+    ss_between: float,
+    ss_within: float,
+    ss_total: float,
+    df_between: int,
+    df_within: int,
+) -> GroupEffectEstimate:
+    """Epsilon squared from the same sums that produced eta squared."""
+    value = _epsilon_squared(ss_between, ss_within, ss_total, df_between, df_within)
+    if value is None:
+        return _unavailable_corrected(UnavailabilityReason.NON_FINITE_RESULT)
+    return _available_corrected(value)
+
+
+def _epsilon_squared(
+    ss_between: float,
+    ss_within: float,
+    ss_total: float,
+    df_between: int,
+    df_within: int,
+) -> Optional[float]:
+    """Kelley's epsilon squared. A negative result is a defined estimate."""
+    if df_within <= 0 or ss_total <= 0.0 or not math.isfinite(ss_total):
+        return None
+    if ss_within == 0.0:
+        return 1.0 if ss_between > 0.0 else None
+    mean_square_within = ss_within / df_within
+    if not math.isfinite(mean_square_within):
+        return None
+    numerator = ss_between - df_between * mean_square_within
+    if not math.isfinite(numerator):
+        return None
+    value = numerator / ss_total
+    if not math.isfinite(value):
+        return None
+    if value > 1.0:
+        if value <= 1.0 + _ETA_TOLERANCE:
+            return 1.0
+        return None
+    floor = -df_between / df_within
+    if value < floor and floor - value > _ETA_TOLERANCE:
+        return None
+    if value < floor:
+        value = floor
+    if value == 0.0:
+        return 0.0
+    return float(value)
 
 
 def _eta_squared(ss_between: float, ss_total: float) -> Optional[float]:
@@ -570,7 +653,11 @@ def _as_p_value(value: object) -> Optional[float]:
 
 
 def _unavailable_pair(reason: UnavailabilityReason) -> _EffectAndTest:
-    return _unavailable_effect(reason), _unavailable_anova(reason)
+    return (
+        _unavailable_effect(reason),
+        _unavailable_corrected(reason),
+        _unavailable_anova(reason),
+    )
 
 
 def _unavailable_effect(reason: UnavailabilityReason) -> GroupEffectEstimate:
@@ -585,6 +672,24 @@ def _unavailable_effect(reason: UnavailabilityReason) -> GroupEffectEstimate:
 def _available_effect(value: float) -> GroupEffectEstimate:
     return GroupEffectEstimate(
         method=GroupEffectMethod.ETA_SQUARED,
+        availability=ResultAvailability.AVAILABLE,
+        value=value,
+        reason=None,
+    )
+
+
+def _unavailable_corrected(reason: UnavailabilityReason) -> GroupEffectEstimate:
+    return GroupEffectEstimate(
+        method=GroupEffectMethod.EPSILON_SQUARED,
+        availability=ResultAvailability.UNAVAILABLE,
+        value=None,
+        reason=reason,
+    )
+
+
+def _available_corrected(value: float) -> GroupEffectEstimate:
+    return GroupEffectEstimate(
+        method=GroupEffectMethod.EPSILON_SQUARED,
         availability=ResultAvailability.AVAILABLE,
         value=value,
         reason=None,

@@ -683,13 +683,7 @@ def _copy_method(method: AssociationResult) -> AssociationResult:
             direction=estimate.direction,
             reason=estimate.reason,
         ),
-        frequentist=FrequentistEvidence(
-            availability=frequentist.availability,
-            p_value=frequentist.p_value,
-            adjusted_p_value=frequentist.adjusted_p_value,
-            adjustment=frequentist.adjustment,
-            reason=frequentist.reason,
-        ),
+        frequentist=_copy_frequentist(frequentist),
         confidence_interval=CorrelationInterval(
             availability=interval.availability,
             level=interval.level,
@@ -715,6 +709,7 @@ def _copy_numeric_categorical(
         n_paired=relationship.n_paired,
         groups=tuple(_copy_group(group) for group in relationship.groups),
         effect=_copy_effect(relationship.effect),
+        corrected_effect=_copy_effect(relationship.corrected_effect),
         omnibus=_copy_omnibus(relationship.omnibus),
     )
 
@@ -751,19 +746,24 @@ def _copy_effect(effect: GroupEffectEstimate) -> GroupEffectEstimate:
 
 
 def _copy_omnibus(omnibus: OmnibusAnovaResult) -> OmnibusAnovaResult:
-    frequentist = omnibus.frequentist
     return OmnibusAnovaResult(
         method=omnibus.method,
         statistic_availability=omnibus.statistic_availability,
         statistic=omnibus.statistic,
         statistic_reason=omnibus.statistic_reason,
-        frequentist=FrequentistEvidence(
-            availability=frequentist.availability,
-            p_value=frequentist.p_value,
-            adjusted_p_value=frequentist.adjusted_p_value,
-            adjustment=frequentist.adjustment,
-            reason=frequentist.reason,
-        ),
+        frequentist=_copy_frequentist(omnibus.frequentist),
+    )
+
+
+def _copy_frequentist(frequentist: FrequentistEvidence) -> FrequentistEvidence:
+    return FrequentistEvidence(
+        availability=frequentist.availability,
+        p_value=frequentist.p_value,
+        adjusted_p_value=frequentist.adjusted_p_value,
+        adjustment=frequentist.adjustment,
+        reason=frequentist.reason,
+        inferential_validity=frequentist.inferential_validity,
+        invalidity_reason=frequentist.invalidity_reason,
     )
 
 
@@ -841,13 +841,7 @@ def _copy_independence(test: BooleanIndependenceTest) -> BooleanIndependenceTest
     frequentist = test.frequentist
     return BooleanIndependenceTest(
         method=test.method,
-        frequentist=FrequentistEvidence(
-            availability=frequentist.availability,
-            p_value=frequentist.p_value,
-            adjusted_p_value=frequentist.adjusted_p_value,
-            adjustment=frequentist.adjustment,
-            reason=frequentist.reason,
-        ),
+        frequentist=_copy_frequentist(frequentist),
     )
 
 
@@ -912,13 +906,7 @@ def _copy_mean_difference_test(test: MeanDifferenceTest) -> MeanDifferenceTest:
         statistic=test.statistic,
         degrees_of_freedom=test.degrees_of_freedom,
         statistic_reason=test.statistic_reason,
-        frequentist=FrequentistEvidence(
-            availability=frequentist.availability,
-            p_value=frequentist.p_value,
-            adjusted_p_value=frequentist.adjusted_p_value,
-            adjustment=frequentist.adjustment,
-            reason=frequentist.reason,
-        ),
+        frequentist=_copy_frequentist(frequentist),
     )
 
 
@@ -934,6 +922,7 @@ def _copy_categorical_categorical(
         n_paired=relationship.n_paired,
         table=_copy_contingency(relationship.table),
         association=_copy_cramers_v(relationship.association),
+        corrected_association=_copy_cramers_v(relationship.corrected_association),
         expected_counts=_copy_expected_counts(relationship.expected_counts),
         independence=_copy_chi_square(relationship.independence),
     )
@@ -962,6 +951,7 @@ def _copy_cramers_v(
         availability=estimate.availability,
         value=estimate.value,
         reason=estimate.reason,
+        numerator_floored=estimate.numerator_floored,
     )
 
 
@@ -986,13 +976,7 @@ def _copy_chi_square(test: CategoricalIndependenceTest) -> CategoricalIndependen
         statistic=test.statistic,
         degrees_of_freedom=test.degrees_of_freedom,
         statistic_reason=test.statistic_reason,
-        frequentist=FrequentistEvidence(
-            availability=frequentist.availability,
-            p_value=frequentist.p_value,
-            adjusted_p_value=frequentist.adjusted_p_value,
-            adjustment=frequentist.adjustment,
-            reason=frequentist.reason,
-        ),
+        frequentist=_copy_frequentist(frequentist),
     )
 
 

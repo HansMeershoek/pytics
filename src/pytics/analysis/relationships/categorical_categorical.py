@@ -5,15 +5,29 @@ symmetric association is, and what frequentist evidence supports
 departure from independence. Chi-square significance is not the
 relationship.
 
-The effect is classical Cramér's V,
+The descriptive effect is classical Cramér's V,
 
     V = sqrt(chi2 / (n * min(r - 1, c - 1)))
 
 with ``n`` the paired count and ``r``, ``c`` the observed levels. It is
-not the Bergsma finite-sample correction. It is unsigned. For a 2×2
-table it equals the absolute value of the phi coefficient of the same
-Pearson counts. Boolean × Boolean keeps signed phi because False and
-True have a fixed coding. Arbitrary category levels do not.
+unsigned. For a 2×2 table it equals the absolute value of the phi
+coefficient of the same Pearson counts. Boolean × Boolean keeps signed
+phi because False and True have a fixed coding. Arbitrary category
+levels do not.
+
+The bias-corrected companion is Bergsma's estimator. With
+``phi2 = chi2 / n``,
+
+    phi2* = max(0, phi2 - (r - 1) * (c - 1) / (n - 1))
+    V* = sqrt(phi2* * (n - 1) / min((r - 1) * (n - r), (c - 1) * (n - c)))
+
+A negative ``phi2 - bias`` is floored at zero by that estimator. The
+retained value is then zero and ``numerator_floored`` is true. That zero
+is the estimate. It is not an unavailable result and it is not evidence
+that the finite sample was exactly independent. When the corrected
+denominator is not strictly positive, which happens when an observed
+axis has one level per paired row, the companion is unavailable with
+reason ``BIAS_CORRECTION_UNDEFINED``. Classical V can still be finite.
 
 The test is Pearson's chi-square of independence, without Yates's
 correction for any shape, including 2×2. The null is independence of
@@ -23,13 +37,16 @@ freedom are ``(r - 1) * (c - 1)``. The p-value is the upper tail
 called: its default applies Yates's correction when the degrees of
 freedom are 1, and its array input is a dense rectangle.
 
-One Pearson statistic produces V, the chi-square, and the tail. Expected
-counts are not stored. The retained diagnostics are the minimum expected
-count and the Cochran checkpoints of cells below 5 and below 1. Those
-checkpoints do not turn the test on or off. A sparse table keeps its
-table, its V when the formula is defined, its statistic, and its raw
-p-value, and it does not switch to Fisher's exact test. This module
-does not apply dataset-level correction.
+One Pearson statistic produces both V estimates, the chi-square, and
+the tail. Expected counts are not stored. The retained diagnostics are
+the minimum expected count and the Cochran checkpoints of cells below 5
+and below 1. Those checkpoints do not suppress the statistic or the
+computed tail, and they do not switch the test to Fisher's exact test.
+They do mark the tail inferentially invalid unless no expected count is
+below 1 and at most 20 percent of expected counts are below 5. An exact
+fifth passes. A sparse table keeps its table, its V when the formula is
+defined, its statistic, and its computed p-value. This module does not
+apply dataset-level correction.
 
 The retained table stores positive cells only. Pair counts use a
 temporary one-dimensional histogram when the observed rectangle has at
@@ -57,6 +74,7 @@ from __future__ import annotations
 
 import math
 import warnings
+from dataclasses import replace
 from typing import Optional
 from typing import Tuple
 
@@ -74,6 +92,7 @@ from pytics.analysis.relationships.models import FrequentistEvidence
 from pytics.analysis.relationships.models import MultipleTestingAdjustment
 from pytics.analysis.relationships.models import ResultAvailability
 from pytics.analysis.relationships.models import UnavailabilityReason
+from pytics.analysis.relationships.models import chi_square_inferential_status
 
 # The same absolute tolerance eta squared and phi use for a float that
 # lands just outside its closed interval.
@@ -86,7 +105,11 @@ _UNIT_OVERSHOOT = 1e-8
 # unavailable.
 _DENSE_HISTOGRAM_LIMIT = 2**20
 
-_Effects = Tuple[CategoricalAssociationEstimate, CategoricalIndependenceTest]
+_Effects = Tuple[
+    CategoricalAssociationEstimate,
+    CategoricalAssociationEstimate,
+    CategoricalIndependenceTest,
+]
 
 
 def analyze(
@@ -167,7 +190,9 @@ def _assemble(
     right_label: object,
     n_total_rows: int,
 ) -> CategoricalCategoricalRelationship:
-    association, independence = _effects(table)
+    association, corrected, independence = _effects(table)
+    diagnostics = _diagnostics(table)
+    independence = _with_chi_square_validity(independence, diagnostics, table)
     return CategoricalCategoricalRelationship(
         left_position=left_position,
         left_label=left_label,
@@ -177,7 +202,8 @@ def _assemble(
         n_paired=table.grand_total,
         table=table,
         association=association,
-        expected_counts=_diagnostics(table),
+        corrected_association=corrected,
+        expected_counts=diagnostics,
         independence=independence,
     )
 
@@ -290,21 +316,22 @@ def _effects(table: CategoricalContingencyTable) -> _Effects:
     n_right = table.n_right_levels
     if n_paired == 0:
         reason = UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS
-        return _unavailable_association(reason), _unavailable_test(reason)
+        return _unavailable_effects(reason)
     if n_left < 2 or n_right < 2:
         reason = UnavailabilityReason.CONSTANT_PAIRED_VALUES
-        return _unavailable_association(reason), _unavailable_test(reason)
+        return _unavailable_effects(reason)
     statistic = _pearson_chi_square(table)
     if statistic is None:
         reason = UnavailabilityReason.NON_FINITE_RESULT
-        return _unavailable_association(reason), _unavailable_test(reason)
+        return _unavailable_effects(reason)
     cramers_v = _cramers_v(statistic, n_paired, n_left, n_right)
     if cramers_v is None:
         association = _unavailable_association(UnavailabilityReason.NON_FINITE_RESULT)
     else:
         association = _available_association(cramers_v)
+    corrected = _corrected_association(statistic, n_paired, n_left, n_right)
     degrees_of_freedom = (n_left - 1) * (n_right - 1)
-    return association, _test_from_statistic(statistic, degrees_of_freedom)
+    return association, corrected, _test_from_statistic(statistic, degrees_of_freedom)
 
 
 def _pearson_chi_square(table: CategoricalContingencyTable) -> Optional[float]:
@@ -365,6 +392,80 @@ def _finite_chi_square(statistic: float) -> Optional[float]:
             return 0.0
         return None
     return float(statistic)
+
+
+def _corrected_association(
+    statistic: float,
+    n_paired: int,
+    n_left: int,
+    n_right: int,
+) -> CategoricalAssociationEstimate:
+    value, floored, reason = _bias_corrected_cramers_v(
+        statistic, n_paired, n_left, n_right
+    )
+    if reason is not None or value is None or floored is None:
+        return _unavailable_corrected(reason or UnavailabilityReason.NON_FINITE_RESULT)
+    return CategoricalAssociationEstimate(
+        method=CategoricalAssociationMethod.BIAS_CORRECTED_CRAMERS_V,
+        availability=ResultAvailability.AVAILABLE,
+        value=value,
+        reason=None,
+        numerator_floored=floored,
+    )
+
+
+def _bias_corrected_cramers_v(
+    statistic: float,
+    n_paired: int,
+    n_left: int,
+    n_right: int,
+) -> Tuple[Optional[float], Optional[bool], Optional[UnavailabilityReason]]:
+    """Bergsma's bias-corrected Cramér's V.
+
+    The return is ``(value, numerator_floored, reason)``. A defined
+    estimate has no reason. A negative phi-squared adjustment is floored
+    at zero and reported as that floor rather than as a missing value.
+    """
+    left_span = (n_left - 1) * (n_paired - n_left)
+    right_span = (n_right - 1) * (n_paired - n_right)
+    if n_paired < 2 or min(left_span, right_span) <= 0:
+        return None, None, UnavailabilityReason.BIAS_CORRECTION_UNDEFINED
+    if statistic == 0.0:
+        return 0.0, True, None
+    try:
+        phi_squared = statistic / n_paired
+        bias = ((n_left - 1) * (n_right - 1)) / (n_paired - 1)
+    except (OverflowError, ZeroDivisionError):
+        return None, None, UnavailabilityReason.NON_FINITE_RESULT
+    if not math.isfinite(phi_squared) or not math.isfinite(bias):
+        return None, None, UnavailabilityReason.NON_FINITE_RESULT
+    adjusted = phi_squared - bias
+    if not math.isfinite(adjusted):
+        return None, None, UnavailabilityReason.NON_FINITE_RESULT
+    scale = max(1.0, abs(phi_squared), abs(bias))
+    if adjusted < 0.0:
+        if -adjusted <= _UNIT_OVERSHOOT * scale:
+            floored = False
+            adjusted = 0.0
+        else:
+            floored = True
+            adjusted = 0.0
+    else:
+        floored = False
+        if adjusted == 0.0:
+            adjusted = 0.0
+    if adjusted == 0.0:
+        return 0.0, floored, None
+    try:
+        ratio = adjusted * (n_paired - 1) / min(left_span, right_span)
+    except (OverflowError, ZeroDivisionError):
+        return None, None, UnavailabilityReason.NON_FINITE_RESULT
+    if not math.isfinite(ratio) or ratio < 0.0:
+        return None, None, UnavailabilityReason.NON_FINITE_RESULT
+    value = _normalize_unit(math.sqrt(ratio))
+    if value is None:
+        return None, None, UnavailabilityReason.NON_FINITE_RESULT
+    return value, floored, None
 
 
 def _cramers_v(
@@ -553,6 +654,43 @@ def _fraction(count: int, n_cells: int) -> Optional[float]:
     return _normalize_unit(value)
 
 
+def _unavailable_effects(reason: UnavailabilityReason) -> _Effects:
+    return (
+        _unavailable_association(reason),
+        _unavailable_corrected(reason),
+        _unavailable_test(reason),
+    )
+
+
+def _with_chi_square_validity(
+    independence: CategoricalIndependenceTest,
+    diagnostics: ExpectedCountDiagnostics,
+    table: CategoricalContingencyTable,
+) -> CategoricalIndependenceTest:
+    """Mark a computed chi-square tail by Cochran's convention.
+
+    An absent tail stays absent. A computed tail is kept either way.
+    """
+    if independence.frequentist.availability is not ResultAvailability.AVAILABLE:
+        return independence
+    validity, reason = chi_square_inferential_status(
+        diagnostics_available=(
+            diagnostics.availability is ResultAvailability.AVAILABLE
+        ),
+        minimum_expected_count=diagnostics.minimum_expected_count,
+        n_cells_expected_below_5=diagnostics.n_cells_expected_below_5,
+        n_cells=table.n_left_levels * table.n_right_levels,
+    )
+    return replace(
+        independence,
+        frequentist=replace(
+            independence.frequentist,
+            inferential_validity=validity,
+            invalidity_reason=reason,
+        ),
+    )
+
+
 def _available_association(value: float) -> CategoricalAssociationEstimate:
     return CategoricalAssociationEstimate(
         method=CategoricalAssociationMethod.CRAMERS_V,
@@ -567,6 +705,17 @@ def _unavailable_association(
 ) -> CategoricalAssociationEstimate:
     return CategoricalAssociationEstimate(
         method=CategoricalAssociationMethod.CRAMERS_V,
+        availability=ResultAvailability.UNAVAILABLE,
+        value=None,
+        reason=reason,
+    )
+
+
+def _unavailable_corrected(
+    reason: UnavailabilityReason,
+) -> CategoricalAssociationEstimate:
+    return CategoricalAssociationEstimate(
+        method=CategoricalAssociationMethod.BIAS_CORRECTED_CRAMERS_V,
         availability=ResultAvailability.UNAVAILABLE,
         value=None,
         reason=reason,

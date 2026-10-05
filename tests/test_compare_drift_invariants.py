@@ -228,7 +228,7 @@ def test_relationship_record_rejects_a_mismatched_family_payload() -> None:
     categorical = _categorical_pair()
     with pytest.raises(ValueError, match="belongs to a numeric pair"):
         replace(categorical, pearson_change_test=record.pearson_change_test)
-    with pytest.raises(ValueError, match="no complementary"):
+    with pytest.raises(ValueError, match="must match the family"):
         replace(categorical, complementary=record.complementary)
 
 
@@ -617,6 +617,9 @@ def test_pair_identity_and_side_shape_are_rejected_when_inconsistent() -> None:
             n_positive_cells=2,
             cramers_v=0.0,
             cramers_v_reason=None,
+            bias_corrected_cramers_v=0.0,
+            bias_corrected_cramers_v_reason=None,
+            bias_correction_numerator_floored=False,
         )
     with pytest.raises(ValueError, match="implemented family"):
         RelationshipSide(

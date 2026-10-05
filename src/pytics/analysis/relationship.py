@@ -43,6 +43,8 @@ from pytics.analysis.relationships.models import CorrelationInterval
 from pytics.analysis.relationships.models import CorrelationIntervalMethod
 from pytics.analysis.relationships.models import EffectDirection
 from pytics.analysis.relationships.models import FrequentistEvidence
+from pytics.analysis.relationships.models import InferentialInvalidityReason
+from pytics.analysis.relationships.models import InferentialValidity
 from pytics.analysis.relationships.models import GroupEffectEstimate
 from pytics.analysis.relationships.models import GroupEffectMethod
 from pytics.analysis.relationships.models import MeanDifferenceEstimate
