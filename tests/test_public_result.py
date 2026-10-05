@@ -29,7 +29,7 @@ def test_label_fields_follow_the_column_identity_contract() -> None:
     assert LABEL_FIELDS == _COLUMN_LABEL_FIELDS
 
 
-def test_profile_without_target_exposes_views_and_not_a_renderer() -> None:
+def test_profile_without_target_exposes_views_and_a_notebook_hook() -> None:
     frame = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0], "y": [1.0, 2.0, 3.0, 5.0]})
     result = profile_result(frame)
     assert type(result).__name__ == "ProfileResult"
@@ -59,7 +59,7 @@ def test_profile_without_target_exposes_views_and_not_a_renderer() -> None:
     assert not hasattr(result, "to_pdf")
     assert not hasattr(result, "to_json")
     assert not hasattr(result, "to_dict")
-    assert not hasattr(result, "_repr_html_")
+    assert callable(result._repr_html_)
     assert not hasattr(result, "show")
     assert not hasattr(result, "score")
     assert "quality" not in result.__dict__

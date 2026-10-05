@@ -131,11 +131,13 @@ DatasetAnalysis                       DatasetComparison
                           ComparisonResult
                                 |
                                 v
-              notebook / text / JSON / HTML / PDF
+              notebook landing view (DEC-114)
+              text repr (one line)
+              JSON / standalone HTML / PDF
               (not implemented; they must read this result)
 ```
 
-`profile_result` and `comparison_result` analyze once and return a frozen facade. The facade retains the canonical result by reference. It does not render. `pytics.profile` and `pytics.compare` are still the legacy renderers and do not return this object. A later notebook or HTML renderer should import `pytics.results` and read `variables`, `columns`, `relationships`, `findings`, `target`, `coverage`, and `metadata`. It should not import a collector to rebuild those facts.
+`profile_result` and `comparison_result` analyze once and return a frozen facade. The facade retains the canonical result by reference. `_repr_html_` delegates to `pytics.presentation.notebook` and does not store HTML on the result ([DEC-114](DECISIONS.md#dec-114)). `pytics.profile` and `pytics.compare` are still the legacy renderers and do not return this object. The notebook renderer reads `variables`, `columns`, `relationships`, `findings`, `target`, `coverage`, `metadata`, and the profile's `missing`, `duplicates`, and `anomalies`. It does not import a collector to rebuild those facts.
 
 The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copies diverge, that is a documentation defect. The decision is the ruling. This file is the architecture description.
 
@@ -144,7 +146,7 @@ The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copi
 | Pandas-native, DataFrame-only | Accepted (`REQ-P-06`, [DEC-040](DECISIONS.md#dec-040)) |
 | Semantic-first | Accepted (`REQ-S-*`) |
 | Analysis/render separation | Accepted (`REQ-T-01`, `REQ-T-02`) |
-| Structured results | Accepted. Public result contract v0.1 is [DEC-113](DECISIONS.md#dec-113). Legacy signatures remain [OPEN-004](DECISIONS.md#open-questions). |
+| Structured results | Accepted. Public result contract v0.1 is [DEC-113](DECISIONS.md#dec-113). The notebook landing view is [DEC-114](DECISIONS.md#dec-114). Legacy signatures remain [OPEN-004](DECISIONS.md#open-questions). |
 | Shared statistical capabilities | Accepted (`REQ-T-05`, [DEC-037](DECISIONS.md#dec-037)). Internal API not finalized ([OPEN-038](DECISIONS.md#open-questions)). |
 | Evidence-based findings | Accepted (`REQ-N-*`) |
 | Analysis modes | Accepted as a concept ([DEC-058](DECISIONS.md#dec-058)). Contents not finalized ([OPEN-010](DECISIONS.md#open-questions)). |

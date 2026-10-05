@@ -70,7 +70,7 @@ pytics.compare(df_a, df_b)
 
 Core does not take responsibility for CSV parsing, separators, encodings, Parquet engines, remote file loading, or generic path detection. The user loads data with pandas and passes a DataFrame.
 
-`pytics.profile` and `pytics.compare` are still the legacy 1.1.5 renderers. The structured result is `profile_result` and `comparison_result` in `pytics.results` ([DEC-113](DECISIONS.md#dec-113)). Replacing the legacy functions, the configuration object, and semantic-override representation remain [OPEN-004](DECISIONS.md#open-questions).
+`pytics.profile` and `pytics.compare` are still the legacy 1.1.5 renderers. The structured result is `profile_result` and `comparison_result` in `pytics.results` ([DEC-113](DECISIONS.md#dec-113)). Displaying that result in a notebook uses the landing view in [DEC-114](DECISIONS.md#dec-114). Replacing the legacy functions, the configuration object, and semantic-override representation remain [OPEN-004](DECISIONS.md#open-questions).
 
 Do not design a Polars or Arrow abstraction at this stage merely for theoretical future compatibility.
 
@@ -171,15 +171,25 @@ The seed's place in the public configuration is [OPEN-009](DECISIONS.md#open-que
 
 ## How a result is used
 
-Intended direction, not a frozen API:
+Intended direction, not yet the installed call:
 
 ```python
 report = pytics.profile(df)
+report
 ```
 
-That call performs analysis. It should not dump charts into the notebook. A plain notebook representation of `report` should stay compact.
+That call is still the legacy 1.1.5 renderer. The 2.0 result, until those functions are replaced ([OPEN-004](DECISIONS.md#open-questions)), is:
 
-Explicit rendering may eventually look approximately like:
+```python
+from pytics.results import profile_result
+
+report = profile_result(df)
+report
+```
+
+`report` is a `ProfileResult`. In a notebook it renders the Observe landing view ([DEC-114](DECISIONS.md#dec-114)). It does not dump charts. A comparison uses `comparison_result` and a different landing view. The same object remains the programmatic result: `report.variables`, `report.findings`, `report.relationships`, and `report.target`. Label lookup is `by_label`, not a dict keyed by label.
+
+Explicit file rendering may eventually look approximately like:
 
 ```python
 report.show()
@@ -187,12 +197,12 @@ report.to_html("report.html")
 report.to_pdf("report.pdf")
 ```
 
-The result should expose structured analytical results programmatically. Conceptual access looks like `report.variables["income"]`, `report.missing`, `report.relationships`, and `report.findings`. Those attribute names are not frozen.
+The result should expose structured analytical results programmatically. The 2.0 names are `variables`, `findings`, `relationships`, `target`, `coverage`, and `metadata` ([DEC-113](DECISIONS.md#dec-113)). A profile also exposes `missing`, `duplicates`, and `anomalies`. A comparison exposes `columns` and `overview`. Those names are the contract v0.1. `show`, `to_html`, and `to_pdf` are not implemented.
 
 | ID | Requirement | Status |
 | --- | --- | --- |
 | REQ-P-13 | `profile` performs analysis without dumping charts into the notebook, and a plain notebook representation stays compact. | Accepted |
-| REQ-P-14 | Expose structured results programmatically, and render HTML and PDF through explicit presentation entry points. | Accepted as behavior. Method and attribute names are Proposed / not yet finalized. |
+| REQ-P-14 | Expose structured results programmatically, and render HTML and PDF through explicit presentation entry points. | Accepted as behavior. Result attribute names v0.1 are [DEC-113](DECISIONS.md#dec-113). The notebook landing view is [DEC-114](DECISIONS.md#dec-114). `show`, `to_html`, and `to_pdf` remain Proposed / not yet finalized. |
 
 HTML is the canonical interactive report. PDF is a professional static, shareable representation. Visual and navigation rules are in [INFORMATION_ARCHITECTURE.md](INFORMATION_ARCHITECTURE.md).
 

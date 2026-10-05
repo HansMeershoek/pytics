@@ -44,6 +44,8 @@ Pytics uses progressive disclosure so it can be mathematically deep and visually
 | --- | --- | --- |
 | REQ-IA-17 | Structure the report so a reader can observe, then investigate, then verify. | Accepted |
 
+TSK-043 delivers the notebook Observe landing view of a `ProfileResult` or `ComparisonResult` ([DEC-114](DECISIONS.md#dec-114)). It is a linear HTML fragment, not the desktop sidebar below and not an Investigate or Verify page. Profile and Compare use different landing sections. A finding shows its severity, code, and subject. It does not open an evidence view. Charts, tabs, and the sidebar are not part of this view.
+
 ## Navigation shell
 
 On desktop, the report uses a persistent left-hand navigation sidebar. The sidebar is navigation, not a mini-dashboard.

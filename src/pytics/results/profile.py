@@ -7,6 +7,9 @@ retained.
 
 ``pytics.profile`` is still the legacy renderer. It does not return this
 object. :func:`profile_result` is the entry point that does.
+
+``ProfileResult._repr_html_`` delegates to the notebook presentation
+layer. The HTML is not stored on the result.
 """
 
 from __future__ import annotations
@@ -389,9 +392,7 @@ class ProfileResult:
             raise TypeError("ProfileResult wraps a DatasetAnalysis")
         findings = collect_profile_findings(analysis)
         requested = analysis.target_analysis is not None
-        request = (
-            TargetRequest.REQUESTED if requested else TargetRequest.NOT_REQUESTED
-        )
+        request = TargetRequest.REQUESTED if requested else TargetRequest.NOT_REQUESTED
         variables = VariableIndex.from_columns(analysis.columns)
         relationships = RelationshipIndex(analysis.relationship_analysis, variables)
         target = TargetView(
@@ -490,6 +491,12 @@ class ProfileResult:
             f"findings={len(self._findings_analysis.findings)}, "
             f"target={self._metadata.target_request.value})"
         )
+
+    def _repr_html_(self) -> str:
+        """Notebook HTML view of this result. Not stored on the result."""
+        from pytics.presentation.notebook.profile import render_profile
+
+        return render_profile(self)
 
 
 def profile_result(

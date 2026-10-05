@@ -5,6 +5,9 @@ the findings read from it. It does not compare the frames again.
 ``pytics.compare`` is still the legacy renderer. :func:`comparison_result`
 is the entry point that returns this object.
 
+``ComparisonResult._repr_html_`` delegates to the notebook presentation
+layer. The HTML is not stored on the result.
+
 Columns are the alignment sequence: reference order, then
 comparison-only columns. That is not a second variables table.
 Relationships here are relationship-drift records, not within-dataset
@@ -297,9 +300,7 @@ class ComparisonResult:
             raise TypeError("ComparisonResult wraps a DatasetComparison")
         findings = collect_compare_findings(comparison)
         requested = comparison.target is not None
-        request = (
-            TargetRequest.REQUESTED if requested else TargetRequest.NOT_REQUESTED
-        )
+        request = TargetRequest.REQUESTED if requested else TargetRequest.NOT_REQUESTED
         columns = ComparisonColumnIndex(comparison.columns)
         relationships = ComparisonRelationshipIndex(
             comparison.relationships,
@@ -382,6 +383,12 @@ class ComparisonResult:
             f"findings={len(self._findings_analysis.findings)}, "
             f"target={self._metadata.target_request.value})"
         )
+
+    def _repr_html_(self) -> str:
+        """Notebook HTML view of this result. Not stored on the result."""
+        from pytics.presentation.notebook.comparison import render_comparison
+
+        return render_comparison(self)
 
 
 def comparison_result(

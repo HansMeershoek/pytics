@@ -1,13 +1,15 @@
 """Public result contract for Pytics 2.0.
 
 ``profile_result`` and ``comparison_result`` return read-only views of
-the canonical analysis. They do not render HTML, Markdown, or PDF, and
-they do not replace :func:`pytics.profile` or :func:`pytics.compare`.
-Those two functions are still the legacy 1.1.5 renderers.
+the canonical analysis. They do not replace :func:`pytics.profile` or
+:func:`pytics.compare`. Those two functions are still the legacy 1.1.5
+renderers.
 
-A notebook, terminal, or serializer should read this package. It should
-not import collectors from :mod:`pytics.analysis` to obtain a finished
-profile or comparison.
+A notebook display of these results delegates to
+:mod:`pytics.presentation.notebook`. That layer is not exported from
+:mod:`pytics`. Markdown, PDF, and JSON are not produced here. A
+serializer should read this package and should not import collectors
+from :mod:`pytics.analysis` to obtain a finished profile or comparison.
 """
 
 from pytics.results.common import AmbiguousColumnLabel

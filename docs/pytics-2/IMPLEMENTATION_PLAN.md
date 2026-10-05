@@ -2009,6 +2009,23 @@ Acceptance checks:
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
-## After TSK-042
+## TSK-043
 
-TSK-042 records the public result contract. It leaves notebook rendering, HTML, Markdown, PDF, JSON serialization, replacement of legacy `profile()` and `compare()`, and Python 3.15 migration unselected. [DEC-113](DECISIONS.md#dec-113) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+Slice 043, notebook landing view. Approved 2026-10-05 after TSK-042. Completed the same day. No later slice is approved by this section.
+
+Render a compact notebook view of `ProfileResult` and `ComparisonResult`. Do not recompute statistics. Do not replace legacy `profile()` or `compare()`. Do not add charts, standalone HTML, PDF, Markdown, JSON, or a Python 3.15 migration.
+
+Acceptance checks:
+
+1. Displaying a profile or comparison result returns namespaced HTML through `_repr_html_`.
+2. The renderer reads the public result and does not recompute analytical truth or create findings.
+3. Profile and Compare landing views are different, bounded, and ordered by the canonical finding order.
+4. User-controlled labels are escaped. Duplicate, `NaN`, `True`/`1`, and `1`/`1.0` labels stay distinguishable. Raw anomaly and category values are not on the landing view.
+5. The view needs no JavaScript, CDN, notebook extension, or separate package. `import pytics` does not import it.
+6. The full suite has only the known legacy PDF failure, total coverage stays at least 97%, and [DEC-114](DECISIONS.md#dec-114) records the contract.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-043
+
+TSK-043 records the notebook presentation contract v0.1. It leaves Investigate and Verify interaction, charts, standalone HTML, Markdown, PDF, JSON serialization, replacement of legacy `profile()` and `compare()`, and Python 3.15 migration unselected. [DEC-114](DECISIONS.md#dec-114) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
