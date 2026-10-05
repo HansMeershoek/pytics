@@ -36,7 +36,7 @@ If the slice needs a decision that is still `OPEN-###`, stop and record the ques
 | `REQ-T-04`, [DEC-027](DECISIONS.md#dec-027), [DEC-060](DECISIONS.md#dec-060) | No installation and no version pins. Candidate directions are not a lock. |
 | `REQ-K-03`, `REQ-T-03` | No frozen method catalog. The registry concept is accepted. Do not implement it until [OPEN-039](DECISIONS.md#open-questions) is decided. |
 | `REQ-L-06`, `REQ-P-03` | No AutoML, tuning, leaderboards, cleaning framework, or prescriptive product. |
-| [OPEN-004](DECISIONS.md#open-questions) | No commitment to function signatures or illustrative `ProfileReport` / `ComparisonReport` attribute names. |
+| [OPEN-004](DECISIONS.md#open-questions) | Legacy `profile` / `compare` signatures are not the 2.0 result. The public result contract v0.1 is [DEC-113](DECISIONS.md#dec-113). The illustrative `ProfileReport` / `ComparisonReport` names were not adopted. |
 | [DEC-105](DECISIONS.md#dec-105), formerly [OPEN-013](DECISIONS.md#open-013) | One untuned diagnostic estimator per task: logistic regression and ridge regression. No second estimator, search, or comparison. |
 | [OPEN-041](DECISIONS.md#open-questions) | No silent choice of a Plotly static-export mechanism for PDF. |
 | [DEC-066](DECISIONS.md#dec-066) | Candidate Resolution v0.1 uses no numeric total-score. [DEC-042](DECISIONS.md#dec-042) still permits a future statistically justified numeric confidence. |
@@ -1992,6 +1992,23 @@ Acceptance checks:
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
-## After TSK-041
+## TSK-042
 
-TSK-041 records the column-identity primitive and the float-`NaN` label fix. It leaves threshold-based findings, renderer wording, a rendered Findings view, and the public result unselected. [DEC-112](DECISIONS.md#dec-112) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+Slice 042, public result contract. Approved 2026-10-05 after TSK-041. Completed the same day. No later slice is approved by this section.
+
+Add a read-only public facade over a finished profile or comparison. Do not render a notebook, terminal theme, HTML, Markdown, or PDF. Do not serialize a file. Do not change `pytics.profile` or `pytics.compare`. Do not migrate to Python 3.15.
+
+Acceptance checks:
+
+1. `profile_result` and `comparison_result` return `ProfileResult` and `ComparisonResult`.
+2. The facade references the canonical analysis and does not recompute it or keep the DataFrame.
+3. Variables, findings, relationships, and target are navigable, including duplicate, `NaN`, `True`/`1`, and `1`/`1.0` labels.
+4. Target-not-requested is distinct from a requested target that is unsupported, unavailable, or unaligned.
+5. Public equality is label-aware and has no timestamp or random id. Results are frozen.
+6. The full suite has only the known legacy PDF failure, total coverage stays at least 97%, and [DEC-113](DECISIONS.md#dec-113) records the contract.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-042
+
+TSK-042 records the public result contract. It leaves notebook rendering, HTML, Markdown, PDF, JSON serialization, replacement of legacy `profile()` and `compare()`, and Python 3.15 migration unselected. [DEC-113](DECISIONS.md#dec-113) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

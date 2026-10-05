@@ -24,7 +24,7 @@ These restate product rules that also bind the architecture:
 - evidence-based findings (`REQ-N-01`);
 - reproducibility and visible sampling (`REQ-P-12`, `REQ-IA-15`, [DEC-054](DECISIONS.md#dec-054)).
 
-Structured results are Accepted. A specific type system, class hierarchy, or attribute spelling is not ([OPEN-004](DECISIONS.md#open-questions)).
+Structured results are Accepted. The public result contract v0.1 is [DEC-113](DECISIONS.md#dec-113). Legacy `profile()` and `compare()` signatures remain [OPEN-004](DECISIONS.md#open-questions).
 
 ## Architectural direction
 
@@ -113,10 +113,29 @@ DatasetAnalysis                       DatasetComparison
        +---------> policy -> result -> models <+
                           |
                           v
-                 future renderer and public result
+                 public result (DEC-113); renderer still future
 ```
 
 `models` holds codes, scopes, severities, subjects, typed evidence, identity, and suppression. `result` holds the policy type, coverage, and `FindingsAnalysis`. `policy` holds the v0.1 severity and order table and assembles a result. `profile` and `compare` are the only modules that read an analysis, and each reads one result type. The package imports `column_label`, the alignment, schema, target-drift, and comparison models, `target_leakage`, and semantic basic evidence. It does not import pandas, NumPy, SciPy, or scikit-learn, does not read a DataFrame, and does not read a p-value. Nothing in the analysis or comparison layers imports it. Column identity is the match key and occurrence count in `column_label.py` ([DEC-112](DECISIONS.md#dec-112)). Alignment pairs those occurrences across two datasets. Findings reads `column_label` and does not import the alignment indexer. There is no rule registry and no configuration argument.
+
+TSK-042 adds the public result in `pytics.results` ([DEC-113](DECISIONS.md#dec-113)). It sits after findings:
+
+```text
+DatasetAnalysis                       DatasetComparison
+      |                                       |
+      v                                       v
+  profile findings                     compare findings
+      \                                       /
+       +----------------> pytics.results <----+
+                          ProfileResult
+                          ComparisonResult
+                                |
+                                v
+              notebook / text / JSON / HTML / PDF
+              (not implemented; they must read this result)
+```
+
+`profile_result` and `comparison_result` analyze once and return a frozen facade. The facade retains the canonical result by reference. It does not render. `pytics.profile` and `pytics.compare` are still the legacy renderers and do not return this object. A later notebook or HTML renderer should import `pytics.results` and read `variables`, `columns`, `relationships`, `findings`, `target`, `coverage`, and `metadata`. It should not import a collector to rebuild those facts.
 
 The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copies diverge, that is a documentation defect. The decision is the ruling. This file is the architecture description.
 
@@ -125,7 +144,7 @@ The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copi
 | Pandas-native, DataFrame-only | Accepted (`REQ-P-06`, [DEC-040](DECISIONS.md#dec-040)) |
 | Semantic-first | Accepted (`REQ-S-*`) |
 | Analysis/render separation | Accepted (`REQ-T-01`, `REQ-T-02`) |
-| Structured results | Accepted. Concrete types not finalized ([OPEN-004](DECISIONS.md#open-questions)). |
+| Structured results | Accepted. Public result contract v0.1 is [DEC-113](DECISIONS.md#dec-113). Legacy signatures remain [OPEN-004](DECISIONS.md#open-questions). |
 | Shared statistical capabilities | Accepted (`REQ-T-05`, [DEC-037](DECISIONS.md#dec-037)). Internal API not finalized ([OPEN-038](DECISIONS.md#open-questions)). |
 | Evidence-based findings | Accepted (`REQ-N-*`) |
 | Analysis modes | Accepted as a concept ([DEC-058](DECISIONS.md#dec-058)). Contents not finalized ([OPEN-010](DECISIONS.md#open-questions)). |
@@ -207,7 +226,7 @@ ComparisonReport
   metadata
 ```
 
-The profile shape and the compare information architecture are related but not the same list. Compare navigation also has duplicates. The sketch above has no `duplicate_changes` field. That mismatch inside the illustration is unresolved ([OPEN-004](DECISIONS.md#open-questions)).
+The profile shape and the compare information architecture are related but not the same list. Compare navigation also has duplicates. The sketch above has no `duplicate_changes` field. That mismatch inside the illustration is unresolved as a rendered layout. [DEC-113](DECISIONS.md#dec-113) does not adopt these class names. The public result uses `ProfileResult` and `ComparisonResult` and does not prebuild these sections as separate copies.
 
 ## Shared statistics
 

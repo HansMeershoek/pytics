@@ -29,5 +29,6 @@ frames are supplied, univariate distribution drift. It does not profile
 either dataset again, and it is not ``pytics.compare``.
 ``findings`` selects retained facts from a finished analysis or
 comparison for attention. It does not read a DataFrame or compute a
-statistic.
+statistic. ``pytics.results`` is the public result boundary over those
+finished records. This package remains internal.
 """

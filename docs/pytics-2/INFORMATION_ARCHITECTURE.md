@@ -209,7 +209,7 @@ Metadata such as:
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| REQ-IA-15 | Report Info shows the metadata listed above. Sampling must never be hidden. | Accepted. "Such as" is preserved: this is the named metadata set, not proof that no other metadata field can exist. Mode names are accepted ([DEC-058](DECISIONS.md#dec-058)). Exact mode behavior is [OPEN-010](DECISIONS.md#open-questions). |
+| REQ-IA-15 | Report Info shows the metadata listed above. Sampling must never be hidden. | Accepted. "Such as" is preserved: this is the named metadata set, not proof that no other metadata field can exist. Mode names are accepted ([DEC-058](DECISIONS.md#dec-058)). Exact mode behavior is [OPEN-010](DECISIONS.md#open-questions). The live public result records package version, result kind, target request, and the findings-policy identifier, and it reads row and column counts from the analysis ([DEC-113](DECISIONS.md#dec-113)). A generation timestamp is not part of that result. Report Info rendering is not implemented. |
 
 ### About Pytics
 
