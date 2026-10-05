@@ -22,9 +22,13 @@ strings are not parsed.
 Categorical means values primarily function as a classification
 vocabulary. Non-empty, non-constant physical categorical storage is one
 positive rule. A reused vocabulary of unpunctuated letter-bearing labels
-is another, and it lives in ``repeated_alphabetic_label_support``.
-Ordered categorical metadata stays on the physical dtype. Numeric
-storage is not a categorical rule.
+is another, and it lives in ``repeated_alphabetic_label_support``. A
+reused vocabulary of short labels, including ordinary spaces and a small
+punctuation set, is a third, and it lives in
+``repeated_ordinary_label_support``. That rule reads representation
+counts. It does not replace the unpunctuated rule. Ordered categorical
+metadata stays on the physical dtype. Numeric storage is not a
+categorical rule.
 
 Text means values primarily function as textual content. Current
 observations do not contain an approved positive rule for that reading,
@@ -46,8 +50,10 @@ from pytics.semantics.numeric_structure_evidence import NumericStructureEvidence
 from pytics.semantics.pattern_evidence import PatternEvidence
 from pytics.semantics.physical import PhysicalDtype
 from pytics.semantics.physical import PhysicalDtypeFamily
+from pytics.semantics.representation_evidence import RepresentationEvidence
 from pytics.semantics.string_structure_evidence import StringStructureEvidence
 from pytics.semantics.string_vocabulary import repeated_alphabetic_label_support
+from pytics.semantics.string_vocabulary import repeated_ordinary_label_support
 
 _NUMERIC_FAMILIES = frozenset(
     {
@@ -101,13 +107,15 @@ def assess_categorical_candidate(
     numeric_structure: Optional[NumericStructureEvidence] = None,
     string_structure: Optional[StringStructureEvidence] = None,
     pattern: Optional[PatternEvidence] = None,
+    representation: Optional[RepresentationEvidence] = None,
 ) -> CandidateAssessment:
     """Assess Categorical from one consistent evidence bundle.
 
     The return value is always a Categorical candidate assessment. It is
     not a semantic interpretation. Physical categorical storage is one
-    positive rule. A reused alphabetic label vocabulary is the other.
-    Empty and Constant stay unsupported.
+    positive rule. A reused alphabetic label vocabulary is another. A
+    reused short-label vocabulary is a third and runs only when the first
+    string rule does not apply. Empty and Constant stay unsupported.
     """
     _require_bundle(
         basic,
@@ -117,6 +125,7 @@ def assess_categorical_candidate(
         string_structure,
         pattern,
     )
+    _require_representation(representation, string_structure)
     if basic.is_empty or basic.is_constant:
         return _not_supported(SemanticType.CATEGORICAL)
     if physical.family is PhysicalDtypeFamily.CATEGORICAL:
@@ -134,6 +143,13 @@ def assess_categorical_candidate(
         string_structure,
         pattern,
     )
+    if not support:
+        support = repeated_ordinary_label_support(
+            basic,
+            string_structure,
+            pattern,
+            representation,
+        )
     if support:
         return CandidateAssessment(
             semantic_type=SemanticType.CATEGORICAL,
@@ -170,6 +186,29 @@ def assess_text_candidate(
         return _not_supported(SemanticType.TEXT)
     # No approved positive rule uses the observations collected so far.
     return _not_supported(SemanticType.TEXT)
+
+
+def _require_representation(
+    representation: Optional[RepresentationEvidence],
+    string_structure: Optional[StringStructureEvidence],
+) -> None:
+    """Reject representation evidence that was collected for another column.
+
+    ``None`` means this path did not collect representation evidence. That
+    is missing evidence, not support.
+    """
+    if representation is None:
+        return
+    if not isinstance(representation, RepresentationEvidence):
+        raise TypeError("representation must be RepresentationEvidence")
+    if (
+        string_structure is None
+        or representation.string_structure is not string_structure
+    ):
+        raise ValueError(
+            "representation evidence was not collected from the supplied "
+            "StringStructureEvidence"
+        )
 
 
 def _not_supported(semantic_type: SemanticType) -> CandidateAssessment:

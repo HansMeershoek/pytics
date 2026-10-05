@@ -7,10 +7,10 @@ collected. It does not mean the underlying count was zero.
 
 Frequency evidence is collected for a non-structural physical categorical
 column, and for a string or object column whose selected semantic type is
-Categorical. It is not an assessor input. The label-vocabulary rule reads
-basic counts, string structure, and pattern evidence. String-content
-evidence is not collected. Structural precedence still returns before
-candidate collection.
+Categorical. It is not an assessor input. The unpunctuated label rule
+reads basic counts, string structure, and pattern evidence. The short-label
+rule also reads representation evidence. String-content evidence is not
+collected. Structural precedence still returns before candidate collection.
 
 Numeric descriptive statistics are not evidence. After resolution, a column
 whose selected semantic type is Numeric is described from its finite
@@ -70,6 +70,8 @@ from pytics.semantics.pattern_evidence import collect_pattern_evidence
 from pytics.semantics.physical import PhysicalDtype
 from pytics.semantics.physical import PhysicalDtypeFamily
 from pytics.semantics.physical import classify_physical_dtype
+from pytics.semantics.representation_evidence import RepresentationEvidence
+from pytics.semantics.representation_evidence import collect_representation_evidence
 from pytics.semantics.physical_timedelta import interpret_precedence_from_evidence
 from pytics.semantics.resolution import resolve_semantics
 from pytics.semantics.string_structure_evidence import StringStructureEvidence
@@ -113,6 +115,7 @@ class ColumnEvidence:
     numeric_structure: Optional[NumericStructureEvidence] = None
     string_structure: Optional[StringStructureEvidence] = None
     pattern: Optional[PatternEvidence] = None
+    representation: Optional[RepresentationEvidence] = None
     frequency: Optional[FrequencyEvidence] = None
 
     def __post_init__(self) -> None:
@@ -142,6 +145,17 @@ class ColumnEvidence:
             if self.pattern.string_structure is not self.string_structure:
                 raise ValueError(
                     "pattern.string_structure must be this evidence's "
+                    "string_structure"
+                )
+        if self.representation is not None:
+            _require(self.representation, RepresentationEvidence, "representation")
+            if self.string_structure is None:
+                raise ValueError(
+                    "representation evidence requires string-structure evidence"
+                )
+            if self.representation.string_structure is not self.string_structure:
+                raise ValueError(
+                    "representation.string_structure must be this evidence's "
                     "string_structure"
                 )
         if self.numeric_structure is not None and self.string_structure is not None:
@@ -240,9 +254,15 @@ def analyze_series(
         numeric_structure = None
         string_structure = None
         pattern = None
+        representation = None
         frequency = None
     else:
-        numeric_structure, string_structure, pattern = _evidence_for_candidates(
+        (
+            numeric_structure,
+            string_structure,
+            pattern,
+            representation,
+        ) = _evidence_for_candidates(
             series,
             basic,
             physical,
@@ -254,6 +274,7 @@ def analyze_series(
             numeric_structure,
             string_structure,
             pattern,
+            representation,
         )
         resolution = resolve_semantics(candidates=candidates)
     inferred = build_inferred_semantic_result(physical, resolution)
@@ -267,6 +288,7 @@ def analyze_series(
         numeric_structure=numeric_structure,
         string_structure=string_structure,
         pattern=pattern,
+        representation=representation,
         frequency=frequency,
     )
     return ColumnAnalysis(
@@ -409,23 +431,25 @@ def _evidence_for_candidates(
     Optional[NumericStructureEvidence],
     Optional[StringStructureEvidence],
     Optional[PatternEvidence],
+    Optional[RepresentationEvidence],
 ]:
     """Collect the evidence the current assessors can consume.
 
     Numeric-structure evidence is collected only for integer and floating
-    storage. String structure and pattern evidence are collected only when
-    the string-structure collector accepts the population. String-content
-    evidence is not collected. Frequency evidence is collected separately,
-    and only for physical categorical storage. Other families are assessed
-    from the basic evidence and the physical dtype alone.
+    storage. String structure, pattern evidence, and representation
+    evidence are collected only when the string-structure collector accepts
+    the population. String-content evidence is not collected. Frequency
+    evidence is collected separately, and only for physical categorical
+    storage. Other families are assessed from the basic evidence and the
+    physical dtype alone.
     """
     if physical.family in _NUMERIC_FAMILIES:
         numeric = collect_numeric_structure_evidence(series, basic, physical)
-        return numeric, None, None
+        return numeric, None, None, None
     if physical.family in _STRING_FAMILIES:
-        structure, pattern = _string_evidence(series, basic, physical)
-        return None, structure, pattern
-    return None, None, None
+        structure, pattern, representation = _string_evidence(series, basic, physical)
+        return None, structure, pattern, representation
+    return None, None, None, None
 
 
 def _frequency_for_physical_categorical(
@@ -449,17 +473,23 @@ def _string_evidence(
     series: pd.Series,
     basic: BasicColumnEvidence,
     physical: PhysicalDtype,
-) -> Tuple[Optional[StringStructureEvidence], Optional[PatternEvidence]]:
-    """Collect string structure, then pattern evidence from that same object.
+) -> Tuple[
+    Optional[StringStructureEvidence],
+    Optional[PatternEvidence],
+    Optional[RepresentationEvidence],
+]:
+    """Collect string structure, then pattern and representation evidence.
 
-    An ineligible population collects neither. Pattern evidence is not
+    An ineligible population collects none of them. Pattern evidence and
+    representation evidence share the string-structure object. Neither is
     rebuilt from a second string-structure pass.
     """
     structure = _collect_applicable_string_structure(series, basic, physical)
     if structure is None:
-        return None, None
+        return None, None, None
     pattern = collect_pattern_evidence(series, structure, physical)
-    return structure, pattern
+    representation = collect_representation_evidence(series, structure, physical)
+    return structure, pattern, representation
 
 
 def _collect_applicable_string_structure(
@@ -488,6 +518,7 @@ def _assess_candidates(
     numeric_structure: Optional[NumericStructureEvidence],
     string_structure: Optional[StringStructureEvidence],
     pattern: Optional[PatternEvidence],
+    representation: Optional[RepresentationEvidence],
 ) -> Tuple[CandidateAssessment, ...]:
     """Assess every current candidate from one evidence bundle.
 
@@ -517,6 +548,7 @@ def _assess_candidates(
             numeric_structure=numeric_structure,
             string_structure=string_structure,
             pattern=pattern,
+            representation=representation,
         ),
         assess_text_candidate(
             basic,

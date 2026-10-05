@@ -151,7 +151,11 @@ def test_assessors_consume_evidence_and_do_not_take_a_series():
         "pattern",
     ]
     for assess in _ASSESSORS:
-        assert list(inspect.signature(assess).parameters) == expected
+        parameters = list(inspect.signature(assess).parameters)
+        if assess is assess_categorical_candidate:
+            assert parameters == expected + ["representation"]
+        else:
+            assert parameters == expected
     source = inspect.getsource(core_module)
     assert "CONTRADICTED" not in source
     assert "assess_identifier_candidate" not in source

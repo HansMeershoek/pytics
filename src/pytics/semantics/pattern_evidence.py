@@ -334,6 +334,16 @@ def _is_ipv6_syntax(value: str) -> bool:
     return True
 
 
+def matches_identifier_syntax(value: str) -> bool:
+    """Return whether ``value`` is UUID syntax or one hexadecimal width.
+
+    This is the same full-value test the Identifier counts use. It does
+    not decide that a column is an Identifier, and it does not retain
+    ``value``.
+    """
+    return _is_uuid_syntax(value) or _fixed_hex_width(value) is not None
+
+
 def _fixed_hex_width(value: str) -> Optional[int]:
     """Return 32, 40, 64, or 128 when ``value`` is ASCII hexadecimal.
 

@@ -138,7 +138,8 @@ def test_facts_that_are_not_findings_stay_silent() -> None:
     )
     analysis = analyze_dataframe(frame)
     assert analysis.columns[0].inferred.selected_type is SemanticType.IDENTIFIER
-    assert analysis.columns[1].inferred.selected_type is None
+    # "value 0" .. "value 6" is a reused short-label vocabulary.
+    assert analysis.columns[1].inferred.selected_type is SemanticType.CATEGORICAL
     anomalies = analysis.anomaly_analysis.numeric_univariate
     assert sum(len(record.observations) for record in anomalies) > 20
     result = collect_profile_findings(analysis)

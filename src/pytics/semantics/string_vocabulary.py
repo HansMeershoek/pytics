@@ -2,8 +2,9 @@
 
 Physical categorical storage is a separate rule. This module does not
 replace it, and it does not read a Series, a column name, or a numeric
-code. It reads basic counts, string-structure counts, and pattern counts
-that were already collected.
+code. It reads basic counts, string-structure counts, pattern counts,
+and, for the short-label rule, representation counts that were already
+collected.
 
 Support requires four independent facts at once. Repetition shows that
 the values are reused. A vocabulary bound keeps a near-key from passing
@@ -19,9 +20,12 @@ average of four observations per label. Once the sample is larger, one
 distinct label per four observations is the reuse density. Neither number
 is a category list, and neither number is used alone.
 
-Low-cardinality numeric storage is not this rule. Multi-word labels,
-punctuation, pure digit strings, and mixed representations stay
-unsupported here. Text is not selected by withholding Categorical.
+Low-cardinality numeric storage is not this rule. Pure digit strings
+and mixed representations stay unsupported here. Multi-word labels and
+ordinary punctuation are a separate rule,
+``repeated_ordinary_label_support``. That rule reads representation
+counts already collected. It does not trim, case-fold, or parse. Text
+is not selected by withholding Categorical.
 """
 
 from __future__ import annotations
@@ -33,6 +37,8 @@ from typing import cast
 from pytics.semantics.column_evidence import BasicColumnEvidence
 from pytics.semantics.interpretation import SemanticEvidence
 from pytics.semantics.pattern_evidence import PatternEvidence
+from pytics.semantics.representation_evidence import RepresentationEvidence
+from pytics.semantics.representation_evidence import RepresentationFamily
 from pytics.semantics.string_structure_evidence import StringStructureEvidence
 
 # A familiar closed set (the months). It is a floor for a short extract,
@@ -50,6 +56,9 @@ _IDENTIFIER_HEX_WIDTHS = (32, 40, 64, 128)
 _SUPPORT_STATEMENT = (
     "A reused vocabulary of unpunctuated letter-bearing labels "
     "supports a Categorical reading."
+)
+_ORDINARY_LABEL_STATEMENT = (
+    "A reused vocabulary of short labels supports a Categorical reading."
 )
 
 
@@ -87,6 +96,62 @@ def repeated_alphabetic_label_support(
     if not _reused_vocabulary(basic):
         return ()
     return (SemanticEvidence(_SUPPORT_STATEMENT),)
+
+
+def repeated_ordinary_label_support(
+    basic: BasicColumnEvidence,
+    string_structure: Optional[StringStructureEvidence],
+    pattern: Optional[PatternEvidence],
+    representation: Optional[RepresentationEvidence],
+) -> Tuple[SemanticEvidence, ...]:
+    """Return Categorical support for a reused short-label vocabulary.
+
+    An empty tuple means this rule does not support Categorical. The
+    non-missing strings must already be label-like, padded, or
+    missing-like. Label-like strings must be present and at least as
+    numerous as padded strings, so a column of padded non-labels does
+    not borrow this reading. Counts are not recomputed here. Distinct
+    values stay the original strings: a padded value is its own level,
+    and a missing-like literal is not removed. Prose, dates, numbers,
+    emails, and URLs do not qualify. The unpunctuated letter-label rule
+    is separate and is not changed here.
+    """
+    if representation is None:
+        return ()
+    if not _bundle_applies(basic, string_structure, pattern):
+        return ()
+    if representation.string_structure is not string_structure:
+        return ()
+    population = basic.n_non_missing
+    if not _label_population_with_modifiers(representation, population):
+        return ()
+    observed = cast(PatternEvidence, pattern)
+    if _identifier_syntax_covers_population(observed, population):
+        return ()
+    if not _reused_vocabulary(basic):
+        return ()
+    return (SemanticEvidence(_ORDINARY_LABEL_STATEMENT),)
+
+
+def _label_population_with_modifiers(
+    representation: RepresentationEvidence,
+    population: int,
+) -> bool:
+    """True when the original strings are labels plus modifiers only.
+
+    Padding and missing-like literals may sit beside label-like strings.
+    Any other family means this is not a label vocabulary. Label-like
+    strings must be at least as numerous as padded strings. That keeps a
+    column whose recorded text is mostly padding from being treated as
+    labels without inspecting the padded interior. The comparison uses
+    counts already stored. It does not strip a value.
+    """
+    label_count = representation.count(RepresentationFamily.LABEL_LIKE)
+    padded_count = representation.count(RepresentationFamily.PADDED)
+    missing_count = representation.count(RepresentationFamily.MISSING_LIKE)
+    if label_count == 0 or label_count < padded_count:
+        return False
+    return label_count + padded_count + missing_count == population
 
 
 def _bundle_applies(

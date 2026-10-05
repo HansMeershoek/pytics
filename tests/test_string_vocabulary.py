@@ -251,7 +251,7 @@ def test_high_cardinality_identifier_like_strings_are_not_categorical():
     assert _selected(hyphenated).selected_type is SemanticType.IDENTIFIER
 
 
-def test_repeated_prose_and_multiword_labels_stay_unresolved():
+def test_repeated_prose_and_blank_strings_stay_unresolved():
     prose = pd.Series(
         [
             "The river is wide and the road is long today.",
@@ -260,10 +260,8 @@ def test_repeated_prose_and_multiword_labels_stay_unresolved():
         ],
         dtype="string",
     )
-    places = pd.Series(["New York", "Los Angeles", "New York"], dtype=object)
-    padded = pd.Series(["US", " US ", "US"], dtype=object)
     blank = pd.Series(["US", "", "US"], dtype=object)
-    for series in (prose, places, padded, blank):
+    for series in (prose, blank):
         result = _selected(series)
         assert result.selected_type is None
         assert result.resolution.status is ResolutionStatus.INSUFFICIENT_EVIDENCE

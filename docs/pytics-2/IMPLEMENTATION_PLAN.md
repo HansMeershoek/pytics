@@ -2044,6 +2044,25 @@ Acceptance checks:
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
-## After TSK-044
+## TSK-045
 
-TSK-044 records the reused letter-label Categorical rule. It leaves mixed representations, explainable uncertainty, notebook information density, charts, standalone HTML, Markdown, PDF, JSON serialization, replacement of legacy `profile()` and `compare()`, and Python 3.15 migration unselected. [DEC-115](DECISIONS.md#dec-115) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+Slice 045, mixed representation and explainable semantic evidence. Approved 2026-10-05 after TSK-044. Completed the same day. No later slice is approved by this section.
+
+Retain bounded representation evidence for heterogeneous string columns, distinguish absence of evidence from conflicting evidence, and support Categorical for reused short labels that include ordinary spaces and punctuation. Do not clean, coerce, or mutate the source. Do not select Datetime or Numeric from string shapes. Do not redesign the notebook. Do not change relationship methods.
+
+Acceptance checks:
+
+1. Reused short labels with internal spaces or a small punctuation set can resolve Categorical. The unpunctuated letter-label rule still applies to clean single-token labels.
+2. Repeated long prose, unique strings, emails, URLs, UUIDs, and empty strings do not resolve Categorical. Padding and missing-like literals beside a label vocabulary are retained and do not by themselves block Categorical or count as semantic conflict. The original strings stay the category levels.
+3. Date-like, quarter-year, numeric-like, currency-like, range, score, and unit-count strings are counted without conversion. A pure digit string is not an Excel date.
+4. Missing-like literals stay literals and do not change pandas missing counts.
+5. A column with no informative representation family and a column with conflicting families can both stay unresolved, and the retained mixture distinguishes them.
+6. The source Series and DataFrame are unchanged. Column names are not evidence.
+7. A penguins-shaped table stays 5 Numeric, 3 Categorical, 28 calculated relationships, and 0 ineligible.
+8. The full suite has only the known legacy PDF failure, total coverage stays at least 97%, and [DEC-116](DECISIONS.md#dec-116) records the rule.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-045
+
+TSK-045 records representation evidence and the short-label Categorical rule. It leaves notebook information density, charts, standalone HTML, Markdown, PDF, JSON serialization, replacement of legacy `profile()` and `compare()`, Text selection, and Python 3.15 migration unselected. [DEC-116](DECISIONS.md#dec-116) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
