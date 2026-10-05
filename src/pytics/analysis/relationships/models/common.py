@@ -81,10 +81,13 @@ class MultipleTestingAdjustment(Enum):
     raw. It does not mean a correction was attempted and failed.
 
     ``BENJAMINI_HOCHBERG`` means this p-value was one available primary
-    relationship test in the dataset-level exploratory family, and it
-    received that family's Benjamini–Hochberg adjustment. The adjusted
-    value is evidence about that same raw test. It is not a significance
-    flag.
+    test in the exploratory family of the result that stores it, and it
+    received that family's Benjamini–Hochberg adjustment. A relationship
+    record belongs to the dataset-level relationship family. A
+    distribution-drift record belongs to the univariate drift family of
+    one dataset comparison. The two families are never pooled. The
+    adjusted value is evidence about that same raw test. It is not a
+    significance flag.
     """
 
     NOT_APPLIED = "not_applied"

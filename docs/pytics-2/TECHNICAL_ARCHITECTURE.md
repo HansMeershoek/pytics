@@ -78,6 +78,26 @@ Status: **Accepted** as direction ([DEC-036](DECISIONS.md#dec-036)). This replac
 
 TSK-037 adds an internal comparison layer in `pytics.analysis.compare` ([DEC-108](DECISIONS.md#dec-108)). It reads two finished dataset analyses. It does not profile either frame again, and single-dataset analysis does not import it. The public `compare()` function is still the legacy entry point. The illustrative `ComparisonReport` above is not that result ([OPEN-004](DECISIONS.md#open-questions)).
 
+TSK-038 adds univariate distribution drift and turns that module into a package ([DEC-109](DECISIONS.md#dec-109)). The dependency direction is:
+
+```text
+DatasetAnalysis(reference)   DatasetAnalysis(comparison)
+              |                         |
+              +------------+------------+
+                           v
+     values -> alignment, schema, overview, descriptive
+                           v
+     distribution_models -> distribution   (Numeric reads source values here only)
+                           v
+                         models            (column, coverage, dataset cross-checks)
+                           v
+                        collector          (entry points, pass order, one BH call)
+                           v
+      future relationship and target drift, Findings, renderer
+```
+
+`descriptive` owns comparison eligibility. Drift reads it and does not decide again. Categorical and Boolean drift read the retained descriptive counts. Numeric drift reads each side's finite values once, through the Numeric profile's reader, when both source frames are supplied. Without them, `compare_dataset_analyses` reads no value and records drift as not collected. Drift reuses the relationship package's Pearson chi-square and expected-count kernels, its Fisher helper, and `benjamini_hochberg`. The chi-square kernels now accept margins and positive cells, and the relationship table functions delegate to them. Single-dataset analysis does not import compare. `column_label.py` stays a separate primitive. There is no method registry. No module was created for relationship or target drift.
+
 The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copies diverge, that is a documentation defect. The decision is the ruling. This file is the architecture description.
 
 | Principle | Classification |
@@ -173,7 +193,7 @@ The profile shape and the compare information architecture are related but not t
 
 General relationships, target analysis, missingness relationships, dataset comparison, and drift reuse one statistical layer wherever that is analytically appropriate ([DEC-037](DECISIONS.md#dec-037), `REQ-T-05`).
 
-Target-specific behavior sits on top of that layer: target distribution, imbalance, the diagnostic model, and potential leakage ([DEC-059](DECISIONS.md#dec-059)). TSK-032 is the first of that behavior. It projects an explicit target onto retained descriptive facts and retained relationship records. It does not add the diagnostic model ([DEC-103](DECISIONS.md#dec-103)). TSK-033 adds the exact observed Categorical distribution to that descriptive layer and has the projection reuse it ([DEC-104](DECISIONS.md#dec-104)). It does not add an imbalance verdict or the diagnostic model. TSK-034 adds the diagnostic model ([DEC-105](DECISIONS.md#dec-105)). It is target-specific and is not part of the shared relationship layer. It does not read or recompute relationship records, and the relationship layer does not read it. TSK-035 adds leakage evidence beside both ([DEC-106](DECISIONS.md#dec-106)). It reads the frame and the target's semantic state. It does not read relationship records or the diagnostic model. The diagnostic then excludes a predictor that the leakage result records as an exact duplicate. The dependency order is column analysis, relationships, target projection, leakage evidence, diagnostic model. Missingness and duplicate-row collection do not feed that chain. The chain does not read back.
+Target-specific behavior sits on top of that layer: target distribution, imbalance, the diagnostic model, and potential leakage ([DEC-059](DECISIONS.md#dec-059)). TSK-032 is the first of that behavior. It projects an explicit target onto retained descriptive facts and retained relationship records. It does not add the diagnostic model ([DEC-103](DECISIONS.md#dec-103)). TSK-033 adds the exact observed Categorical distribution to that descriptive layer and has the projection reuse it ([DEC-104](DECISIONS.md#dec-104)). It does not add an imbalance verdict or the diagnostic model. TSK-034 adds the diagnostic model ([DEC-105](DECISIONS.md#dec-105)). It is target-specific and is not part of the shared relationship layer. It does not read or recompute relationship records, and the relationship layer does not read it. TSK-035 adds leakage evidence beside both ([DEC-106](DECISIONS.md#dec-106)). It reads the frame and the target's semantic state. It does not read relationship records or the diagnostic model. The diagnostic then excludes a predictor that the leakage result records as an exact duplicate. The dependency order is column analysis, relationships, target projection, leakage evidence, diagnostic model. Missingness and duplicate-row collection do not feed that chain. The chain does not read back. TSK-038 distribution drift reuses the relationship chi-square, expected-count, Fisher, and Benjamini–Hochberg implementations for two-sample comparison ([DEC-109](DECISIONS.md#dec-109)). Its correction family is separate from the relationship family.
 
 The exact internal API is [OPEN-038](DECISIONS.md#open-questions).
 

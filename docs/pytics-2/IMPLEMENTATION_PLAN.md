@@ -1896,4 +1896,31 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
 ## After TSK-037
 
-TSK-037 records column alignment and descriptive change for exactly two datasets. It leaves distribution drift, relationship drift, target drift, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-108](DECISIONS.md#dec-108) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-037 records column alignment and descriptive change for exactly two datasets. It leaves distribution drift, relationship drift, target drift, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-108](DECISIONS.md#dec-108) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-038 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-038
+
+Slice 038, statistical distribution drift and compare architecture consolidation. Approved 2026-10-05 after TSK-037. Completed the same day. No later slice is approved by this section.
+
+Add univariate distribution drift for matched Numeric, Categorical, and Boolean columns, effect first. Split the comparison module by ownership before adding it. Do not add relationship drift, target drift, Findings, or public `compare()`.
+
+Acceptance checks:
+
+1. A drift statistical method matrix is derived before implementation. Drift is not framed as degradation. There is no drift score, severity, threshold, or significance flag. Sides stay reference and comparison.
+2. `compare.py` becomes a package with one direction of imports. TSK-037 values are unchanged, verified against the previous module.
+3. Eligibility is the descriptive comparison's. Semantic mismatches, Identifier, Datetime, Timedelta, Text, Empty, and Constant are not coerced. Constant behavior is explicit.
+4. Numeric drift uses finite non-missing values, keeps the KS distance with its location, the Wasserstein distance in column units, and the two-sample KS test with its exact or asymptotic computation. Ties are visible and the conservative p-value is documented.
+5. Large integers, `uint64`, mixed integer and float storage, extreme floats, subnormals, and signed zero keep exact order. No NaN or infinity is stored as an effect.
+6. Categorical drift uses the descriptive partition, total variation distance, chi-square homogeneity, and expected-count diagnostics. New and disappeared levels are evidence. Memory stays linear in the number of levels.
+7. Boolean drift has a signed True-share difference and a Fisher exact test, with no redundant effect.
+8. Missingness change stays separate from value drift. Components are independently available.
+9. One available primary p-value per tested column enters one Benjamini–Hochberg family per comparison. Raw and adjusted values are distinct. Unavailable p-values do not enter.
+10. Independent calculations verify KS, Wasserstein, the permutation p-value, TVD, the chi-square statistic, expected counts, Fisher, and Benjamini–Hochberg. Tiny effects with huge samples and large effects with small samples keep both facts.
+11. Results are deterministic and source-independent after collection. Numeric, high-cardinality, and mixed-frame costs are measured separately from descriptive compare.
+12. The full suite has only the known legacy PDF failure. [DEC-109](DECISIONS.md#dec-109) records the contract.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-038
+
+TSK-038 records univariate distribution drift between two datasets. It leaves relationship drift, target drift, constant-value comparison, mode-dependent drift inference, Findings, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-109](DECISIONS.md#dec-109) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

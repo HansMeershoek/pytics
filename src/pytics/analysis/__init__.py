@@ -24,6 +24,7 @@ then fits one untuned diagnostic model and is the only scikit-learn
 user. ``target_diagnostic`` holds its frozen result. An exact duplicate
 recorded by leakage evidence is excluded from that model.
 ``compare`` reads two finished dataset analyses and describes column
-alignment, schema transitions, and descriptive change. It does not
-profile either dataset again, and it is not ``pytics.compare``.
+alignment, schema transitions, descriptive change, and, when both source
+frames are supplied, univariate distribution drift. It does not profile
+either dataset again, and it is not ``pytics.compare``.
 """

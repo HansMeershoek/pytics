@@ -268,6 +268,8 @@ The comparison overview should emphasize what changed (`REQ-M-02`).
 
 TSK-037 does not render this navigation ([DEC-108](DECISIONS.md#dec-108)). The internal result records dataset counts, schema and semantic transitions, and Numeric, Categorical, and Boolean descriptive change. The Distributions, Relationships, and Drift views are not implemented. Their absence in that result is not a claim that those aspects were unchanged.
 
+TSK-038 adds the structured evidence a future Distributions or Drift view needs ([DEC-109](DECISIONS.md#dec-109)). Each matched Numeric, Categorical, or Boolean column holds its population, distance or difference, test, and adjusted p-value. Coverage counts eligible, collected, not collected, and unavailable components. A view should lead with the distance and show the p-value after it. It must not add a colour band, severity, or pass/fail label, and it must not rank Wasserstein distances across columns. No view is rendered, and the Relationships drift view still has no data.
+
 | ID | Requirement | Status |
 | --- | --- | --- |
 | REQ-IA-03 | Compare navigation follows the structure above, omitting items that do not apply. | Accepted |

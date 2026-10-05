@@ -5,7 +5,9 @@ from __future__ import annotations
 import dataclasses
 import datetime as datetime_module
 import math
+import re
 from fractions import Fraction
+from pathlib import Path
 from typing import Optional
 from typing import Tuple
 
@@ -15,6 +17,7 @@ import pytest
 
 import pytics
 import pytics.analysis.compare as compare_module
+import pytics.analysis.compare.collector as compare_collector
 from pytics.analysis.anomaly import anomaly_analysis_for_columns
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import ColumnEvidence
@@ -1141,7 +1144,7 @@ def test_naming_a_target_does_not_change_the_comparison(monkeypatch) -> None:
     def fail(*args, **kwargs):
         raise AssertionError("compare reanalyzed a frame")
 
-    monkeypatch.setattr(compare_module, "analyze_dataframe", fail)
+    monkeypatch.setattr(compare_collector, "analyze_dataframe", fail)
     plain = compare_dataset_analyses(plain_reference, plain_comparison)
     targeted = compare_dataset_analyses(targeted_reference, targeted_comparison)
     assert plain == targeted
@@ -1164,7 +1167,7 @@ def test_source_frames_and_analyses_are_unchanged() -> None:
     assert reference_analysis.columns is columns_id
 
 
-def test_result_has_no_score_severity_or_distribution_test() -> None:
+def test_result_has_no_score_severity_or_unselected_drift_method() -> None:
     result = compare_dataframes(
         pd.DataFrame({"amount": [1, 2, 3]}),
         pd.DataFrame({"amount": [1, 2, 9]}),
@@ -1172,24 +1175,26 @@ def test_result_has_no_score_severity_or_distribution_test() -> None:
     names = {field.name for field in dataclasses.fields(result)}
     assert "score" not in names
     assert "severity" not in names
-    assert "drift" not in names
-    source = (
-        compare_module.__file__
-        and open(compare_module.__file__, encoding="utf-8").read()
+    package = Path(compare_module.__file__).parent
+    lowered = "".join(
+        path.read_text(encoding="utf-8").lower() for path in package.glob("*.py")
     )
-    lowered = source.lower()
     for banned in (
-        "wasserstein",
         "jensen",
-        "kolmogorov",
+        "hellinger",
         "mannwhitney",
-        "chi_square",
         "population_stability",
+        "severity =",
+        "significant",
     ):
         assert banned not in lowered
+    assert re.search(r"\bpsi\b", lowered) is None
     assert result.coverage.deferred_families[0] is (
-        DeferredComparisonFamily.STATISTICAL_DISTRIBUTION_DRIFT
+        DeferredComparisonFamily.RELATIONSHIP_DRIFT
     )
+    assert "statistical_distribution_drift" not in {
+        family.value for family in DeferredComparisonFamily
+    }
 
 
 def test_legacy_public_compare_is_not_replaced() -> None:

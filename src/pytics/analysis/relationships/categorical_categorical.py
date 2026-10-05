@@ -308,20 +308,38 @@ def _effects(table: CategoricalContingencyTable) -> _Effects:
 
 
 def _pearson_chi_square(table: CategoricalContingencyTable) -> Optional[float]:
+    """Uncorrected Pearson statistic of one retained contingency table."""
+    return _pearson_chi_square_from_counts(
+        table.observed_counts,
+        table.left_totals,
+        table.right_totals,
+        table.grand_total,
+    )
+
+
+def _pearson_chi_square_from_counts(
+    observed_counts: Tuple[Tuple[int, int, int], ...],
+    left_totals: Tuple[int, ...],
+    right_totals: Tuple[int, ...],
+    n_paired: int,
+) -> Optional[float]:
     """Uncorrected Pearson statistic from the observed positive cells.
 
-    ``(O*n - R*C)^2 / (n*R*C)`` is ``(O - E)^2 / E`` with the products
-    kept as Python integers. Unobserved cells contribute their expected
-    counts in one exact remainder, ``(n*n - sum(R*C)) / n``, so a zero
-    cell does not need its own visit and does not need a dense matrix.
+    ``observed_counts`` holds ``(left_index, right_index, count)`` for
+    positive cells. The margins are positive and each sums to
+    ``n_paired``. ``(O*n - R*C)^2 / (n*R*C)`` is ``(O - E)^2 / E`` with
+    the products kept as Python integers. Unobserved cells contribute
+    their expected counts in one exact remainder,
+    ``(n*n - sum(R*C)) / n``, so a zero cell does not need its own visit
+    and does not need a dense matrix. Distribution drift reuses this
+    statistic for its two-sample homogeneity table.
     """
-    n_paired = table.grand_total
     terms = []
     observed_product = 0
     try:
-        for left_index, right_index, count in table.observed_counts:
-            row_total = table.left_totals[left_index]
-            column_total = table.right_totals[right_index]
+        for left_index, right_index, count in observed_counts:
+            row_total = left_totals[left_index]
+            column_total = right_totals[right_index]
             residual = count * n_paired - row_total * column_total
             denominator = n_paired * row_total * column_total
             terms.append((residual * residual) / denominator)
@@ -439,18 +457,35 @@ def _as_p_value(value: object) -> Optional[float]:
 
 
 def _diagnostics(table: CategoricalContingencyTable) -> ExpectedCountDiagnostics:
-    n_paired = table.grand_total
+    return _expected_count_diagnostics(
+        table.left_totals,
+        table.right_totals,
+        table.grand_total,
+    )
+
+
+def _expected_count_diagnostics(
+    left_totals: Tuple[int, ...],
+    right_totals: Tuple[int, ...],
+    n_paired: int,
+) -> ExpectedCountDiagnostics:
+    """Cochran checkpoints for the rectangle spanned by two positive margins.
+
+    Every cell of that rectangle counts, including observed zeros.
+    Distribution drift reuses these checkpoints for its two-sample
+    homogeneity table.
+    """
     if n_paired == 0:
         return _unavailable_diagnostics(
             UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS
         )
-    minimum = _minimum_expected(table.left_totals, table.right_totals, n_paired)
+    minimum = _minimum_expected(left_totals, right_totals, n_paired)
     if minimum is None:
         return _unavailable_diagnostics(UnavailabilityReason.NON_FINITE_RESULT)
-    ordered = tuple(sorted(table.right_totals))
-    below_5 = _count_products_below(table.left_totals, ordered, 5 * n_paired)
-    below_1 = _count_products_below(table.left_totals, ordered, n_paired)
-    n_cells = table.n_left_levels * table.n_right_levels
+    ordered = tuple(sorted(right_totals))
+    below_5 = _count_products_below(left_totals, ordered, 5 * n_paired)
+    below_1 = _count_products_below(left_totals, ordered, n_paired)
+    n_cells = len(left_totals) * len(right_totals)
     fraction = _fraction(below_5, n_cells)
     if fraction is None:
         return _unavailable_diagnostics(UnavailabilityReason.NON_FINITE_RESULT)

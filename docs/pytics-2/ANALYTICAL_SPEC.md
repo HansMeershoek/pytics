@@ -592,7 +592,7 @@ Comparison should eventually cover:
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| REQ-M-01 | `compare()` is a first-class capability and uses the same product language as profile. | Accepted. Distribution, relationship, and drift comparisons reuse the shared statistical layer where analytically appropriate (`REQ-T-05`). |
+| REQ-M-01 | `compare()` is a first-class capability and uses the same product language as profile. | Accepted. Distribution, relationship, and drift comparisons reuse the shared statistical layer where analytically appropriate (`REQ-T-05`). TSK-038 distribution drift reuses the relationship chi-square, expected-count checkpoints, Fisher helper, and Benjamini–Hochberg. |
 | REQ-M-02 | Explain what changed. Do not merely place two profile reports side by side. | Accepted |
 | REQ-M-03 | Report drift neutrally as observed or material change. Do not automatically label it bad. | Accepted |
 | REQ-M-04 | The change types listed above are the destination scope of comparison. | Accepted as destination scope. |
@@ -600,6 +600,16 @@ Comparison should eventually cover:
 "Eventually" means this list is not an approved first implementation slice. Sequencing is [OPEN-024](DECISIONS.md#open-questions). Comparison of more than two datasets was not specified ([OPEN-024](DECISIONS.md#open-questions)).
 
 TSK-037 delivers the internal foundation for exactly two datasets ([DEC-108](DECISIONS.md#dec-108)). It aligns columns, records physical and semantic transitions, and compares retained Numeric, Categorical, and Boolean descriptive facts, plus dataset missing and duplicate counts. It does not score drift or degradation. Distribution drift, relationship drift, and target drift are not implemented. Public `compare()` is unchanged ([OPEN-004](DECISIONS.md#open-questions)). `REQ-M-01` through `REQ-M-04` stay Accepted and are not Implemented.
+
+TSK-038 adds univariate distribution drift to that internal result ([DEC-109](DECISIONS.md#dec-109)). The question is how a matched variable's distribution differs from reference to comparison, how large that difference is, and what evidence supports it. Five levels stay apart: a descriptive difference, a distribution distance, inferential evidence under the null of one common distribution, the analyst's interpretation, and an unsupported automatic verdict, which Pytics does not produce. Drift is not degradation, error, or cause. A column has drift exactly when it has a typed Numeric, Categorical, or Boolean descriptive comparison. Constant, Identifier, Datetime, Timedelta, Text, Empty, unresolved, ambiguous, mismatched, and unmatched columns are not eligible and are not coerced. Missing values are outside every population, and missingness change stays its own evidence.
+
+| Family | Population | Effects | Primary test |
+| --- | --- | --- | --- |
+| Numeric | Finite non-missing values, the Numeric profile's population | Kolmogorov–Smirnov distance on `[0, 1]`, with where it is attained; Wasserstein-1 distance in the column's units, not comparable across columns | Two-sample KS. Exact up to 10,000 values on the larger side, asymptotic above. Conservative with ties. |
+| Categorical | Non-missing observed levels under the descriptive partition | Total variation distance on `[0, 1]`, with the observations in new and disappeared levels | Pearson chi-square homogeneity on the 2 by k table, with Cochran expected-count diagnostics that do not gate it |
+| Boolean | Non-missing values | Signed True-share difference, comparison minus reference | Two-sided Fisher exact on side by value |
+
+Values are compared exactly, including integers beyond `2**53` and `uint64`. One available primary p-value per tested column enters one Benjamini–Hochberg family per comparison. Raw and adjusted p-values are both kept. There is no threshold, significance flag, score, or severity. Numeric drift reads source values when both source frames are supplied. Categorical and Boolean drift read retained counts. Relationship drift and target drift are not implemented.
 
 The illustrative `ComparisonReport` fields in [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) are not accepted ([OPEN-004](DECISIONS.md#open-questions)).
 
