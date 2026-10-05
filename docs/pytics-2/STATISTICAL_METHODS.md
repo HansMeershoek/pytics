@@ -28,6 +28,8 @@ These are product rules. The contract detail sits in [PRODUCT_CONTRACT.md](PRODU
 | Reproducibility | Same data, configuration, version, and seed should agree where reasonably possible. Record nondeterministic metadata (`REQ-P-12`). | Accepted |
 | Catalog freeze | Do not hard-code a final method catalog (`REQ-K-03`). | In force |
 
+TSK-037 compares retained descriptive facts between a reference dataset and a comparison dataset ([DEC-108](DECISIONS.md#dec-108)). A numeric or proportion change is `comparison - reference` when that difference is defined. It is not a hypothesis test, not a drift statistic, and not a practical-significance rule. KS, Wasserstein, PSI, chi-square drift tests, and other two-sample tests are not added. Compare does not call the relationship package.
+
 ## Relationship direction
 
 Status: **Accepted as direction** ([DEC-055](DECISIONS.md#dec-055)). Not a closed catalog. Exact formulas and fallbacks are [OPEN-006](DECISIONS.md#open-questions).

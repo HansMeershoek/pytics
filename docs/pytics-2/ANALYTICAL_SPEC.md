@@ -599,6 +599,8 @@ Comparison should eventually cover:
 
 "Eventually" means this list is not an approved first implementation slice. Sequencing is [OPEN-024](DECISIONS.md#open-questions). Comparison of more than two datasets was not specified ([OPEN-024](DECISIONS.md#open-questions)).
 
+TSK-037 delivers the internal foundation for exactly two datasets ([DEC-108](DECISIONS.md#dec-108)). It aligns columns, records physical and semantic transitions, and compares retained Numeric, Categorical, and Boolean descriptive facts, plus dataset missing and duplicate counts. It does not score drift or degradation. Distribution drift, relationship drift, and target drift are not implemented. Public `compare()` is unchanged ([OPEN-004](DECISIONS.md#open-questions)). `REQ-M-01` through `REQ-M-04` stay Accepted and are not Implemented.
+
 The illustrative `ComparisonReport` fields in [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) are not accepted ([OPEN-004](DECISIONS.md#open-questions)).
 
 ## N — Findings

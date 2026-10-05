@@ -1870,4 +1870,30 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
 ## After TSK-036
 
-TSK-036 records Tukey fences for selected Numeric columns. It leaves multivariate anomaly detection, other univariate methods, categorical rarity as an anomaly method, datetime gaps, text-length anomalies, mode-dependent retention, and the rendered Anomalies view unselected. [DEC-107](DECISIONS.md#dec-107) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-036 records Tukey fences for selected Numeric columns. It leaves multivariate anomaly detection, other univariate methods, categorical rarity as an anomaly method, datetime gaps, text-length anomalies, mode-dependent retention, and the rendered Anomalies view unselected. [DEC-107](DECISIONS.md#dec-107) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). TSK-037 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-037
+
+Slice 037, compare and drift foundation. Approved 2026-10-05 after TSK-036. Completed the same day. No later slice is approved by this section.
+
+Record what changed between a reference DataFrame and a comparison DataFrame. Do not score drift or degradation. Do not add distribution, relationship, or target drift.
+
+Acceptance checks:
+
+1. The sides are reference and comparison. A directional change is comparison minus reference. There is no drift score, quality score, or severity.
+2. `compare_dataframes` analyzes each frame independently and then compares those results. `compare_dataset_analyses` does not scan either frame. Public `pytics.compare` is unchanged.
+3. Columns align by label identity and occurrence. Reordered columns stay matched. Both physical positions are retained. `1` does not match `True`. Duplicate labels are deterministic.
+4. Physical dtype transitions and semantic transitions are separate. Confidence transitions are categorical.
+5. Matched Numeric, Categorical, and Boolean columns compare retained descriptive facts. Identifier, Datetime, Timedelta, Text, Empty, Constant, unresolved columns, and semantic mismatches do not receive those specialized comparisons. The reason is visible.
+6. Numeric differences do not collapse exact integers or store a non-finite float as a change. Categorical level partitions follow the existing category equality and are not quadratic. Boolean comparison is descriptive.
+7. Rows are not paired by index. Duplicate groups are not matched across datasets. Missingness patterns, anomaly counts, relationship drift, and target drift are not compared.
+8. A missing descriptive payload is an explicit status. It does not mean the column was unchanged. The retained result holds no DataFrame, Series, Index, or ndarray. The source frames are unchanged.
+9. Alignment, schema transitions, numeric deltas, and categorical partitions agree with independent fixture calculations.
+10. Naming a target does not change the comparison. High-cardinality category comparison and a wide reordered schema are measured. The cross pass does not rescan row values.
+11. The full suite has only the known legacy PDF failure. [DEC-108](DECISIONS.md#dec-108) records the contract.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-037
+
+TSK-037 records column alignment and descriptive change for exactly two datasets. It leaves distribution drift, relationship drift, target drift, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-108](DECISIONS.md#dec-108) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

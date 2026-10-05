@@ -76,6 +76,8 @@ Status: **Accepted** as direction ([DEC-036](DECISIONS.md#dec-036)). This replac
 
 `compare()` is a public entry point. Drift is a special analysis that compare can use. It is not a second statistical implementation (`REQ-T-05`).
 
+TSK-037 adds an internal comparison layer in `pytics.analysis.compare` ([DEC-108](DECISIONS.md#dec-108)). It reads two finished dataset analyses. It does not profile either frame again, and single-dataset analysis does not import it. The public `compare()` function is still the legacy entry point. The illustrative `ComparisonReport` above is not that result ([OPEN-004](DECISIONS.md#open-questions)).
+
 The same diagram is recorded in [DEC-036](DECISIONS.md#dec-036). If the two copies diverge, that is a documentation defect. The decision is the ruling. This file is the architecture description.
 
 | Principle | Classification |

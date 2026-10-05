@@ -266,6 +266,8 @@ DETAILS
 
 The comparison overview should emphasize what changed (`REQ-M-02`).
 
+TSK-037 does not render this navigation ([DEC-108](DECISIONS.md#dec-108)). The internal result records dataset counts, schema and semantic transitions, and Numeric, Categorical, and Boolean descriptive change. The Distributions, Relationships, and Drift views are not implemented. Their absence in that result is not a claim that those aspects were unchanged.
+
 | ID | Requirement | Status |
 | --- | --- | --- |
 | REQ-IA-03 | Compare navigation follows the structure above, omitting items that do not apply. | Accepted |
