@@ -56,7 +56,7 @@ from pytics.analysis.compare.schema import semantic_comparison
 from pytics.analysis.compare.target import compare_target
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
-from pytics.analysis.relationships.collector import _labels_match
+from pytics.analysis.column_label import observed_labels_equal
 from pytics.analysis.target import TargetPosition
 from pytics.analysis.target import _labels_equal
 
@@ -166,15 +166,15 @@ def compare_dataframes(
         comparison_position = _target_position(comparison.columns, target)
     reference_analysis = analyze_dataframe(
         reference,
-        target=None
-        if reference_position is None
-        else TargetPosition(reference_position),
+        target=(
+            None if reference_position is None else TargetPosition(reference_position)
+        ),
     )
     comparison_analysis = analyze_dataframe(
         comparison,
-        target=None
-        if comparison_position is None
-        else TargetPosition(comparison_position),
+        target=(
+            None if comparison_position is None else TargetPosition(comparison_position)
+        ),
     )
     return compare_dataset_analyses(
         reference_analysis,
@@ -200,9 +200,7 @@ def _target_position(labels: Sequence[object], target: object) -> Optional[int]:
         if target.position >= count:
             return None
         return target.position
-    matches = [
-        index for index in range(count) if _labels_equal(labels[index], target)
-    ]
+    matches = [index for index in range(count) if _labels_equal(labels[index], target)]
     if len(matches) > 1:
         raise ValueError("target label matches more than one column")
     if not matches:
@@ -216,7 +214,7 @@ def _require_source_frame(frame: pd.DataFrame, analysis: DatasetAnalysis) -> Non
     if frame.shape != (analysis.n_rows, analysis.n_columns):
         raise ValueError("source frame shape does not match its analysis")
     for column in analysis.columns:
-        if not _labels_match(column.label, frame.columns[column.position]):
+        if not observed_labels_equal(column.label, frame.columns[column.position]):
             raise ValueError("source frame labels do not match its analysis")
 
 

@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Optional
 from typing import Tuple
 
+from pytics.analysis.column_label import install_column_label_equality
 from pytics.analysis.relationships.models.common import FrequentistEvidence
 from pytics.analysis.relationships.models.common import MultipleTestingAdjustment
 from pytics.analysis.relationships.models.common import RelationshipFamily
@@ -318,3 +319,6 @@ def _require_correlation(value: Optional[float], field: str) -> None:
         raise ValueError(f"{field} must be a finite float")
     if value < -1.0 or value > 1.0:
         raise ValueError(f"{field} must lie on [-1, 1]")
+
+
+install_column_label_equality(NumericNumericRelationship)

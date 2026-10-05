@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from pytics.analysis.column import ColumnAnalysis
+from pytics.analysis.column_label import observed_labels_equal
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.relationships.adjustment import adjust_primary_p_values
 from pytics.analysis.relationships.boolean_boolean import _read_boolean_column
@@ -996,12 +997,9 @@ def _copy_chi_square(test: CategoricalIndependenceTest) -> CategoricalIndependen
 
 
 def _labels_match(left: object, right: object) -> bool:
-    if left is right:
-        return True
-    try:
-        equal = left == right
-    except TypeError:
-        return False
-    if isinstance(equal, np.ndarray):
-        return False
-    return bool(equal)
+    """Whether two stored column labels are the same label.
+
+    This is :func:`observed_labels_equal`. Float ``NaN`` matches float
+    ``NaN``. ``True`` does not match ``1``.
+    """
+    return observed_labels_equal(left, right)

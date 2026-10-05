@@ -20,7 +20,7 @@ from typing import List
 from typing import Tuple
 
 from pytics.analysis.column import ColumnAnalysis
-from pytics.analysis.compare.alignment import _index_columns
+from pytics.analysis.column_label import identify_column_labels
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.findings.models import ColumnSubject
 from pytics.analysis.findings.models import DuplicateRowsEvidence
@@ -75,14 +75,15 @@ def collect_profile_findings(analysis: DatasetAnalysis) -> FindingsAnalysis:
 
 
 def column_subjects(columns: Tuple[ColumnAnalysis, ...]) -> Tuple[ColumnSubject, ...]:
-    """One subject per physical column, with the cross-dataset label identity."""
+    """One subject per physical column, with the shared label identity."""
+    identities = identify_column_labels(tuple(column.label for column in columns))
     return tuple(
         ColumnSubject(
-            position=indexed.column.position,
-            label=indexed.label,
-            occurrence=indexed.occurrence,
+            position=column.position,
+            label=identity.retained,
+            occurrence=identity.occurrence,
         )
-        for indexed in _index_columns(columns)
+        for column, identity in zip(columns, identities)
     )
 
 

@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+from pytics.analysis.column_label import install_column_label_equality
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.relationships.models.common import BooleanLevel
 from pytics.analysis.relationships.models.common import FrequentistEvidence
@@ -665,3 +666,6 @@ def _require_finite_float(value: object, field: str) -> None:
         raise ValueError(f"{field} must be a finite float")
     if value == 0.0 and math.copysign(1.0, value) < 0.0:
         raise ValueError(f"{field} must not be negative zero")
+
+
+install_column_label_equality(NumericBooleanRelationship)

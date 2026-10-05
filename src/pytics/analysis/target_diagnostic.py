@@ -33,6 +33,7 @@ from typing import Tuple
 from typing import Union
 
 from pytics.analysis.column import ColumnAnalysis
+from pytics.analysis.column_label import labels_are_float_nan
 from pytics.semantics.interpretation import SemanticType
 from pytics.semantics.resolution import ResolutionStatus
 
@@ -906,9 +907,12 @@ def _require_metric_value(metric: DiagnosticMetric, value: object) -> None:
 def _same_value(left: object, right: object) -> bool:
     """Return whether two retained labels or class values are the same value.
 
-    ``True == 1`` in Python, so the types must also match.
+    ``True == 1`` in Python, so the types must also match. ``1`` and
+    ``1.0`` stay different types. Float ``NaN`` matches float ``NaN``,
+    including a NumPy floating NaN, because those values are not equal
+    under ``==``.
     """
-    if left is right:
+    if left is right or labels_are_float_nan(left, right):
         return True
     if type(left) is not type(right):
         return False

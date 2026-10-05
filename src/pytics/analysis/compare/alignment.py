@@ -21,8 +21,7 @@ from typing import Tuple
 
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column_label import RetainedColumnLabel
-from pytics.analysis.column_label import column_label_match_key
-from pytics.analysis.column_label import retain_column_label
+from pytics.analysis.column_label import identify_column_labels
 from pytics.analysis.compare.values import _require_optional
 from pytics.analysis.compare.values import _require_optional_position
 
@@ -159,24 +158,21 @@ def align_columns(
 def _index_columns(
     columns: Tuple[ColumnAnalysis, ...],
 ) -> Tuple[_IndexedColumn, ...]:
-    counts: Dict[Tuple[object, ...], int] = {}
-    indexed = []
-    for column in columns:
-        label = retain_column_label(column.label)
-        key = column_label_match_key(column.label)
-        occurrence = None
-        if key is not None:
-            counts[key] = counts.get(key, 0) + 1
-            occurrence = counts[key]
-        indexed.append(
-            _IndexedColumn(
-                column=column,
-                label=label,
-                occurrence=occurrence,
-                key=key,
-            )
+    """Attach each column to the shared label identity of its label.
+
+    Occurrence counting lives in :func:`identify_column_labels`. This
+    function only pairs that identity with the column analysis.
+    """
+    identities = identify_column_labels(tuple(column.label for column in columns))
+    return tuple(
+        _IndexedColumn(
+            column=column,
+            label=identity.retained,
+            occurrence=identity.occurrence,
+            key=identity.match_key,
         )
-    return tuple(indexed)
+        for column, identity in zip(columns, identities)
+    )
 
 
 def _matched(reference: _IndexedColumn, comparison: _IndexedColumn) -> _AlignedColumn:

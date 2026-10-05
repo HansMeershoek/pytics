@@ -135,7 +135,7 @@ Status: **Accepted** as a descriptive foundation, with one complementary inferen
 
 A relationship state is an effect inside one dataset. A relationship change is `comparison - reference` for that effect. Inferential evidence of change, where it exists, has a null that the effect parameter is equal across the two datasets. A within-dataset p-value crossing a threshold is not that evidence. Adjusted p-values are not subtracted. `None` is not stored as zero.
 
-Pairs align by the TSK-037 column identity: label match key plus occurrence. Physical order does not define the pair. Duplicate labels stay distinct. If the semantic family changes, the effects are not subtracted.
+Pairs align by the TSK-037 column identity: label match key plus occurrence ([DEC-112](DECISIONS.md#dec-112)). Physical order does not define the pair. Duplicate labels stay distinct. Float `NaN` labels share one match key. If the semantic family changes, the effects are not subtracted.
 
 | Family | Primary change | Complementary change | Formal change test | This slice |
 | --- | --- | --- | --- | --- |

@@ -1,8 +1,14 @@
-"""Cross-dataset identity for one column label.
+"""Column-label equivalence and occurrence identity.
 
-Physical position identifies a column inside one DataFrame. Across two
-DataFrames the label has to be matched as well. This module defines that
-match and the value the comparison result may keep.
+Physical position identifies a column inside one DataFrame. A label's
+match key is the equivalence used when two labels should be treated as
+the same label: across datasets, and wherever a stored label is compared
+again. Occurrence counts labels that share a match key, from 1, in the
+order of one column axis. Alignment pairs those occurrences across two
+datasets. This module owns the key and the occurrence count. It does not
+align datasets, and it does not rewrite a label.
+
+The comparison result may keep only the retained form defined below.
 
 Boolean labels stay distinct from integers. ``True == 1`` is true in
 Python, and that comparison must not align those labels. The same rule
@@ -26,11 +32,14 @@ are not stored.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as datetime_module
 import math
 from dataclasses import dataclass
 from enum import Enum
+from typing import Dict
 from typing import Optional
+from typing import Sequence
 from typing import Tuple
 
 import numpy as np
@@ -115,6 +124,222 @@ def column_labels_equal(left: object, right: object) -> bool:
     if left_key is None or right_key is None:
         return False
     return left_key == right_key
+
+
+def retained_column_label_match_key(
+    label: RetainedColumnLabel,
+) -> Tuple[object, ...]:
+    """Return the match key of a label that was already retained.
+
+    A raw label uses :func:`column_label_match_key`. An unsupported
+    label has no key.
+    """
+    if not isinstance(label, RetainedColumnLabel):
+        raise TypeError("label must be a RetainedColumnLabel")
+    if label.kind is ColumnLabelKind.UNSUPPORTED:
+        raise TypeError("an unsupported label has no match key")
+    return _match_key(label)
+
+
+def observed_labels_equal(left: object, right: object) -> bool:
+    """Whether two observed labels are the same label.
+
+    The same object matches, including an unsupported label compared
+    with itself. Otherwise two supported labels match by match key, so
+    every float ``NaN`` matches, ``True`` does not match ``1``, and
+    ``1`` matches ``1.0`` when the float is that integer exactly. An
+    unsupported label does not match a different object through the
+    match key. It can still match through guarded Python equality, which
+    is how an incomparable object stays unequal and how a NumPy array
+    stays unequal. Nothing is stringified.
+    """
+    if left is right:
+        return True
+    left_key = column_label_match_key(left)
+    right_key = column_label_match_key(right)
+    if left_key is not None or right_key is not None:
+        return left_key is not None and left_key == right_key
+    return _guarded_python_equal(left, right)
+
+
+def labels_are_float_nan(left: object, right: object) -> bool:
+    """Whether both values are float NaN, including a NumPy floating NaN.
+
+    ``None``, ``pd.NA``, and ``pd.NaT`` are not float NaN. This is the
+    NaN case used by checks that otherwise require the same Python type.
+    """
+    return _is_float_nan(left) and _is_float_nan(right)
+
+
+@dataclass(frozen=True)
+class ColumnLabelIdentity:
+    """One label's retained form, match key, and occurrence in one order.
+
+    ``occurrence`` counts labels that share ``match_key``, starting at 1.
+    Both are ``None`` exactly when the label is unsupported.
+    """
+
+    retained: RetainedColumnLabel
+    match_key: Optional[Tuple[object, ...]]
+    occurrence: Optional[int]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.retained, RetainedColumnLabel):
+            raise TypeError("retained must be a RetainedColumnLabel")
+        if self.match_key is None:
+            if self.occurrence is not None:
+                raise ValueError("an unsupported label has no occurrence")
+            if self.retained.kind is not ColumnLabelKind.UNSUPPORTED:
+                raise ValueError("a retained label has a match key")
+            return
+        if type(self.match_key) is not tuple or len(self.match_key) < 1:
+            raise TypeError("match_key must be a non-empty tuple")
+        if type(self.occurrence) is not int or self.occurrence < 1:
+            raise ValueError("occurrence must be a positive int")
+        if self.retained.kind is ColumnLabelKind.UNSUPPORTED:
+            raise ValueError("an unsupported label has no match key")
+
+
+def identify_column_labels(
+    labels: Sequence[object],
+) -> Tuple[ColumnLabelIdentity, ...]:
+    """Identify each label once, in the order given.
+
+    One pass and a dict of match keys. Expected linear in the number of
+    labels. Column values are not read, and the labels are not reordered
+    or rewritten.
+    """
+    if isinstance(labels, (str, bytes)):
+        raise TypeError("identify_column_labels expects a sequence of labels")
+    counts: Dict[Tuple[object, ...], int] = {}
+    identified = []
+    for label in labels:
+        retained = retain_column_label(label)
+        if retained.kind is ColumnLabelKind.UNSUPPORTED:
+            identified.append(
+                ColumnLabelIdentity(
+                    retained=retained,
+                    match_key=None,
+                    occurrence=None,
+                )
+            )
+            continue
+        key = _match_key(retained)
+        counts[key] = counts.get(key, 0) + 1
+        identified.append(
+            ColumnLabelIdentity(
+                retained=retained,
+                match_key=key,
+                occurrence=counts[key],
+            )
+        )
+    return tuple(identified)
+
+
+_COLUMN_LABEL_FIELDS = frozenset(
+    {
+        "label",
+        "left_label",
+        "right_label",
+        "other_label",
+        "target_label",
+    }
+)
+
+
+def records_equal(left: object, right: object) -> bool:
+    """Field equality, with column-label fields on the match key.
+
+    Non-label fields use ordinary equality. A column-label field uses
+    :func:`observed_labels_equal`, so a rebuilt record whose label is
+    float ``NaN`` still matches. This does not compare different types.
+    """
+    if left is right:
+        return True
+    if type(left) is not type(right):
+        return False
+    if not dataclasses.is_dataclass(left) or isinstance(left, type):
+        return False
+    for field in dataclasses.fields(left):
+        if not _field_equal(
+            getattr(left, field.name),
+            getattr(right, field.name),
+            field.name,
+        ):
+            return False
+    return True
+
+
+def records_hash(record: object) -> int:
+    """Hash consistent with :func:`records_equal` for column-label fields.
+
+    A supported label is hashed by its match key, so every float ``NaN``
+    shares one hash and ``1`` shares the hash of ``1.0``. Other fields
+    use their ordinary hash.
+    """
+    if not dataclasses.is_dataclass(record) or isinstance(record, type):
+        raise TypeError("records_hash expects a dataclass instance")
+    hashed = []
+    for field in dataclasses.fields(record):
+        value = getattr(record, field.name)
+        if field.name in _COLUMN_LABEL_FIELDS:
+            hashed.append(_label_hash(value))
+        else:
+            hashed.append(value)
+    return hash(tuple(hashed))
+
+
+def install_column_label_equality(cls: type) -> type:
+    """Use match-key equality for one frozen record's column-label fields.
+
+    The generated equality compares a raw label with ``==``. Float
+    ``NaN`` is not equal to itself under that test, so a rebuilt record
+    does not match. The replacement keeps ordinary equality for every
+    other field.
+    """
+
+    def __eq__(self: object, other: object) -> bool:
+        if other.__class__ is not self.__class__:
+            return NotImplemented  # type: ignore[return-value]
+        return records_equal(self, other)
+
+    def __hash__(self: object) -> int:
+        return records_hash(self)
+
+    setattr(cls, "__eq__", __eq__)
+    setattr(cls, "__hash__", __hash__)
+    return cls
+
+
+def _guarded_python_equal(left: object, right: object) -> bool:
+    try:
+        equal = left == right
+    except TypeError:
+        return False
+    if equal is True or equal is False:
+        return equal
+    if isinstance(equal, np.bool_):
+        return bool(equal)
+    return False
+
+
+def _is_float_nan(value: object) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (float, np.floating)):
+        return False
+    return math.isnan(float(value))
+
+
+def _field_equal(left: object, right: object, name: str) -> bool:
+    if name in _COLUMN_LABEL_FIELDS:
+        return observed_labels_equal(left, right)
+    return _guarded_python_equal(left, right)
+
+
+def _label_hash(label: object) -> int:
+    key = column_label_match_key(label)
+    if key is not None:
+        return hash(key)
+    return hash(label)
 
 
 def _retain(label: object) -> Optional[RetainedColumnLabel]:

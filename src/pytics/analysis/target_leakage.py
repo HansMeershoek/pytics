@@ -54,6 +54,7 @@ import numpy as np
 import pandas as pd
 
 from pytics.analysis.column import ColumnAnalysis
+from pytics.analysis.column_label import labels_are_float_nan
 from pytics.analysis.relationships.boolean_boolean import _read_boolean_column
 from pytics.analysis.relationships.numeric_categorical import _read_categorical_column
 from pytics.analysis.relationships.numeric_numeric import _read_numeric_column
@@ -1155,9 +1156,11 @@ def _require_mapping_reconciliation(evidence: MappingEvidence) -> None:
 def _same_value(left: object, right: object) -> bool:
     """Return whether two retained labels are the same value.
 
-    ``True == 1`` in Python, so the types must also match.
+    ``True == 1`` in Python, so the types must also match. Float ``NaN``
+    matches float ``NaN``, including a NumPy floating NaN, because those
+    values are not equal under ``==``.
     """
-    if left is right:
+    if left is right or labels_are_float_nan(left, right):
         return True
     if type(left) is not type(right):
         return False

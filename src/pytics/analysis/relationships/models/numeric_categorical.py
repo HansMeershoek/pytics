@@ -13,6 +13,7 @@ from enum import Enum
 from typing import Optional
 from typing import Tuple
 
+from pytics.analysis.column_label import install_column_label_equality
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.relationships.models.common import FrequentistEvidence
 from pytics.analysis.relationships.models.common import RelationshipFamily
@@ -333,3 +334,6 @@ def _require_numeric_categorical_components(
         raise ValueError("an unavailable F statistic has no p-value")
     if frequentist.reason is not UnavailabilityReason.NON_FINITE_RESULT:
         raise ValueError("a non-finite omnibus result stays non-finite")
+
+
+install_column_label_equality(NumericCategoricalRelationship)

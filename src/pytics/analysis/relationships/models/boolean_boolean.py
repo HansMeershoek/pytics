@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+from pytics.analysis.column_label import install_column_label_equality
 from pytics.analysis.relationships.models.common import BooleanLevel
 from pytics.analysis.relationships.models.common import FrequentistEvidence
 from pytics.analysis.relationships.models.common import RelationshipFamily
@@ -705,3 +706,6 @@ def _require_fisher_margins(
             raise ValueError(
                 "a defined independence test is unavailable only when non-finite"
             )
+
+
+install_column_label_equality(BooleanBooleanRelationship)

@@ -15,6 +15,7 @@ from enum import Enum
 from typing import Optional
 from typing import Tuple
 
+from pytics.analysis.column_label import install_column_label_equality
 from pytics.analysis.relationships.models.common import FrequentistEvidence
 from pytics.analysis.relationships.models.common import RelationshipFamily
 from pytics.analysis.relationships.models.common import ResultAvailability
@@ -541,3 +542,6 @@ def _require_diagnostics_for_populated_table(
     below_5 = diagnostics.n_cells_expected_below_5
     if below_5 is None or below_5 > n_cells:
         raise ValueError("cells below 5 cannot exceed the contingency rectangle")
+
+
+install_column_label_equality(CategoricalCategoricalRelationship)

@@ -1973,4 +1973,25 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
 ## After TSK-040
 
-TSK-040 records the Findings Engine foundation and a threshold-free v0.1 catalog. It leaves threshold-based and effect-first findings for missingness, cardinality, anomalies, non-finite values, relationships, relationship change, distribution drift, and target predictability unselected, together with repeated-mapping transitions, findings configuration, user-facing level labels, renderer wording, a rendered Findings view, and the public result. [DEC-111](DECISIONS.md#dec-111) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-040 records the Findings Engine foundation and a threshold-free v0.1 catalog. It leaves threshold-based and effect-first findings for missingness, cardinality, anomalies, non-finite values, relationships, relationship change, distribution drift, and target predictability unselected, together with repeated-mapping transitions, findings configuration, user-facing level labels, renderer wording, a rendered Findings view, and the public result. [DEC-111](DECISIONS.md#dec-111) records that boundary. TSK-041 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-041
+
+Slice 041, canonical column identity. Approved 2026-10-05 after TSK-040. Completed the same day. No later slice is approved by this section.
+
+Make the existing label match key and occurrence count the one identity primitive, and use that key where a stored column label is compared. Do not change a statistical method, the findings catalog, drift, or the public API.
+
+Acceptance checks:
+
+1. A Numeric column whose label is float `NaN` completes `analyze_dataframe`, including anomaly location and a relationship with another eligible column.
+2. Duplicate labels stay distinct by occurrence through analysis, relationships, Compare alignment, and Findings subjects.
+3. `True` does not match `1`. `1` matches `1.0` by match key and keeps a separate occurrence. `None` does not match float `NaN`. `2**53 + 1` does not match `float(2**53 + 1)`.
+4. Reordered columns stay aligned by match key plus occurrence.
+5. Findings no longer imports private Compare identity helpers. The 11 codes, 2 suppression rules, and `pytics.findings/0.1` are unchanged.
+6. The full suite has only the known legacy PDF failure, total coverage stays at least 97%, and [DEC-112](DECISIONS.md#dec-112) records the contract.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-041
+
+TSK-041 records the column-identity primitive and the float-`NaN` label fix. It leaves threshold-based findings, renderer wording, a rendered Findings view, and the public result unselected. [DEC-112](DECISIONS.md#dec-112) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

@@ -28,12 +28,12 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 
-import numpy as np
-
 from pytics.analysis.boolean import BooleanDescriptiveAnalysis
 from pytics.analysis.categorical import CategoricalDescriptiveAnalysis
 from pytics.analysis.categorical import copy_categorical_descriptive_analysis
 from pytics.analysis.column import ColumnAnalysis
+from pytics.analysis.column_label import install_column_label_equality
+from pytics.analysis.column_label import observed_labels_equal
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.relationships.models.boolean_boolean import (
     BooleanBooleanRelationship,
@@ -394,8 +394,9 @@ def resolve_target_position(labels: Sequence[object], target: object) -> int:
     """Resolve an explicit target to one physical column position.
 
     ``TargetPosition`` selects that index. Any other value is a label.
-    The label must equal exactly one column. Boolean labels do not match
-    integer labels. A missing label and a duplicated label both raise.
+    The label must equal exactly one column under the column-label match
+    key. Boolean labels do not match integer labels. Every float ``NaN``
+    matches. A missing label and a duplicated label both raise.
     This function does not choose a column by position, by the name
     ``target``, or by cardinality.
     """
@@ -883,34 +884,14 @@ def _count_coverage(
 def _labels_equal(label: object, target: object) -> bool:
     """Return whether a stored label is the requested target label.
 
-    Boolean and integer labels stay distinct. ``True == 1`` is true in
-    Python, and that comparison must not select one of those labels as
-    the other. A NumPy integer label still matches a Python integer of
-    the same value.
+    Supported labels use the column-label match key. Boolean labels do
+    not match integers, including inside a tuple. ``1`` matches ``1.0``
+    when the float is that integer exactly. Every float ``NaN`` matches.
+    An unsupported label matches only itself, or another object that
+    guarded Python equality accepts. A NumPy integer still matches a
+    Python integer of the same value, because both retain as that integer.
     """
-    if label is target:
-        return True
-    label_is_bool = _is_boolean_label(label)
-    target_is_bool = _is_boolean_label(target)
-    if label_is_bool or target_is_bool:
-        if label_is_bool and target_is_bool:
-            return bool(label) is bool(target)
-        return False
-    try:
-        equal = label == target
-    except TypeError:
-        return False
-    if isinstance(equal, np.ndarray):
-        return False
-    if equal is True or equal is False:
-        return equal
-    if isinstance(equal, np.bool_):
-        return bool(equal)
-    return False
-
-
-def _is_boolean_label(value: object) -> bool:
-    return type(value) is bool or isinstance(value, np.bool_)
+    return observed_labels_equal(label, target)
 
 
 def _require_count(value: object, field: str) -> None:
@@ -921,3 +902,7 @@ def _require_count(value: object, field: str) -> None:
 def _require_type(value: object, expected: type, field: str) -> None:
     if not isinstance(value, expected):
         raise TypeError(f"{field} must be a {expected.__name__}")
+
+
+install_column_label_equality(TargetRelationship)
+install_column_label_equality(TargetAnalysis)

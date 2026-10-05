@@ -33,7 +33,7 @@ from typing import Union
 
 from pytics.analysis.column_label import ColumnLabelKind
 from pytics.analysis.column_label import RetainedColumnLabel
-from pytics.analysis.column_label import _match_key
+from pytics.analysis.column_label import retained_column_label_match_key
 from pytics.analysis.compare.alignment import ColumnAlignment
 from pytics.analysis.compare.alignment import ColumnMatchStatus
 from pytics.analysis.compare.schema import SemanticComparison
@@ -109,8 +109,6 @@ class FindingSeverity(Enum):
     WARNING = "warning"
 
 
-
-
 class SuppressionRule(Enum):
     """Why a candidate finding is owned by another finding.
 
@@ -171,7 +169,7 @@ class ColumnSubject:
         """Identity of this column. Position only for an unsupported label."""
         if self.occurrence is None:
             return ("position", self.position)
-        return ("label", _match_key(self.label), self.occurrence)
+        return ("label", retained_column_label_match_key(self.label), self.occurrence)
 
 
 @dataclass(frozen=True)
@@ -198,7 +196,10 @@ class ComparedTargetPredictorSubject:
     def __post_init__(self) -> None:
         _require_type(self.target, ColumnAlignment, "target")
         _require_type(self.predictor, ColumnAlignment, "predictor")
-        for alignment, field in ((self.target, "target"), (self.predictor, "predictor")):
+        for alignment, field in (
+            (self.target, "target"),
+            (self.predictor, "predictor"),
+        ):
             if alignment.status is not ColumnMatchStatus.MATCHED:
                 raise ValueError(f"the {field} is a matched column")
         if self.target.reference_position == self.predictor.reference_position:
@@ -505,7 +506,11 @@ def _alignment_key(alignment: ColumnAlignment) -> Tuple[object, ...]:
     label = alignment.reference_label
     if label is None:
         label = alignment.comparison_label
-    return ("label", _match_key(label), alignment.occurrence)  # type: ignore[arg-type]
+    return (
+        "label",
+        retained_column_label_match_key(label),  # type: ignore[arg-type]
+        alignment.occurrence,
+    )
 
 
 def _alignment_order(alignment: ColumnAlignment) -> Tuple[int, ...]:
@@ -514,9 +519,7 @@ def _alignment_order(alignment: ColumnAlignment) -> Tuple[int, ...]:
     return (1, alignment.comparison_position)  # type: ignore[return-value]
 
 
-def _require_occurrence(
-    occurrence: Optional[int], label: RetainedColumnLabel
-) -> None:
+def _require_occurrence(occurrence: Optional[int], label: RetainedColumnLabel) -> None:
     unsupported = label.kind is ColumnLabelKind.UNSUPPORTED
     if occurrence is None:
         if not unsupported:
@@ -554,7 +557,10 @@ def _require_condition(finding: Finding) -> None:
     elif code is FindingCode.SEMANTIC_TYPE_CHANGED:
         if subject.status is not ColumnMatchStatus.MATCHED:  # type: ignore[union-attr]
             raise ValueError("a semantic change is about a matched column")
-    elif code in (FindingCode.TARGET_TASK_CHANGED, FindingCode.TARGET_CLASS_VOCABULARY_CHANGED):
+    elif code in (
+        FindingCode.TARGET_TASK_CHANGED,
+        FindingCode.TARGET_CLASS_VOCABULARY_CHANGED,
+    ):
         _require_target_comparability(code, subject, evidence)  # type: ignore[arg-type]
     elif code is FindingCode.TARGET_EXACT_DUPLICATE_EVIDENCE_CHANGED:
         _require_exact_transition(subject, evidence)  # type: ignore[arg-type]

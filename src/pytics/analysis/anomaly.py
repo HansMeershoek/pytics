@@ -46,6 +46,7 @@ import numpy as np
 import pandas as pd
 
 from pytics.analysis.column import ColumnAnalysis
+from pytics.analysis.column_label import install_column_label_equality
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.semantics.interpretation import SemanticType
 from pytics.semantics.resolution import ResolutionStatus
@@ -1162,3 +1163,6 @@ def _require_observed_number(value: object, field: str) -> None:
             raise ValueError(f"{field} must not be negative zero")
         return
     raise TypeError(f"{field} must be a Python int or float")
+
+
+install_column_label_equality(NumericAnomalyColumn)
