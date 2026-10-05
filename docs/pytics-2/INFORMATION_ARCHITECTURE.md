@@ -105,7 +105,7 @@ No arbitrary quality score (`REQ-P-07`).
 | --- | --- | --- |
 | REQ-IA-05 | Overview answers those four questions and does not show a composite quality score. | Accepted |
 
-An internal analytical overview now exposes size, cell completeness, the resolved semantic types that are present, semantic-resolution coverage, and the columns that are Empty, Constant, Identifier, insufficient, or ambiguous ([DEC-089](DECISIONS.md#dec-089)). It also copies unique-row and excess-duplicate counts from the duplicate analysis ([DEC-094](DECISIONS.md#dec-094)). It does not list duplicate groups, render this view, name the dataset, or add a composite quality score. "What deserves attention" is not yet a Finding.
+An internal analytical overview now exposes size, cell completeness, the resolved semantic types that are present, semantic-resolution coverage, and the columns that are Empty, Constant, Identifier, insufficient, or ambiguous ([DEC-089](DECISIONS.md#dec-089)). It also copies unique-row and excess-duplicate counts from the duplicate analysis ([DEC-094](DECISIONS.md#dec-094)). It does not list duplicate groups, render this view, name the dataset, or add a composite quality score. TSK-040 adds an internal findings result for "what deserves attention" ([DEC-111](DECISIONS.md#dec-111)). The overview does not embed it.
 
 ### Findings
 
@@ -114,6 +114,8 @@ Findings link back to their analytical evidence (`REQ-N-01`).
 | ID | Requirement | Status |
 | --- | --- | --- |
 | REQ-IA-06 | The Findings view links each finding back to its evidence. | Accepted |
+
+TSK-040 adds the internal findings result a later Findings view can read ([DEC-111](DECISIONS.md#dec-111)). Each finding has a code, a scope, a severity, a subject that keeps physical positions and retained labels, and typed evidence. A renderer can filter by severity or scope and navigate to the evidence without parsing text: a column finding leads to Variables, a duplicate-row finding to Duplicates, a target–predictor finding to Target leakage, and a comparison finding to Schema or Target. The result has no title, sentence, or recommendation. No view is rendered. User-facing level labels remain [OPEN-025](DECISIONS.md#open-questions).
 
 ### Variables
 
@@ -233,7 +235,7 @@ Known metadata that already exists, and is not a story: the author name Hans Mee
 
 ## Compare navigation
 
-The rendered Compare view is not delivered. TSK-039 stores the analytical relationship and target records that a later Relationships and Drift destination can read ([DEC-110](DECISIONS.md#dec-110)). It does not add navigation or Findings.
+The rendered Compare view is not delivered. TSK-039 stores the analytical relationship and target records that a later Relationships and Drift destination can read ([DEC-110](DECISIONS.md#dec-110)). It does not add navigation or Findings. TSK-040 adds Compare findings for one-sided columns, semantic-type changes, target task and class-set changes, and exact-duplicate transitions ([DEC-111](DECISIONS.md#dec-111)). It adds no navigation.
 
 ```text
 PYTICS

@@ -637,4 +637,53 @@ Rendered text is a presentation of a structured finding. Pytics core must be abl
 | REQ-N-03 | Core findings must be producible without an LLM. | Accepted |
 | REQ-N-04 | Do not use gamified or sensational finding labels. | Accepted |
 
-Possible restrained levels — information, notable, and warning — are **Proposed / not yet finalized** ([OPEN-025](DECISIONS.md#open-questions)).
+Possible restrained levels — information, notable, and warning — are **Proposed / not yet finalized** as user-facing labels ([OPEN-025](DECISIONS.md#open-questions)). TSK-040 defines them as internal levels ([DEC-111](DECISIONS.md#dec-111)).
+
+### Findings v0.1
+
+TSK-040 adds the first Findings Engine in `pytics.analysis.findings` ([DEC-111](DECISIONS.md#dec-111)). A finding is an attention selection: one fact a canonical analysis already retained, about one subject, with typed evidence. It is not a statistic, a verdict, an interpretation, or a recommendation. The engine reads a finished `DatasetAnalysis` or `DatasetComparison`. It does not read a DataFrame or a p-value, and it computes no statistic.
+
+| Concept | Meaning in v0.1 |
+| --- | --- |
+| Fact | A value an analysis retained. |
+| Evidence | The retained facts that make one finding true, kept as the canonical record by reference or as an exact count snapshot. |
+| Finding | Code, subject, severity, and evidence. No prose. |
+| Severity | The policy's attention level for a code. `INFO`: a structural fact; every analysis that applies to the subject applies as computed. `NOTABLE`: analyses are removed from the subject, or a cross-dataset reading of it is unavailable or not like-for-like. `WARNING`: mechanical, threshold-free evidence that a retained or downstream reading of the subject would measure sameness or a determined mapping. Not significance, confidence, or effect size. |
+| Priority | Severity, then the code's rank in the policy, then subject order. No score. |
+| Interpretation, verdict, recommendation | Not produced. |
+
+Implemented catalog. Every trigger is a retained status, a selected semantic type, or a non-zero count. No trigger uses a practical threshold, a p-value, or an effect size.
+
+| Code | Scope | Source | Trigger | Evidence | Severity | Why it exists |
+| --- | --- | --- | --- | --- | --- | --- |
+| `TARGET_EXACT_DUPLICATE_EVIDENCE` | Target–predictor | Target leakage | Predictor status `EXACT_DUPLICATE` | `ExactDuplicateEvidence` | `WARNING` | The predictor equals the target on every applicable row. Its relationship with the target measures sameness. This is evidence, not a leakage verdict. |
+| `TARGET_DETERMINISTIC_MAPPING_EVIDENCE` | Target–predictor | Target leakage | `DETERMINISTIC_REPEATED` and no singleton predictor value | `MappingEvidence` | `WARNING` | Every observed predictor value repeats and always carries one class, so held-out diagnostic signal and importance for that predictor reflect the mapping. Suppressed when the same predictor is an exact duplicate. |
+| `EMPTY_COLUMN` | Column | Semantic resolution | Selected type Empty | `BasicColumnEvidence` | `NOTABLE` | No value analysis applies. |
+| `CONSTANT_COLUMN` | Column | Semantic resolution | Selected type Constant | `BasicColumnEvidence` | `NOTABLE` | No variation-based analysis applies. Semantic precedence keeps Empty and Constant exclusive. |
+| `DUPLICATE_ROWS` | Dataset | Duplicate rows | At least one exact duplicate group | Group, row, and excess counts | `INFO` | Repeated complete rows exist. They are not called errors. |
+| `TARGET_EXACT_DUPLICATE_EVIDENCE_CHANGED` | Comparison target–predictor | Target drift | `EXACT_DUPLICATE` on exactly one side | `PredictorLeakageTransition` | `WARNING` | Target relationship and diagnostic changes for that predictor compare an exact copy with a non-copy. |
+| `TARGET_TASK_CHANGED` | Comparison target | Target drift | Diagnostic status `TASK_TRANSITION` | `DiagnosticPredictabilityComparison` | `NOTABLE` | Diagnostic metrics are not comparable. Not degradation. |
+| `TARGET_CLASS_VOCABULARY_CHANGED` | Comparison target | Target drift | Diagnostic status `CLASS_VOCABULARY_CHANGED` | `DiagnosticPredictabilityComparison` | `NOTABLE` | Same classification task with a different class set, so metrics are not subtracted. |
+| `SEMANTIC_TYPE_CHANGED` | Comparison column | Schema comparison | Matched column with different selected types | `SemanticComparison` and the count of relationship family and eligibility transitions it causes | `NOTABLE` | Descriptive, drift, and relationship comparisons for the column stop being like-for-like. |
+| `COLUMN_REFERENCE_ONLY` | Comparison column | Column alignment | Alignment status `REFERENCE_ONLY` | `SemanticComparison` | `NOTABLE` | Nothing about the column is compared. |
+| `COLUMN_COMPARISON_ONLY` | Comparison column | Column alignment | Alignment status `COMPARISON_ONLY` | `SemanticComparison` | `NOTABLE` | Nothing about the column is compared. Same severity as reference-only, because neither side is assumed older. |
+
+Deferred catalog. Each needs a policy that is not decided. Coverage names these families so that their absence is not read as absence of the condition.
+
+| Candidate | Reason it is deferred |
+| --- | --- |
+| High missingness, missing patterns | A practical missingness level is domain policy. |
+| High cardinality | No cardinality threshold is accepted ([OPEN-018](DECISIONS.md#open-questions)). |
+| Univariate anomalies present or frequent | Tukey fences flag a share of almost every large or skewed column, so presence is nearly universal and a rate needs a cutoff. |
+| Non-finite values | A strong threshold-free candidate. Deferred to keep v0.1 small. |
+| Strong, significant, or perfect relationships | Strength needs a cutoff, significance is not attention, and exact relationships can be expected. |
+| Relationship sign reversal and relationship change | `+0.0001` to `-0.0001` is a reversal. An effect-magnitude policy is needed. |
+| Distribution drift, including complete separation | Effect-first policy is not decided. Complete separation is threshold-free, and it fires for every time-like column in a temporal split. |
+| Target predictability, low or high, and its change | Held-out metric levels are domain dependent and have no interval. |
+| Repeated-mapping transitions | The comparison keeps mapping statuses and not the singleton counts a mapping finding needs. |
+
+Rejected as findings: an Identifier column; rows that contain a missing value; unresolved or ambiguous semantic resolution, which currently covers most string columns and reflects implementation scope; an unavailable diagnostic or analysis; a physical dtype change without a semantic change; and a resolution-status change between two unresolved readings. These are facts or coverage for Variables, Methods, or Report Info. Absence of analysis is a finding only when the data itself causes it and the cause is not already a finding.
+
+Identity is the code and a subject key built from the label match key and occurrence used by column alignment, so it survives reordering and the insertion of unrelated columns, and duplicate labels stay distinct. Severity is not part of identity. A root condition owns what it mechanically implies: an exact target duplicate owns its mapping, and a semantic-type change owns task, class-vocabulary, and exact-duplicate transition findings for that column. Suppressed candidates are kept with their rule and root. One finding exists per condition and subject. No finding is emitted per row.
+
+`REQ-N-01` through `REQ-N-03` are advanced and not completed. The v0.1 catalog is not the product's findings scope, and no Findings view is rendered.

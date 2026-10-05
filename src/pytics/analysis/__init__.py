@@ -27,4 +27,7 @@ recorded by leakage evidence is excluded from that model.
 alignment, schema transitions, descriptive change, and, when both source
 frames are supplied, univariate distribution drift. It does not profile
 either dataset again, and it is not ``pytics.compare``.
+``findings`` selects retained facts from a finished analysis or
+comparison for attention. It does not read a DataFrame or compute a
+statistic.
 """

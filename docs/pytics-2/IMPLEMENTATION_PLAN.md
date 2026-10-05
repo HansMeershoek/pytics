@@ -1948,4 +1948,29 @@ Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
 ## After TSK-039
 
-TSK-039 records relationship effect changes and a target projection for an explicit target. It leaves formal Spearman, eta-squared, Hedges' g, phi, and Cramér's V change tests, permutation-importance drift, temporal drift, Findings, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-110](DECISIONS.md#dec-110) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+TSK-039 records relationship effect changes and a target projection for an explicit target. It leaves formal Spearman, eta-squared, Hedges' g, phi, and Cramér's V change tests, permutation-importance drift, temporal drift, Findings, a rendered Compare view, and the public `compare()` replacement unselected. [DEC-110](DECISIONS.md#dec-110) records that boundary. TSK-040 was approved later and is recorded below. This section does not create a later task.
+
+## TSK-040
+
+Slice 040, Findings Engine foundation. Approved 2026-10-05 after TSK-039. Completed the same day. No later slice is approved by this section.
+
+Define what a Finding is before writing rules, then build a small, threshold-free v0.1 catalog over retained Profile and Compare results. Do not add a second statistical engine, recommendations, prose, a renderer, or public API changes.
+
+Acceptance checks:
+
+1. A Findings Epistemic Contract separates fact, evidence, finding, severity, priority, interpretation, verdict, and recommendation before implementation. Severity is not significance. Priority is not severity.
+2. Findings read finished `DatasetAnalysis` and `DatasetComparison` values only. They do not read a DataFrame, compute a statistic, or read a p-value.
+3. Identity is the code and a structured subject key, deterministic, independent of prose and severity, distinct for duplicate labels, and stable under column reordering and unrelated insertion.
+4. Scopes, subjects, and evidence are typed. Each code has one scope, one subject type, and one evidence type. Invalid combinations are rejected.
+5. Severity semantics and a per-code severity table are explicit. No severity follows from a p-value or an effect size. No practical threshold is introduced.
+6. Ordering is lexicographic and deterministic: severity, code rank, subject order. There is no score.
+7. The v0.1 catalog, the deferred catalog, and rejected candidates are explicit, each with a rationale.
+8. Root conditions suppress derivative candidates deterministically, and suppressed candidates are inspectable. Empty never also produces Constant. No finding is emitted per row.
+9. Tests cover identity, ordering, duplicate and adversarial labels, root conditions, target leakage deduplication, Compare suppression, significance independence, coverage arithmetic, source independence, and invalid frozen combinations.
+10. The findings pass is benchmarked separately from analysis. The full suite has only the known legacy PDF failure, total coverage stays at least 97%, and [DEC-111](DECISIONS.md#dec-111) records the contract.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-040
+
+TSK-040 records the Findings Engine foundation and a threshold-free v0.1 catalog. It leaves threshold-based and effect-first findings for missingness, cardinality, anomalies, non-finite values, relationships, relationship change, distribution drift, and target predictability unselected, together with repeated-mapping transitions, findings configuration, user-facing level labels, renderer wording, a rendered Findings view, and the public result. [DEC-111](DECISIONS.md#dec-111) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.

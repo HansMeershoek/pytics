@@ -168,6 +168,12 @@ Target drift runs only when the caller names a target. The target is the aligned
 
 A changed relationship between predictors and the target is target-associated structure. Pytics does not call that concept drift. Incompatible diagnostic tasks are not subtracted. Public `compare()` does not gain a target argument.
 
+## Findings
+
+Status: **Accepted** as a selection layer ([DEC-111](DECISIONS.md#dec-111)). It is not a statistical method.
+
+Findings compute no statistic. They do not read a p-value, an adjusted p-value, an effect size, a distance, or a held-out metric. No severity follows from significance or from an effect crossing a value. A tiny effect with a tiny p-value and a large effect with a large p-value produce the same findings, because neither is a v0.1 trigger. Effect-first findings for relationships, drift, and target predictability need a practical threshold that is not decided, so they are deferred.
+
 ## Modes
 
 `quick`, `standard`, and `deep` are accepted names. Standard is the intended default ([DEC-058](DECISIONS.md#dec-058), `REQ-P-16`).
