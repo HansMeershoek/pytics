@@ -4,8 +4,7 @@ A duplicate group is one complete row value that occurs more than once.
 Row equality is physical cell equality across physical column positions.
 Column labels and the index are not part of that value. ``collect_duplicate_analysis``
 reads the DataFrame, keeps the physical positions of repeated rows, and
-drops the values. ``build_duplicate_summary`` reads that retained analysis
-only.
+drops the values.
 
 The result records exact repetition. It does not decide that a repeated
 row is an error, and it does not normalize near-duplicates.
@@ -14,7 +13,6 @@ row is an error, and it does not normalize near-duplicates.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 from typing import Optional
 from typing import Tuple
 
@@ -23,9 +21,6 @@ import pandas as pd
 
 from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.semantics.column_evidence import _contains_unhashable_non_missing
-
-if TYPE_CHECKING:
-    from pytics.analysis.dataset import DatasetAnalysis
 
 
 @dataclass(frozen=True)
@@ -168,78 +163,6 @@ class DuplicateAnalysis:
         return _unique_row_count(n_rows, excess)
 
 
-@dataclass(frozen=True)
-class DuplicateSummary:
-    """Product duplicate-row facts for one dataset analysis.
-
-    ``n_rows`` is copied from the dataset analysis. Groups are copies of
-    the retained duplicate groups. This summary does not keep that
-    analysis, a DataFrame, or the row values.
-
-    Row ratios divide by ``n_rows`` and are ``None`` when there are no
-    rows. They are not a quality score.
-    """
-
-    n_rows: int
-    duplicate_groups: Tuple[DuplicateGroup, ...]
-
-    def __post_init__(self) -> None:
-        _require_count(self.n_rows, "n_rows")
-        analysis = DuplicateAnalysis(duplicate_groups=self.duplicate_groups)
-        _require_positions_within_rows(analysis, self.n_rows)
-        excess = analysis.n_excess_duplicate_rows
-        if excess is None:
-            raise ValueError("a duplicate summary requires available counts")
-        _unique_row_count(self.n_rows, excess)
-
-    @property
-    def n_duplicate_groups(self) -> int:
-        """How many row values occur more than once."""
-        return len(self.duplicate_groups)
-
-    @property
-    def n_rows_in_duplicate_groups(self) -> int:
-        """Rows that belong to some duplicate group."""
-        return _rows_in_duplicate_groups(self.duplicate_groups)
-
-    @property
-    def n_excess_duplicate_rows(self) -> int:
-        """Rows beyond one occurrence of each distinct row value."""
-        return _excess_duplicate_rows(self.duplicate_groups)
-
-    @property
-    def n_unique_rows(self) -> int:
-        """Distinct complete row values.
-
-        Zero when there are no rows. Otherwise at least one.
-        """
-        return _unique_row_count(self.n_rows, self.n_excess_duplicate_rows)
-
-    @property
-    def unique_row_ratio(self) -> Optional[float]:
-        """Distinct row values divided by all rows.
-
-        ``None`` when there are no rows.
-        """
-        return _row_ratio(self.n_unique_rows, self.n_rows)
-
-    @property
-    def rows_in_duplicate_groups_ratio(self) -> Optional[float]:
-        """Rows that belong to a duplicate group, divided by all rows.
-
-        ``None`` when there are no rows.
-        """
-        return _row_ratio(self.n_rows_in_duplicate_groups, self.n_rows)
-
-    @property
-    def excess_duplicate_row_ratio(self) -> Optional[float]:
-        """Excess duplicate rows divided by all rows.
-
-        ``None`` when there are no rows.
-        """
-        return _row_ratio(self.n_excess_duplicate_rows, self.n_rows)
-
-
 def collect_duplicate_analysis(frame: pd.DataFrame) -> DuplicateAnalysis:
     """Group rows that are exactly equal.
 
@@ -273,28 +196,6 @@ def collect_duplicate_analysis(frame: pd.DataFrame) -> DuplicateAnalysis:
     except AnalyticalInapplicability:
         return DuplicateAnalysis(duplicate_groups=(), available=False)
     return DuplicateAnalysis(duplicate_groups=_groups_from_codes(codes))
-
-
-def build_duplicate_summary(analysis: DatasetAnalysis) -> DuplicateSummary:
-    """Summarize exact duplicate rows from one dataset analysis.
-
-    The argument must already be a ``DatasetAnalysis``. A DataFrame is
-    not accepted and is not analyzed. Groups are copied from the retained
-    duplicate analysis. They are not recomputed from raw values.
-    """
-    # Local import: dataset analysis retains DuplicateAnalysis, so this
-    # module cannot import DatasetAnalysis at load time.
-    from pytics.analysis.dataset import DatasetAnalysis as DatasetAnalysisType
-
-    if not isinstance(analysis, DatasetAnalysisType):
-        raise TypeError("build_duplicate_summary expects a DatasetAnalysis")
-    if not analysis.duplicate_analysis.available:
-        raise ValueError("exact duplicate counts are unavailable")
-    groups = tuple(
-        DuplicateGroup(row_positions=tuple(group.row_positions))
-        for group in analysis.duplicate_analysis.duplicate_groups
-    )
-    return DuplicateSummary(n_rows=analysis.n_rows, duplicate_groups=groups)
 
 
 def _require_duplicate_attachment(
@@ -417,13 +318,6 @@ def _unique_row_count(n_rows: int, n_excess_duplicate_rows: int) -> int:
     if n_rows > 0 and unique < 1:
         raise ValueError("a dataset with rows has at least one unique row")
     return unique
-
-
-def _row_ratio(count: int, n_rows: int) -> Optional[float]:
-    """``count / n_rows``, or ``None`` when there are no rows."""
-    if n_rows == 0:
-        return None
-    return count / n_rows
 
 
 def _group_sort_key(

@@ -236,65 +236,6 @@ class RelationshipAnalysis:
         return self.n_unimplemented_family_pairs + self.n_ineligible_pairs
 
 
-@dataclass(frozen=True)
-class RelationshipsSummary:
-    """Product projection of a retained relationship analysis.
-
-    The summary is not a second statistical analysis. It copies coverage
-    counts and family records so a later Relationships view can read them
-    without the rest of ``DatasetAnalysis``. ``n_columns`` is copied so
-    the unordered-pair total can be checked against the schema.
-
-    The builder does not read a DataFrame, infer a family, or calculate
-    a statistic. It does not restate a method, a population rule, a
-    computational image, or a confidence level that is not already on
-    the copied record.
-    """
-
-    n_rows: int
-    n_columns: int
-    n_total_pairs: int
-    n_supported_pairs: int
-    n_analyzed_pairs: int
-    n_unimplemented_family_pairs: int
-    n_ineligible_pairs: int
-    unimplemented_family_counts: Tuple[UnimplementedFamilyCount, ...]
-    relationships: Tuple[RelationshipRecord, ...]
-
-    def __post_init__(self) -> None:
-        _require_nonnegative(self.n_rows, "n_rows")
-        _require_nonnegative(self.n_columns, "n_columns")
-        expected = self.n_columns * (self.n_columns - 1) // 2
-        if self.n_total_pairs != expected:
-            raise ValueError("n_total_pairs must equal the unordered column pairs")
-        _require_nonnegative(self.n_supported_pairs, "n_supported_pairs")
-        _require_nonnegative(self.n_analyzed_pairs, "n_analyzed_pairs")
-        _require_nonnegative(
-            self.n_unimplemented_family_pairs,
-            "n_unimplemented_family_pairs",
-        )
-        _require_nonnegative(self.n_ineligible_pairs, "n_ineligible_pairs")
-        if (
-            self.n_supported_pairs
-            + self.n_unimplemented_family_pairs
-            + self.n_ineligible_pairs
-            != self.n_total_pairs
-        ):
-            raise ValueError("pair counts must sum to n_total_pairs")
-        if self.n_analyzed_pairs != self.n_supported_pairs:
-            raise ValueError("every supported pair is analyzed")
-        _require_family_counts(
-            self.unimplemented_family_counts,
-            self.n_unimplemented_family_pairs,
-        )
-        _require_relationships(self.relationships, self.n_rows, self.n_analyzed_pairs)
-
-    @property
-    def n_unsupported_pairs(self) -> int:
-        """Pairs that were not analyzed."""
-        return self.n_unimplemented_family_pairs + self.n_ineligible_pairs
-
-
 def _require_relationships(
     relationships: Tuple[RelationshipRecord, ...],
     n_rows: int,

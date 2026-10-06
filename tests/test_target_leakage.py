@@ -15,7 +15,6 @@ import pytics.analysis.dataset as dataset_module
 import pytics.analysis.target_leakage as leakage_module
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
-from pytics.analysis.target import build_target_summary
 from pytics.analysis.target import project_target_analysis
 from pytics.analysis.target_diagnostic import DiagnosticStatus
 from pytics.analysis.target_diagnostic import PredictorDecision
@@ -27,7 +26,6 @@ from pytics.analysis.target_leakage import MappingEvidence
 from pytics.analysis.target_leakage import MappingStatus
 from pytics.analysis.target_leakage import TargetLeakageAnalysis
 from pytics.analysis.target_leakage import analyze_target_leakage
-from pytics.analysis.target_leakage import copy_target_leakage
 from pytics.semantics.interpretation import SemanticType
 from pytics.semantics.resolution import ResolutionStatus
 
@@ -715,9 +713,7 @@ def test_small_exact_copy_is_retained_before_diagnostic_screening() -> None:
     )
 
 
-def test_results_drop_source_objects_and_summary_does_not_reread(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_results_drop_source_objects() -> None:
     frame = pd.DataFrame(
         {
             "group": _categories(["A", "A", "B", "B"] * 10, ["A", "B"]),
@@ -752,21 +748,7 @@ def test_results_drop_source_objects_and_summary_does_not_reread(
         if record.family.value == "categorical_categorical"
     ]
     assert adjusted == plain_adjusted
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    monkeypatch.setattr(leakage_module, "analyze_target_leakage", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_target_leakage", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    summary = build_target_summary(analysis)
-    assert summary is not None
-    assert summary.leakage == leakage
-    assert summary.leakage is not leakage
-    assert summary.diagnostic == analysis.target_diagnostic
-    assert summary.diagnostic is not analysis.target_diagnostic
-    _assert_plain(summary.leakage)
-    copied = copy_target_leakage(leakage)
-    assert copied == leakage
-    assert copied is not leakage
-    assert copied.predictors[0] is not leakage.predictors[0]
+    _assert_plain(leakage)
 
 
 def test_leakage_has_no_score_and_does_not_name_association_methods() -> None:
@@ -898,8 +880,6 @@ def test_records_and_attachment_reject_inconsistent_evidence() -> None:
                 ),
             }
         )
-    with pytest.raises(TypeError, match="TargetLeakageAnalysis"):
-        copy_target_leakage(analysis)  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="DataFrame"):
         analyze_target_leakage(frame.to_dict(), analysis.columns, analysis.target_analysis)  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="TargetAnalysis"):

@@ -34,7 +34,6 @@ from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationship import relationship_analysis_for_columns
 from pytics.semantics.interpretation import SemanticType
 
@@ -42,7 +41,7 @@ _RETAINED = (pd.DataFrame, pd.Series, pd.Index, np.ndarray)
 
 
 def _relationship(frame: pd.DataFrame) -> NumericCategoricalRelationship:
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert summary.n_analyzed_pairs == 1
     relationship = summary.relationships[0]
     assert isinstance(relationship, NumericCategoricalRelationship)
@@ -106,7 +105,7 @@ def test_orientation_does_not_follow_physical_side() -> None:
             "y": [1, 2, 10, 11],
         }
     )
-    summary = build_relationships_summary(analyze_dataframe(wide))
+    summary = analyze_dataframe(wide).relationship_analysis
     pair = summary.relationships[0]
     assert isinstance(pair, NumericCategoricalRelationship)
     assert (pair.left_position, pair.right_position) == (0, 2)
@@ -145,7 +144,7 @@ def test_physical_categorical_is_eligible_and_other_types_are_not() -> None:
         }
     )
     analysis = analyze_dataframe(frame)
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     categorical_pairs = [
         item
         for item in summary.relationships
@@ -663,7 +662,7 @@ def test_mixed_frame_coverage_counts_each_pair_once(
         "b": [4, 3, 2, 1],
         "c": [1, 1, 2, 2],
     }
-    only_numeric = build_relationships_summary(analyze_dataframe(pd.DataFrame(numeric)))
+    only_numeric = (analyze_dataframe(pd.DataFrame(numeric))).relationship_analysis
     frame = pd.DataFrame(
         {
             **numeric,
@@ -689,7 +688,7 @@ def test_mixed_frame_coverage_counts_each_pair_once(
 
     monkeypatch.setattr(collector_module, "_read_numeric_column", _spy_numeric)
     monkeypatch.setattr(collector_module, "_read_categorical_column", _spy_categorical)
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert summary.n_total_pairs == 15
     assert summary.n_supported_pairs == 13
     assert summary.n_analyzed_pairs == len(summary.relationships) == 13
@@ -736,9 +735,7 @@ def test_mixed_frame_coverage_counts_each_pair_once(
     assert positions == sorted(positions)
 
 
-def test_builder_projects_retained_numeric_categorical_records(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_retained_numeric_categorical_record_holds_no_source() -> None:
     frame = pd.DataFrame(
         {
             "y": [1, 2, 3, 4, 5, 6],
@@ -748,22 +745,7 @@ def test_builder_projects_retained_numeric_categorical_records(
     before = frame.copy(deep=True)
     analysis = analyze_dataframe(frame)
     pd.testing.assert_frame_equal(frame, before)
-
-    def _fail(*args: object, **kwargs: object) -> None:
-        raise AssertionError("summary builder recomputed a relationship")
-
-    monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
-    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
-    monkeypatch.setattr(numeric_categorical_module, "f_oneway", _fail)
-    monkeypatch.setattr(pd.DataFrame, "groupby", _fail)
-    summary = build_relationships_summary(analysis)
-    assert summary.relationships[0] == analysis.relationship_analysis.relationships[0]
-    assert (
-        summary.relationships[0] is not analysis.relationship_analysis.relationships[0]
-    )
     _assert_no_retained_source(analysis.relationship_analysis)
-    _assert_no_retained_source(summary)
 
 
 def test_source_frame_mutation_does_not_change_retained_groups() -> None:
@@ -970,9 +952,7 @@ def test_models_reject_inconsistent_numeric_categorical_records() -> None:
             n_rows=4,
             relationships=(dataclasses.replace(relationship, right_label="z"),),
         )
-    numeric_numeric = build_relationships_summary(
-        analyze_dataframe(pd.DataFrame({"y": [1, 2, 3, 4], "g": [2, 3, 4, 5]}))
-    ).relationships[0]
+    numeric_numeric = (analyze_dataframe(pd.DataFrame({"y": [1, 2, 3, 4], "g": [2, 3, 4, 5]}))).relationship_analysis.relationships[0]
     with pytest.raises(TypeError, match="numeric-categorical pair"):
         relationship_analysis_for_columns(
             (numeric, categorical),

@@ -295,25 +295,6 @@ def _label_storage_codes(series: pd.Series) -> tuple[np.ndarray, tuple[object, .
     return coded, categories
 
 
-def copy_categorical_descriptive_analysis(
-    analysis: CategoricalDescriptiveAnalysis,
-) -> CategoricalDescriptiveAnalysis:
-    """Return a new frozen distribution with the same levels.
-
-    The copy does not read a Series and does not recount values.
-    """
-    if not isinstance(analysis, CategoricalDescriptiveAnalysis):
-        raise TypeError("analysis must be a CategoricalDescriptiveAnalysis")
-    return CategoricalDescriptiveAnalysis(
-        n_non_missing=analysis.n_non_missing,
-        ordered=analysis.ordered,
-        levels=tuple(
-            ObservedCategoryCount(value=level.value, count=level.count)
-            for level in analysis.levels
-        ),
-    )
-
-
 def _observed_code_counts(series: pd.Series) -> np.ndarray:
     """Return one count per physical category, including zeros.
 

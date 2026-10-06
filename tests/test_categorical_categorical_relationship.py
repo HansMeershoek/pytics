@@ -40,7 +40,6 @@ from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationships.categorical_categorical import _assemble
 from pytics.analysis.relationships.categorical_categorical import _as_p_value
 from pytics.analysis.relationships.categorical_categorical import _cramers_v
@@ -93,7 +92,7 @@ def _frame(
 def _only(frame: pd.DataFrame) -> CategoricalCategoricalRelationship:
     records = [
         item
-        for item in build_relationships_summary(analyze_dataframe(frame)).relationships
+        for item in analyze_dataframe(frame).relationship_analysis.relationships
         if isinstance(item, CategoricalCategoricalRelationship)
     ]
     assert len(records) == 1
@@ -241,7 +240,7 @@ def test_selected_categorical_pairs_are_calculated_and_other_types_are_not() -> 
         }
     )
     analysis = analyze_dataframe(frame)
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     assert analysis.columns[0].inferred.selected_type is SemanticType.CATEGORICAL
     assert analysis.columns[1].inferred.selected_type is SemanticType.CATEGORICAL
     assert analysis.columns[1].inferred.selected_type is not SemanticType.BOOLEAN
@@ -323,7 +322,7 @@ def test_boolean_and_numeric_pairs_stay_in_their_families() -> None:
             "y": [1.0, 2.0, 3.0, 4.0],
         }
     )
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert not any(
         isinstance(item, CategoricalCategoricalRelationship)
         for item in summary.relationships
@@ -565,16 +564,14 @@ def test_two_by_two_v_is_unsigned_phi_and_boolean_phi_keeps_its_sign() -> None:
     )
     assert categorical.association.value == pytest.approx(_abs_phi(0, 4, 6, 0))
     assert categorical.association.value == 1.0
-    boolean = build_relationships_summary(
-        analyze_dataframe(
+    boolean = (analyze_dataframe(
             pd.DataFrame(
                 {
                     "left": [False] * 4 + [True] * 6,
                     "right": [True] * 4 + [False] * 6,
                 }
             )
-        )
-    ).relationships[0]
+        )).relationship_analysis.relationships[0]
     assert isinstance(boolean, BooleanBooleanRelationship)
     assert boolean.phi.value == pytest.approx(-1.0)
     assert categorical.association.value == pytest.approx(abs(boolean.phi.value))
@@ -1037,7 +1034,7 @@ def test_each_categorical_column_is_prepared_once(
         return original(series)
 
     monkeypatch.setattr(collector_module, "_read_categorical_column", _spy)
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert reads == ["g", "h", "i"]
     assert (
         sum(
@@ -1072,7 +1069,7 @@ def test_mixed_frame_counts_each_family_once() -> None:
             "fixed": [7, 7, 7, 7],
         }
     )
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert summary.n_total_pairs == 45
     assert summary.n_supported_pairs == summary.n_analyzed_pairs == 15
     assert summary.n_unimplemented_family_pairs == 11
@@ -1106,9 +1103,7 @@ def test_mixed_frame_counts_each_family_once() -> None:
     assert len(positions) == 15
 
 
-def test_summary_copies_records_without_recomputing(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_mutating_the_source_does_not_change_retained_categorical_counts() -> None:
     frame = pd.DataFrame(
         {
             "x": [1.0, 2.0, 3.0, 4.0],
@@ -1122,56 +1117,13 @@ def test_summary_copies_records_without_recomputing(
     before = frame.copy(deep=True)
     analysis = analyze_dataframe(frame)
     pd.testing.assert_frame_equal(frame, before)
-
-    def _fail(*_args: object, **_kwargs: object) -> None:
-        raise AssertionError("summary builder used a source-dependent operation")
-
-    monkeypatch.setattr(collector_module, "adjust_primary_p_values", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
-    monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
-    monkeypatch.setattr(categorical_module, "_pearson_chi_square", _fail)
-    monkeypatch.setattr(categorical_module, "_survival_function", _fail)
-    monkeypatch.setattr(categorical_module, "chi2", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_numeric_boolean", _fail)
-    monkeypatch.setattr(collector_module, "_association_methods", _fail)
-    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_boolean_column", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
-    monkeypatch.setattr(numeric_categorical_module, "f_oneway", _fail)
-    monkeypatch.setattr(boolean_boolean_module, "fisher_exact", _fail)
-    monkeypatch.setattr(numeric_boolean_module, "student_t", _fail)
-    monkeypatch.setattr(column_module, "analyze_series", _fail)
-    monkeypatch.setattr(column_module, "resolve_semantics", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
     original = next(
         item
         for item in analysis.relationship_analysis.relationships
         if isinstance(item, CategoricalCategoricalRelationship)
     )
-    summary = build_relationships_summary(analysis)
-    assert summary.relationships == analysis.relationship_analysis.relationships
-    copied = next(
-        item
-        for item in summary.relationships
-        if isinstance(item, CategoricalCategoricalRelationship)
-    )
-    assert isinstance(copied, CategoricalCategoricalRelationship)
-    assert copied is not original
-    assert copied.table is not original.table
-    assert copied.table.observed_counts is not original.table.observed_counts
-    assert copied.association is not original.association
-    assert copied.expected_counts is not original.expected_counts
-    assert copied.independence is not original.independence
-    assert copied.independence.frequentist is not original.independence.frequentist
-    assert copied.table.right_levels == ("v", "u")
-    _assert_plain(summary)
-    _assert_plain(analysis.relationship_analysis)
+    assert original.table.right_levels == ("v", "u")
     cells = original.table.observed_counts
-    monkeypatch.undo()
     frame.iloc[0, 2] = "b"
     retained = next(
         item
@@ -1179,6 +1131,7 @@ def test_summary_copies_records_without_recomputing(
         if isinstance(item, CategoricalCategoricalRelationship)
     )
     assert retained.table.observed_counts == cells
+    _assert_plain(analysis.relationship_analysis)
 
 
 def test_adding_categorical_pairs_leaves_other_families_unchanged() -> None:
@@ -1188,23 +1141,13 @@ def test_adding_categorical_pairs_leaves_other_families_unchanged() -> None:
     other = pd.Categorical(["u", "v", "u", "v", "u", "v"])
     p = [True, False, True, False, False, True]
     q = [False, False, True, True, False, True]
-    together = build_relationships_summary(
-        analyze_dataframe(
+    together = (analyze_dataframe(
             pd.DataFrame({"x": x, "y": y, "g": group, "h": other, "p": p, "q": q})
-        )
-    ).relationships
-    numeric = build_relationships_summary(
-        analyze_dataframe(pd.DataFrame({"x": x, "y": y}))
-    ).relationships[0]
-    categorical = build_relationships_summary(
-        analyze_dataframe(pd.DataFrame({"x": x, "g": group}))
-    ).relationships[0]
-    boolean = build_relationships_summary(
-        analyze_dataframe(pd.DataFrame({"p": p, "q": q}))
-    ).relationships[0]
-    flagged = build_relationships_summary(
-        analyze_dataframe(pd.DataFrame({"x": x, "p": p}))
-    ).relationships[0]
+        )).relationship_analysis.relationships
+    numeric = (analyze_dataframe(pd.DataFrame({"x": x, "y": y}))).relationship_analysis.relationships[0]
+    categorical = (analyze_dataframe(pd.DataFrame({"x": x, "g": group}))).relationship_analysis.relationships[0]
+    boolean = (analyze_dataframe(pd.DataFrame({"p": p, "q": q}))).relationship_analysis.relationships[0]
+    flagged = (analyze_dataframe(pd.DataFrame({"x": x, "p": p}))).relationship_analysis.relationships[0]
     assert isinstance(together[0], NumericNumericRelationship)
     assert isinstance(numeric, NumericNumericRelationship)
     assert together[0].spearman.estimate == numeric.spearman.estimate

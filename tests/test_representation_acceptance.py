@@ -9,7 +9,6 @@ from __future__ import annotations
 import pandas as pd
 
 from pytics.analysis.dataset import analyze_dataframe
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.presentation.notebook.profile import render_profile
 from pytics.results.profile import profile_result
 from pytics.semantics.interpretation import SemanticType
@@ -108,7 +107,7 @@ def test_mixed_fixture_keeps_source_and_separates_evidence_from_type():
                 ResolutionStatus.INSUFFICIENT_EVIDENCE
             )
             assert column.inferred.resolution.reason == "No candidate is supported."
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     assert summary.n_supported_pairs == 3
     assert summary.n_unimplemented_family_pairs == 0
     assert summary.n_ineligible_pairs == 42
@@ -169,7 +168,7 @@ def test_penguins_shaped_table_stays_categorical_and_numeric():
         SemanticType.CATEGORICAL,
         SemanticType.NUMERIC,
     ]
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     assert summary.n_supported_pairs == 28
     assert summary.n_ineligible_pairs == 0
     assert summary.n_unimplemented_family_pairs == 0

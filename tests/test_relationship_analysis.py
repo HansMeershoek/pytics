@@ -45,12 +45,10 @@ from pytics.analysis.relationship import NumericNumericRelationship
 from pytics.analysis.relationship import PairPopulation
 from pytics.analysis.relationship import RelationshipAnalysis
 from pytics.analysis.relationship import RelationshipFamily
-from pytics.analysis.relationship import RelationshipsSummary
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationship import collect_relationship_analysis
 from pytics.analysis.relationship import relationship_analysis_for_columns
 from pytics.semantics.interpretation import SemanticType
@@ -66,8 +64,8 @@ _UUIDS = (
 _NORMAL_Z_95 = 1.959963984540054
 
 
-def _summary(frame: pd.DataFrame) -> RelationshipsSummary:
-    return build_relationships_summary(analyze_dataframe(frame))
+def _summary(frame: pd.DataFrame) -> RelationshipAnalysis:
+    return analyze_dataframe(frame).relationship_analysis
 
 
 def _only(frame: pd.DataFrame) -> NumericNumericRelationship:
@@ -135,9 +133,7 @@ def _assert_adjustment(
     assert frequentist.adjusted_p_value + 1e-12 >= frequentist.p_value
 
 
-def _assert_counts(summary: RelationshipsSummary) -> None:
-    expected = summary.n_columns * (summary.n_columns - 1) // 2
-    assert summary.n_total_pairs == expected
+def _assert_counts(summary: RelationshipAnalysis) -> None:
     assert summary.n_supported_pairs == len(summary.relationships)
     assert summary.n_analyzed_pairs == summary.n_supported_pairs
     assert (
@@ -217,7 +213,7 @@ def test_one_numeric_pair_keeps_spearman_and_pearson() -> None:
     frame = pd.DataFrame({"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]})
     before = frame.copy(deep=True)
     analysis = analyze_dataframe(frame)
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     pd.testing.assert_frame_equal(frame, before)
     _assert_counts(summary)
     _assert_no_retained_source(analysis)
@@ -253,9 +249,7 @@ def test_one_numeric_pair_keeps_spearman_and_pearson() -> None:
     assert retained_pair.spearman.confidence_interval.level is None
     assert retained_pair.pearson.confidence_interval.level is None
     assert retained.n_unsupported_pairs == 0
-    assert summary.relationships[0] is not retained.relationships[0]
     assert summary.relationships == analysis.relationship_analysis.relationships
-    assert not hasattr(pytics, "build_relationships_summary")
     assert not hasattr(pytics, "RelationshipAnalysis")
 
 
@@ -331,7 +325,7 @@ def test_unsupported_semantic_pairs_are_not_numeric_relationships(
     monkeypatch.setattr(collector_module, "_read_numeric_column", _spy_numeric)
     monkeypatch.setattr(collector_module, "_read_categorical_column", _spy_categorical)
     analysis = analyze_dataframe(frame)
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     _assert_counts(summary)
     assert read_calls == ["amount", "group"]
     assert summary.n_supported_pairs == 2
@@ -685,27 +679,6 @@ def test_extreme_finite_floats_do_not_fail_the_relationship_pass() -> None:
     assert ordinary.relationship_analysis.n_analyzed_pairs == 1
 
 
-def test_builder_does_not_recompute(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    analysis = analyze_dataframe(pd.DataFrame({"x": [1, 2, 3, 4], "y": [1, 3, 2, 4]}))
-
-    def _fail(*args: object, **kwargs: object) -> None:
-        raise AssertionError("summary builder recomputed a relationship")
-
-    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
-    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
-    monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)
-    monkeypatch.setattr(collector_module, "adjust_primary_p_values", _fail)
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    summary = build_relationships_summary(analysis)
-    _assert_counts(summary)
-    assert summary.relationships[0].spearman.estimate.availability is (
-        ResultAvailability.AVAILABLE
-    )
-
-
 def test_zero_and_narrow_frames_follow_semantic_selections() -> None:
     empty = _summary(pd.DataFrame())
     _assert_counts(empty)
@@ -721,10 +694,12 @@ def test_zero_and_narrow_frames_follow_semantic_selections() -> None:
     _assert_counts(one_column)
     assert one_column.n_total_pairs == 0
 
-    zero_rows = _summary(pd.DataFrame({"a": [], "b": [], "c": []}))
+    zero_row_frame = pd.DataFrame({"a": [], "b": [], "c": []})
+    zero_row_analysis = analyze_dataframe(zero_row_frame)
+    zero_rows = zero_row_analysis.relationship_analysis
     _assert_counts(zero_rows)
     assert zero_rows.n_rows == 0
-    assert zero_rows.n_columns == 3
+    assert zero_row_analysis.n_columns == 3
     assert zero_rows.n_total_pairs == 3
     assert zero_rows.n_supported_pairs == 0
     assert zero_rows.n_ineligible_pairs == 3
@@ -772,8 +747,6 @@ def test_models_are_frozen_and_reject_inconsistent_results() -> None:
             direction=None,
             reason=UnavailabilityReason.CONSTANT_PAIRED_VALUES,
         )
-    with pytest.raises(TypeError, match="DatasetAnalysis"):
-        build_relationships_summary(pd.DataFrame({"x": [1, 2]}))  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="pandas DataFrame"):
         collect_relationship_analysis(pd.Series([1, 2]), ())  # type: ignore[arg-type]
     left = analyze_series(pd.Series([1, 2, 3]), position=0, label="a")
@@ -1073,84 +1046,6 @@ def test_rejected_values_and_library_edges(monkeypatch: pytest.MonkeyPatch) -> N
             unimplemented_family_counts=(),
             relationships=(),
         )
-    with pytest.raises(ValueError, match="unordered column pairs"):
-        RelationshipsSummary(
-            n_rows=0,
-            n_columns=2,
-            n_total_pairs=0,
-            n_supported_pairs=0,
-            n_analyzed_pairs=0,
-            n_unimplemented_family_pairs=0,
-            n_ineligible_pairs=0,
-            unimplemented_family_counts=(),
-            relationships=(),
-        )
-    with pytest.raises(ValueError, match="every supported pair"):
-        RelationshipsSummary(
-            n_rows=1,
-            n_columns=2,
-            n_total_pairs=1,
-            n_supported_pairs=1,
-            n_analyzed_pairs=0,
-            n_unimplemented_family_pairs=0,
-            n_ineligible_pairs=0,
-            unimplemented_family_counts=(),
-            relationships=(),
-        )
-    with pytest.raises(ValueError, match="more than once"):
-        RelationshipsSummary(
-            n_rows=0,
-            n_columns=3,
-            n_total_pairs=3,
-            n_supported_pairs=0,
-            n_analyzed_pairs=0,
-            n_unimplemented_family_pairs=2,
-            n_ineligible_pairs=1,
-            unimplemented_family_counts=(
-                UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
-                ),
-                UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
-                ),
-            ),
-            relationships=(),
-        )
-    with pytest.raises(ValueError, match="definition order"):
-        RelationshipsSummary(
-            n_rows=0,
-            n_columns=3,
-            n_total_pairs=3,
-            n_supported_pairs=0,
-            n_analyzed_pairs=0,
-            n_unimplemented_family_pairs=2,
-            n_ineligible_pairs=1,
-            unimplemented_family_counts=(
-                UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.DATETIME_CATEGORICAL, 1
-                ),
-                UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
-                ),
-            ),
-            relationships=(),
-        )
-    with pytest.raises(ValueError, match="family total"):
-        RelationshipsSummary(
-            n_rows=0,
-            n_columns=2,
-            n_total_pairs=1,
-            n_supported_pairs=0,
-            n_analyzed_pairs=0,
-            n_unimplemented_family_pairs=0,
-            n_ineligible_pairs=1,
-            unimplemented_family_counts=(
-                UnimplementedFamilyCount(
-                    UnimplementedRelationshipFamily.DATETIME_NUMERIC, 1
-                ),
-            ),
-            relationships=(),
-        )
     with pytest.raises(TypeError, match="RelationshipAnalysis"):
         DatasetAnalysis(
             n_rows=0,
@@ -1407,18 +1302,6 @@ def test_remaining_model_and_pair_rejections(monkeypatch: pytest.MonkeyPatch) ->
             n_rows=4,
             n_total_pairs=1,
             n_supported_pairs=1,
-            n_analyzed_pairs=0,
-            n_unimplemented_family_pairs=0,
-            n_ineligible_pairs=0,
-            unimplemented_family_counts=(),
-            relationships=(),
-        )
-    with pytest.raises(ValueError, match="sum to n_total_pairs"):
-        RelationshipsSummary(
-            n_rows=4,
-            n_columns=2,
-            n_total_pairs=1,
-            n_supported_pairs=0,
             n_analyzed_pairs=0,
             n_unimplemented_family_pairs=0,
             n_ineligible_pairs=0,

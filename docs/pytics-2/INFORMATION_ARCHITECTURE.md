@@ -179,7 +179,7 @@ Potential internal sections, **Proposed / not yet finalized** as a fixed interna
 | --- | --- | --- |
 | REQ-IA-12 | Show Target only when target analysis exists. | Accepted |
 
-`DatasetAnalysis.target_analysis` is `None` when the caller did not name a target, and a `TargetSummary` is absent in that same case ([DEC-103](DECISIONS.md#dec-103)). That is the analytical condition for showing Target. The view is not rendered. A Categorical target carries the exact observed class distribution from the descriptive layer ([DEC-104](DECISIONS.md#dec-104)). The result does not rank other columns, label the target balanced or imbalanced, infer a problem type, or contain a diagnostic model.
+`DatasetAnalysis.target_analysis` is `None` when the caller did not name a target ([DEC-103](DECISIONS.md#dec-103)). That is the analytical condition for showing Target. TSK-049 removed the separate target summary ([DEC-120](DECISIONS.md#dec-120)). The view is not rendered. A Categorical target carries the exact observed class distribution from the descriptive layer ([DEC-104](DECISIONS.md#dec-104)). The result does not rank other columns, label the target balanced or imbalanced, infer a problem type, or contain a diagnostic model.
 
 ### Time Series
 

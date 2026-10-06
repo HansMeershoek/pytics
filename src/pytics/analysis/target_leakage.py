@@ -42,7 +42,6 @@ columns are not read as temporal leakage. No rule engine is implemented.
 
 from __future__ import annotations
 
-import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from typing import FrozenSet
@@ -451,19 +450,6 @@ def exact_duplicate_positions(analysis: TargetLeakageAnalysis) -> FrozenSet[int]
         for item in analysis.predictors
         if item.exact_duplicate.status is ExactDuplicateStatus.EXACT_DUPLICATE
     )
-
-
-def copy_target_leakage(analysis: TargetLeakageAnalysis) -> TargetLeakageAnalysis:
-    """Return new frozen records with the same values.
-
-    Every nested record is rebuilt and revalidated. Nothing is recomputed
-    and no source value is read.
-    """
-    _require_type(analysis, TargetLeakageAnalysis, "analysis")
-    copied = _copy_record(analysis)
-    if not isinstance(copied, TargetLeakageAnalysis):
-        raise TypeError("analysis must be a TargetLeakageAnalysis")
-    return copied
 
 
 def _require_leakage_attachment(
@@ -1165,19 +1151,6 @@ def _same_value(left: object, right: object) -> bool:
     if type(left) is not type(right):
         return False
     return bool(left == right)
-
-
-def _copy_record(value: object) -> object:
-    if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        return type(value)(
-            **{
-                field.name: _copy_record(getattr(value, field.name))
-                for field in dataclasses.fields(value)
-            }
-        )
-    if isinstance(value, tuple):
-        return tuple(_copy_record(item) for item in value)
-    return value
 
 
 def _require_count(value: object, field: str) -> None:

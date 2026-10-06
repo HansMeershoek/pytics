@@ -3,11 +3,9 @@
 Not part of the public ``pytics.profile`` / ``pytics.compare`` API.
 Import paths and type names here are not a frozen public schema.
 Semantic inference stays in ``pytics.semantics``. This package owns the
-broader column and dataset records, the DataFrame traversal, the dataset
-overview, the variables summary, the missingness summary, the
-duplicate-row summary, the relationships summary, the anomaly
-summary, and the target summary aggregated from an existing dataset
-analysis. Numeric
+broader column and dataset records, the DataFrame traversal, and the
+dataset overview. Those records are the analytical truth. Profile and
+compare read them. They are not copied into a second summary. Numeric
 descriptive statistics for a selected Numeric column, Boolean
 true/false counts for a selected Boolean column, and the observed
 level distribution for a selected Categorical column, are collected

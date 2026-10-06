@@ -345,29 +345,6 @@ class AnomalyAnalysis:
             raise ValueError("unavailable coverage must match numeric record statuses")
 
 
-@dataclass(frozen=True)
-class AnomalySummary:
-    """Source-independent copy of retained numeric anomaly evidence.
-
-    The copy is built from an existing ``DatasetAnalysis``. It does not
-    read a DataFrame and does not classify rows again. It is not a
-    finding and it has no severity.
-    """
-
-    coverage: AnomalyCoverage
-    numeric_univariate: Tuple[NumericAnomalyColumn, ...]
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.coverage, AnomalyCoverage):
-            raise TypeError("coverage must be an AnomalyCoverage")
-        if not isinstance(self.numeric_univariate, tuple):
-            raise TypeError("numeric_univariate must be a tuple")
-        AnomalyAnalysis(
-            coverage=self.coverage,
-            numeric_univariate=self.numeric_univariate,
-        )
-
-
 def collect_anomaly_analysis(
     frame: pd.DataFrame,
     columns: Sequence[ColumnAnalysis],
@@ -444,25 +421,6 @@ def anomaly_analysis_for_columns(
     return AnomalyAnalysis(
         coverage=_coverage(column_tuple, built),
         numeric_univariate=built,
-    )
-
-
-def build_anomaly_summary(analysis: object) -> AnomalySummary:
-    """Copy retained numeric anomaly evidence into a summary.
-
-    The argument must already be a ``DatasetAnalysis``. A DataFrame is
-    not accepted. Rows are not classified again.
-    """
-    from pytics.analysis.dataset import DatasetAnalysis as DatasetAnalysisType
-
-    if not isinstance(analysis, DatasetAnalysisType):
-        raise TypeError("build_anomaly_summary expects a DatasetAnalysis")
-    retained = analysis.anomaly_analysis
-    return AnomalySummary(
-        coverage=_copy_coverage(retained.coverage),
-        numeric_univariate=tuple(
-            _copy_column(record) for record in retained.numeric_univariate
-        ),
     )
 
 
@@ -909,55 +867,6 @@ def _require_aligned(
         if column.evidence.basic.n_total != n_rows:
             raise ValueError("anomaly row count must equal the DataFrame length")
     return n_rows
-
-
-def _copy_coverage(coverage: AnomalyCoverage) -> AnomalyCoverage:
-    return AnomalyCoverage(
-        n_columns=coverage.n_columns,
-        n_eligible=coverage.n_eligible,
-        n_analyzed=coverage.n_analyzed,
-        n_unavailable=coverage.n_unavailable,
-        n_ineligible=coverage.n_ineligible,
-        n_numeric_profile_absent=coverage.n_numeric_profile_absent,
-        unavailable=tuple(
-            AnomalyUnavailableCount(item.status, item.n_columns)
-            for item in coverage.unavailable
-        ),
-        ineligible=tuple(
-            AnomalyIneligibleCount(item.reason, item.n_columns)
-            for item in coverage.ineligible
-        ),
-    )
-
-
-def _copy_column(record: NumericAnomalyColumn) -> NumericAnomalyColumn:
-    return NumericAnomalyColumn(
-        position=record.position,
-        label=record.label,
-        status=record.status,
-        n_rows=record.n_rows,
-        n_missing=record.n_missing,
-        finite_count=record.finite_count,
-        positive_infinity_count=record.positive_infinity_count,
-        negative_infinity_count=record.negative_infinity_count,
-        method=record.method,
-        fence_coefficient=record.fence_coefficient,
-        q1=record.q1,
-        q3=record.q3,
-        iqr=record.iqr,
-        lower_fence=record.lower_fence,
-        upper_fence=record.upper_fence,
-        below_count=record.below_count,
-        above_count=record.above_count,
-        observations=tuple(
-            NumericAnomalyObservation(
-                row_position=observation.row_position,
-                value=observation.value,
-                direction=observation.direction,
-            )
-            for observation in record.observations
-        ),
-    )
 
 
 def _as_fraction(value: QuantileNumber) -> Fraction:

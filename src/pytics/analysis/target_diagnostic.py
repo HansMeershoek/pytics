@@ -24,7 +24,6 @@ inputs can share or hide that drop. Negative values are kept.
 
 from __future__ import annotations
 
-import dataclasses
 import math
 from dataclasses import dataclass
 from enum import Enum
@@ -582,18 +581,6 @@ def semantic_predictor_decision(
     return _expected_semantic_decision(selected_type)
 
 
-def copy_target_diagnostic(
-    analysis: TargetDiagnosticAnalysis,
-) -> TargetDiagnosticAnalysis:
-    """Return new frozen records with the same values.
-
-    Every nested record is rebuilt and revalidated. Labels, class values,
-    enums, and numbers are kept as they are. Nothing is recomputed.
-    """
-    _require_type(analysis, TargetDiagnosticAnalysis, "analysis")
-    return _copy_record(analysis)
-
-
 def _require_diagnostic_attachment(
     diagnostic: Optional[TargetDiagnosticAnalysis],
     target: object,
@@ -917,19 +904,6 @@ def _same_value(left: object, right: object) -> bool:
     if type(left) is not type(right):
         return False
     return bool(left == right)
-
-
-def _copy_record(value: object) -> object:
-    if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        return type(value)(
-            **{
-                field.name: _copy_record(getattr(value, field.name))
-                for field in dataclasses.fields(value)
-            }
-        )
-    if isinstance(value, tuple):
-        return tuple(_copy_record(item) for item in value)
-    return value
 
 
 def _require_count(value: object, field: str) -> None:

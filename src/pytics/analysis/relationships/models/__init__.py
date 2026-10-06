@@ -76,7 +76,6 @@ from pytics.analysis.relationships.models.common import UnavailabilityReason
 from pytics.analysis.relationships.models.common import _require_nonnegative
 from pytics.analysis.relationships.models.coverage import RelationshipAnalysis
 from pytics.analysis.relationships.models.coverage import RelationshipRecord
-from pytics.analysis.relationships.models.coverage import RelationshipsSummary
 from pytics.analysis.relationships.models.coverage import UnimplementedFamilyCount
 from pytics.analysis.relationships.models.coverage import (
     UnimplementedRelationshipFamily,
@@ -189,7 +188,6 @@ __all__ = [
     "RelationshipAnalysis",
     "RelationshipFamily",
     "RelationshipRecord",
-    "RelationshipsSummary",
     "ResultAvailability",
     "StandardizedDifferenceMethod",
     "StandardizedMeanDifference",

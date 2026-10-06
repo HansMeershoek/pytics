@@ -4,7 +4,7 @@ Column missing counts already live on basic evidence. A missingness
 pattern is which physical columns are missing together in a row, so it
 cannot be rebuilt from those independent counts. ``collect_missing_analysis``
 reads the DataFrame once, keeps exact aggregate counts, and drops the
-mask. ``build_missing_summary`` reads that retained analysis only.
+mask.
 
 The result records where values are missing. It does not say why, and it
 does not classify a missingness mechanism.
@@ -13,15 +13,11 @@ does not classify a missingness mechanism.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 from typing import Optional
 from typing import Tuple
 
 import numpy as np
 import pandas as pd
-
-if TYPE_CHECKING:
-    from pytics.analysis.dataset import DatasetAnalysis
 
 
 @dataclass(frozen=True)
@@ -166,174 +162,6 @@ class MissingAnalysis:
         return 0
 
 
-@dataclass(frozen=True)
-class ColumnMissingness:
-    """Missingness facts for one physical column.
-
-    ``position`` is the column's place on the source column axis.
-    ``label`` is the original label object. It is not a display string,
-    and the label alone does not identify the column. The counts are
-    copies of retained basic evidence. ``missing_ratio`` is ``None``
-    when the column has no rows.
-    """
-
-    position: int
-    label: object
-    n_total: int
-    n_missing: int
-    n_non_missing: int
-
-    def __post_init__(self) -> None:
-        if type(self.position) is not int or self.position < 0:
-            raise ValueError("position must be a non-negative int")
-        _require_count(self.n_total, "n_total")
-        _require_count(self.n_missing, "n_missing")
-        _require_count(self.n_non_missing, "n_non_missing")
-        if self.n_missing > self.n_total:
-            raise ValueError("n_missing cannot exceed n_total")
-        if self.n_non_missing != self.n_total - self.n_missing:
-            raise ValueError("n_non_missing must equal n_total - n_missing")
-
-    @property
-    def missing_ratio(self) -> Optional[float]:
-        """Missing values divided by all values in this column.
-
-        ``None`` when the column has no rows.
-        """
-        return _ratio(self.n_missing, self.n_total)
-
-
-@dataclass(frozen=True)
-class MissingSummary:
-    """Product missingness facts for one dataset analysis.
-
-    Cell counts are copies of the dataset analysis. Column counts are
-    copies of retained basic evidence. Row buckets and patterns are
-    copies of the retained missingness analysis. This summary does not
-    keep that analysis, a DataFrame, or a mask.
-
-    ``missing_ratio`` and ``completeness_ratio`` are cell ratios. They
-    are ``None`` when there are no cells. ``complete_row_ratio`` and
-    ``incomplete_row_ratio`` are row ratios. They are ``None`` when
-    there are no rows. A dataset with rows and no columns has no cells,
-    so its cell ratios stay undefined, while every row is complete.
-    """
-
-    n_rows: int
-    n_columns: int
-    n_cells: int
-    n_missing_cells: int
-    n_non_missing_cells: int
-    columns: Tuple[ColumnMissingness, ...]
-    row_distribution: Tuple[RowMissingnessBucket, ...]
-    patterns: Tuple[MissingnessPattern, ...]
-
-    def __post_init__(self) -> None:
-        _require_count(self.n_rows, "n_rows")
-        _require_count(self.n_columns, "n_columns")
-        _require_count(self.n_cells, "n_cells")
-        _require_count(self.n_missing_cells, "n_missing_cells")
-        _require_count(self.n_non_missing_cells, "n_non_missing_cells")
-        if self.n_cells != self.n_rows * self.n_columns:
-            raise ValueError("n_cells must equal n_rows * n_columns")
-        if self.n_missing_cells + self.n_non_missing_cells != self.n_cells:
-            raise ValueError("missing and non-missing cells must sum to n_cells")
-        if not isinstance(self.columns, tuple):
-            raise TypeError("columns must be a tuple")
-        if len(self.columns) != self.n_columns:
-            raise ValueError("columns must contain one record per column")
-        missing_counts = []
-        for position, column in enumerate(self.columns):
-            if not isinstance(column, ColumnMissingness):
-                raise TypeError("columns must contain ColumnMissingness records")
-            if column.position != position:
-                raise ValueError("column position must match source order")
-            if column.n_total != self.n_rows:
-                raise ValueError("column n_total must equal n_rows")
-            missing_counts.append(column.n_missing)
-        if sum(missing_counts) != self.n_missing_cells:
-            raise ValueError("column missing counts must sum to n_missing_cells")
-        _require_missing_attachment(
-            MissingAnalysis(
-                row_distribution=self.row_distribution,
-                patterns=self.patterns,
-            ),
-            n_rows=self.n_rows,
-            n_columns=self.n_columns,
-            n_missing_cells=self.n_missing_cells,
-            missing_counts=tuple(missing_counts),
-        )
-
-    @property
-    def missing_ratio(self) -> Optional[float]:
-        """Missing cells divided by all cells.
-
-        ``None`` when there are no cells. A zero numerator with a
-        positive cell count is ``0.0``.
-        """
-        return _ratio(self.n_missing_cells, self.n_cells)
-
-    @property
-    def completeness_ratio(self) -> Optional[float]:
-        """Non-missing cells divided by all cells.
-
-        This is cell completeness, not a complete-row ratio. ``None``
-        when there are no cells.
-        """
-        return _ratio(self.n_non_missing_cells, self.n_cells)
-
-    @property
-    def n_complete_rows(self) -> int:
-        """Rows with no missing value.
-
-        A row in a dataset with no columns is complete. Zero when there
-        are no rows, and zero when every row has a missing value.
-        """
-        for bucket in self.row_distribution:
-            if bucket.missing_columns_count == 0:
-                return bucket.row_count
-        return 0
-
-    @property
-    def n_rows_with_missing(self) -> int:
-        """Rows with at least one missing value."""
-        return self.n_rows - self.n_complete_rows
-
-    @property
-    def complete_row_ratio(self) -> Optional[float]:
-        """Complete rows divided by all rows.
-
-        ``None`` when there are no rows. This is not cell completeness.
-        """
-        return _ratio(self.n_complete_rows, self.n_rows)
-
-    @property
-    def incomplete_row_ratio(self) -> Optional[float]:
-        """Incomplete rows divided by all rows.
-
-        ``None`` when there are no rows.
-        """
-        return _ratio(self.n_rows_with_missing, self.n_rows)
-
-    @property
-    def n_columns_with_missing(self) -> int:
-        """Columns that contain at least one missing value."""
-        return sum(column.n_missing > 0 for column in self.columns)
-
-    @property
-    def n_complete_columns(self) -> int:
-        """Columns that contain no missing value.
-
-        A column with no rows has no missing value, so it is complete.
-        """
-        return sum(column.n_missing == 0 for column in self.columns)
-
-    @property
-    def n_patterns(self) -> int:
-        """How many distinct missingness patterns this summary contains."""
-        return len(self.patterns)
-
-
 def collect_missing_analysis(frame: pd.DataFrame) -> MissingAnalysis:
     """Count exact row missingness and missingness patterns.
 
@@ -363,55 +191,6 @@ def collect_missing_analysis(frame: pd.DataFrame) -> MissingAnalysis:
         )
     values = _boolean_missingness(frame, n_rows, n_columns)
     return _analysis_from_mask(values)
-
-
-def build_missing_summary(analysis: DatasetAnalysis) -> MissingSummary:
-    """Summarize missingness from one dataset analysis.
-
-    The argument must already be a ``DatasetAnalysis``. A DataFrame is
-    not accepted and is not analyzed. Column counts are copied from
-    retained basic evidence. Patterns are copied from the retained
-    missingness analysis. Neither is recomputed from raw values.
-    """
-    # Local import: dataset analysis retains MissingAnalysis, so this
-    # module cannot import DatasetAnalysis at load time.
-    from pytics.analysis.dataset import DatasetAnalysis as DatasetAnalysisType
-
-    if not isinstance(analysis, DatasetAnalysisType):
-        raise TypeError("build_missing_summary expects a DatasetAnalysis")
-    columns = tuple(
-        ColumnMissingness(
-            position=column.position,
-            label=column.label,
-            n_total=column.evidence.basic.n_total,
-            n_missing=column.evidence.basic.n_missing,
-            n_non_missing=column.evidence.basic.n_non_missing,
-        )
-        for column in analysis.columns
-    )
-    missing = analysis.missing_analysis
-    return MissingSummary(
-        n_rows=analysis.n_rows,
-        n_columns=analysis.n_columns,
-        n_cells=analysis.n_cells,
-        n_missing_cells=analysis.n_missing_cells,
-        n_non_missing_cells=analysis.n_non_missing_cells,
-        columns=columns,
-        row_distribution=tuple(
-            RowMissingnessBucket(
-                missing_columns_count=bucket.missing_columns_count,
-                row_count=bucket.row_count,
-            )
-            for bucket in missing.row_distribution
-        ),
-        patterns=tuple(
-            MissingnessPattern(
-                positions=tuple(pattern.positions),
-                row_count=pattern.row_count,
-            )
-            for pattern in missing.patterns
-        ),
-    )
 
 
 def _require_missing_attachment(

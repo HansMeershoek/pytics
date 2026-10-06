@@ -33,7 +33,6 @@ from pytics.analysis.relationship import RelationshipRecord
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationships.adjustment import adjust_primary_p_values
 from pytics.analysis.relationships.models import InferentialValidity
 from pytics.analysis.relationships.adjustment import benjamini_hochberg
@@ -563,7 +562,7 @@ def test_coverage_categories_classify_a_mixed_semantic_frame() -> None:
         SemanticType.TIMEDELTA,
         None,
     ]
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     assert summary.n_total_pairs == 36
     assert summary.n_supported_pairs == summary.n_analyzed_pairs == 2
     assert summary.n_unimplemented_family_pairs == 3
@@ -656,7 +655,7 @@ def test_summary_keeps_adjusted_evidence_without_recomputing(
     monkeypatch.setattr(column_module, "resolve_semantics", _fail)
     monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
     monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     copied = next(
         item
         for item in summary.relationships

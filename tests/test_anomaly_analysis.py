@@ -13,20 +13,17 @@ import pytest
 
 import pytics
 import pytics.analysis.anomaly as anomaly_module
-import pytics.analysis.dataset as dataset_module
 from pytics.analysis.anomaly import AnomalyAnalysis
 from pytics.analysis.anomaly import AnomalyIneligibleCount
 from pytics.analysis.anomaly import AnomalyUnavailableCount
 from pytics.analysis.anomaly import AnomalyCoverage
 from pytics.analysis.anomaly import AnomalyDirection
 from pytics.analysis.anomaly import AnomalyIneligibility
-from pytics.analysis.anomaly import AnomalySummary
 from pytics.analysis.anomaly import NumericAnomalyColumn
 from pytics.analysis.anomaly import NumericAnomalyMethod
 from pytics.analysis.anomaly import NumericAnomalyObservation
 from pytics.analysis.anomaly import NumericAnomalyStatus
 from pytics.analysis.anomaly import anomaly_analysis_for_columns
-from pytics.analysis.anomaly import build_anomaly_summary
 from pytics.analysis.anomaly import collect_anomaly_analysis
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import ColumnEvidence
@@ -672,36 +669,13 @@ def test_target_presence_does_not_change_anomaly_evidence() -> None:
     assert plain.target_analysis is None
 
 
-def test_summary_copies_retained_evidence_without_reading_the_source(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_retained_anomaly_analysis_holds_no_source_objects() -> None:
     frame = pd.DataFrame(
         {"amount": [-2, 2, 3, 4, 8], "flag": [True, False, True, False, True]}
     )
     original = frame.copy()
     analysis = _analysis(frame)
     pd.testing.assert_frame_equal(frame, original)
-
-    def _fail(*_args: object, **_kwargs: object) -> None:
-        raise AssertionError("anomaly summary reread the source")
-
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    monkeypatch.setattr(pd.Series, "to_numpy", _fail)
-    monkeypatch.setattr(anomaly_module, "collect_anomaly_analysis", _fail)
-    monkeypatch.setattr(dataset_module, "collect_anomaly_analysis", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    summary = build_anomaly_summary(analysis)
-    assert isinstance(summary, AnomalySummary)
-    assert summary.coverage == analysis.anomaly_analysis.coverage
-    assert summary.numeric_univariate == analysis.anomaly_analysis.numeric_univariate
-    assert (
-        summary.numeric_univariate is not analysis.anomaly_analysis.numeric_univariate
-    )
-    assert (
-        summary.numeric_univariate[0]
-        is not analysis.anomaly_analysis.numeric_univariate[0]
-    )
-    _assert_no_source(summary)
     _assert_no_source(analysis.anomaly_analysis)
 
 
@@ -819,8 +793,6 @@ def test_models_reject_inconsistent_anomaly_facts() -> None:
             ),
             numeric_univariate=(),
         )
-    with pytest.raises(TypeError, match="DatasetAnalysis"):
-        build_anomaly_summary(pd.DataFrame({"amount": [1, 2, 3]}))
     with pytest.raises(TypeError, match="DataFrame"):
         collect_anomaly_analysis(pd.Series([1, 2, 3]), ())  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="tuple"):

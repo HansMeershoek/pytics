@@ -7,12 +7,10 @@ coverage container. ``numeric_numeric`` calculates Numeric × Numeric.
 ``numeric_boolean`` calculates Numeric × Boolean.
 ``categorical_categorical`` calculates Categorical × Categorical.
 ``adjustment`` applies the dataset-level primary-test correction after
-those calculations. ``collector`` chooses pairs and projects the product
-summary.
+those calculations. ``collector`` chooses pairs and stores the relationship analysis.
 Importing this package is not a frozen public API.
 """
 
-from pytics.analysis.relationships.collector import build_relationships_summary
 from pytics.analysis.relationships.collector import collect_relationship_analysis
 from pytics.analysis.relationships.collector import relationship_analysis_for_columns
 from pytics.analysis.relationships.models import AssociationMethod
@@ -66,7 +64,6 @@ from pytics.analysis.relationships.models import PairPopulation
 from pytics.analysis.relationships.models import RelationshipAnalysis
 from pytics.analysis.relationships.models import RelationshipFamily
 from pytics.analysis.relationships.models import RelationshipRecord
-from pytics.analysis.relationships.models import RelationshipsSummary
 from pytics.analysis.relationships.models import ResultAvailability
 from pytics.analysis.relationships.models import StandardizedDifferenceMethod
 from pytics.analysis.relationships.models import StandardizedMeanDifference

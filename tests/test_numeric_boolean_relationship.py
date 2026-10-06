@@ -45,7 +45,6 @@ from pytics.analysis.relationship import StandardizedMeanDifference
 from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationship import relationship_analysis_for_columns
 from pytics.analysis.relationships.numeric_boolean import _hedges_correction
 from pytics.semantics.interpretation import SemanticType
@@ -97,7 +96,7 @@ def _frame(
 
 
 def _only(frame: pd.DataFrame) -> NumericBooleanRelationship:
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     records = [
         item
         for item in summary.relationships
@@ -282,7 +281,7 @@ def test_selected_types_decide_the_family() -> None:
         }
     )
     analysis = analyze_dataframe(frame)
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     assert [column.inferred.selected_type for column in analysis.columns] == [
         SemanticType.NUMERIC,
         SemanticType.BOOLEAN,
@@ -340,7 +339,7 @@ def test_population_excludes_missing_and_infinite_rows_once() -> None:
     )
     before = frame.copy(deep=True)
     analysis = analyze_dataframe(frame)
-    relationship = build_relationships_summary(analysis).relationships[0]
+    relationship = analysis.relationship_analysis.relationships[0]
     pd.testing.assert_frame_equal(frame, before)
     assert isinstance(relationship, NumericBooleanRelationship)
     assert relationship.n_total_rows == 10
@@ -396,7 +395,7 @@ def test_absent_level_is_an_explicit_unavailable_group() -> None:
         }
     )
     analysis = analyze_dataframe(frame)
-    relationship = build_relationships_summary(analysis).relationships[0]
+    relationship = analysis.relationship_analysis.relationships[0]
     assert isinstance(relationship, NumericBooleanRelationship)
     assert analysis.columns[1].inferred.selected_type is SemanticType.BOOLEAN
     assert analysis.columns[1].boolean_analysis.true_count == 2
@@ -425,7 +424,7 @@ def test_no_paired_rows_keep_the_record() -> None:
             "flag": pd.Series([pd.NA, pd.NA, True, False], dtype="boolean"),
         }
     )
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert summary.n_supported_pairs == summary.n_analyzed_pairs == 1
     relationship = summary.relationships[0]
     assert isinstance(relationship, NumericBooleanRelationship)
@@ -852,7 +851,7 @@ def test_mixed_frame_counts_each_family_once() -> None:
             "fixed": [7, 7, 7, 7, 7, 7],
         }
     )
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert summary.n_total_pairs == 45
     assert summary.n_supported_pairs == summary.n_analyzed_pairs == 17
     assert len(summary.relationships) == 17
@@ -913,7 +912,7 @@ def test_each_source_column_is_prepared_once(monkeypatch: pytest.MonkeyPatch) ->
 
     monkeypatch.setattr(collector_module, "_read_numeric_column", _spy_numeric)
     monkeypatch.setattr(collector_module, "_read_boolean_column", _spy_boolean)
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert numeric_reads == ["x", "y", "z"]
     assert boolean_reads == ["p", "q", "r"]
     assert summary.n_supported_pairs == 15
@@ -926,9 +925,7 @@ def test_each_source_column_is_prepared_once(monkeypatch: pytest.MonkeyPatch) ->
     )
 
 
-def test_summary_copies_numeric_boolean_records_without_recomputing(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_retained_numeric_boolean_records_hold_no_source() -> None:
     frame = pd.DataFrame(
         {
             "y": [1.0, 2.0, 3.0, 4.0, 5.0, np.nan],
@@ -938,58 +935,17 @@ def test_summary_copies_numeric_boolean_records_without_recomputing(
         }
     )
     analysis = analyze_dataframe(frame)
-
-    def _fail(*args: object, **kwargs: object) -> None:
-        raise AssertionError("summary builder used a source-dependent operation")
-
-    monkeypatch.setattr(collector_module, "_analyze_numeric_boolean", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
-    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_boolean_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
-    monkeypatch.setattr(collector_module, "_association_methods", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
-    monkeypatch.setattr(numeric_boolean_module, "student_t", _fail)
-    monkeypatch.setattr(numeric_boolean_module, "_from_finite", _fail)
-    monkeypatch.setattr(numeric_boolean_module, "_moments", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
-    monkeypatch.setattr(numeric_categorical_module, "f_oneway", _fail)
-    monkeypatch.setattr(boolean_boolean_module, "fisher_exact", _fail)
-    monkeypatch.setattr(column_module, "analyze_series", _fail)
-    monkeypatch.setattr(column_module, "resolve_semantics", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    summary = build_relationships_summary(analysis)
-    retained = analysis.relationship_analysis.relationships
-    assert summary.relationships == retained
-    copies = [
-        (copied, original)
-        for copied, original in zip(summary.relationships, retained)
-        if isinstance(copied, NumericBooleanRelationship)
+    records = [
+        item
+        for item in analysis.relationship_analysis.relationships
+        if isinstance(item, NumericBooleanRelationship)
     ]
-    assert len(copies) == 2
-    absent_seen = False
-    for copied, original in copies:
-        assert copied is not original
-        assert copied.false_group is not original.false_group
-        assert copied.mean_difference is not original.mean_difference
-        assert copied.mean_difference_test is not original.mean_difference_test
-        assert copied.mean_difference_test.frequentist is not (
-            original.mean_difference_test.frequentist
-        )
-        for copied_group, original_group in (
-            (copied.false_group, original.false_group),
-            (copied.true_group, original.true_group),
-        ):
-            if original_group.descriptive is None:
-                absent_seen = True
-                assert copied_group.descriptive is None
-            else:
-                assert copied_group.descriptive is not original_group.descriptive
-    assert absent_seen
-    _assert_plain_record(summary)
+    assert len(records) == 2
+    assert any(
+        group.descriptive is None
+        for item in records
+        for group in (item.false_group, item.true_group)
+    )
     _assert_plain_record(analysis.relationship_analysis)
 
 
@@ -1014,9 +970,7 @@ def test_adding_numeric_boolean_pairs_leaves_other_families_unchanged() -> None:
     group = pd.Categorical(["a", "b", "a", "b", "c", "c"])
     p = [True, False, True, False, False, True]
     q = [False, False, True, True, False, True]
-    together = build_relationships_summary(
-        analyze_dataframe(pd.DataFrame({"x": x, "y": y, "g": group, "p": p, "q": q}))
-    ).relationships
+    together = (analyze_dataframe(pd.DataFrame({"x": x, "y": y, "g": group, "p": p, "q": q}))).relationship_analysis.relationships
     numeric = _single(pd.DataFrame({"x": x, "y": y}), NumericNumericRelationship)
     categorical = _single(
         pd.DataFrame({"x": x, "g": group}),
@@ -1048,7 +1002,7 @@ def test_adding_numeric_boolean_pairs_leaves_other_families_unchanged() -> None:
 
 
 def _single(frame: pd.DataFrame, kind: type) -> object:
-    records = build_relationships_summary(analyze_dataframe(frame)).relationships
+    records = analyze_dataframe(frame).relationship_analysis.relationships
     assert len(records) == 1
     assert isinstance(records[0], kind)
     return records[0]

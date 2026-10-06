@@ -35,7 +35,6 @@ from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.analysis.relationships.boolean_boolean import relationship_from_counts
 from pytics.semantics.interpretation import SemanticType
 
@@ -68,7 +67,7 @@ def _boolean_frame(
 
 
 def _only(frame: pd.DataFrame) -> BooleanBooleanRelationship:
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert summary.n_supported_pairs == 1
     relationship = summary.relationships[0]
     assert isinstance(relationship, BooleanBooleanRelationship)
@@ -250,7 +249,7 @@ def test_boolean_with_numeric_or_categorical_is_not_this_family() -> None:
             "group": pd.Categorical(["a", "b", "a", "b"]),
         }
     )
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert not any(
         isinstance(item, BooleanBooleanRelationship) for item in summary.relationships
     )
@@ -689,15 +688,13 @@ def test_direction_changes_with_column_order_and_phi_does_not() -> None:
     assert forward.independence.frequentist.p_value == pytest.approx(
         backward.independence.frequentist.p_value
     )
-    summary = build_relationships_summary(
-        analyze_dataframe(
+    summary = (analyze_dataframe(
             _boolean_frame(
                 conditioning,
                 outcome,
                 third=pd.Series([True, False, True, False, True], dtype="boolean"),
             )
-        )
-    )
+        )).relationship_analysis
     assert summary.n_supported_pairs == 3
     assert [
         (item.left_position, item.right_position) for item in summary.relationships
@@ -720,7 +717,7 @@ def test_three_boolean_columns_are_prepared_once() -> None:
 
     collector_module._read_boolean_column = _spy
     try:
-        summary = build_relationships_summary(analyze_dataframe(frame))
+        summary = analyze_dataframe(frame).relationship_analysis
     finally:
         collector_module._read_boolean_column = original
     assert boolean_reads == [4, 4, 4]
@@ -752,7 +749,7 @@ def test_mixed_coverage_reconciles() -> None:
             "code": pd.Series(_UUIDS, dtype="string"),
         }
     )
-    summary = build_relationships_summary(analyze_dataframe(frame))
+    summary = analyze_dataframe(frame).relationship_analysis
     assert summary.n_total_pairs == 15
     assert summary.n_supported_pairs == 8
     assert summary.n_analyzed_pairs == 8
@@ -785,43 +782,12 @@ def test_mixed_coverage_reconciles() -> None:
     assert (boolean_pairs[0].left_position, boolean_pairs[0].right_position) == (3, 4)
 
 
-def test_summary_copies_boolean_records_without_recomputing(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_retained_boolean_record_holds_no_source() -> None:
     analysis = analyze_dataframe(
         _boolean_frame([False, False, True, True], [False, True, False, True])
     )
-
-    def _fail(*args: object, **kwargs: object) -> None:
-        raise AssertionError("summary builder used a source-dependent operation")
-
-    monkeypatch.setattr(collector_module, "_read_boolean_column", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
-    monkeypatch.setattr(boolean_module, "fisher_exact", _fail)
-    monkeypatch.setattr(boolean_module, "relationship_from_counts", _fail)
-    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
-    monkeypatch.setattr(collector_module, "_association_methods", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
-    monkeypatch.setattr(numeric_categorical_module, "f_oneway", _fail)
-    monkeypatch.setattr(column_module, "analyze_series", _fail)
-    monkeypatch.setattr(column_module, "resolve_semantics", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    summary = build_relationships_summary(analysis)
     retained = analysis.relationship_analysis.relationships[0]
-    copied = summary.relationships[0]
-    assert copied == retained
-    assert copied is not retained
-    assert isinstance(copied, BooleanBooleanRelationship)
-    assert copied.table is not retained.table
-    assert copied.phi is not retained.phi
-    assert copied.independence is not retained.independence
-    assert copied.independence.frequentist is not retained.independence.frequentist
-    _assert_no_retained_source(summary)
+    assert isinstance(retained, BooleanBooleanRelationship)
     _assert_no_retained_source(analysis.relationship_analysis)
 
 
@@ -1227,8 +1193,6 @@ def test_defensive_boolean_branches_stay_unavailable(
     ).relationship_analysis.relationships[0]
     with pytest.raises(TypeError, match="BooleanBooleanRelationship"):
         collector_module._require_record_family(numeric, columns, 0, 1)
-    with pytest.raises(TypeError, match="calculated relationship"):
-        collector_module._copy_relationship(numeric.methods[0])  # type: ignore[attr-defined]
 
 
 def test_outcome_true_level_names_are_explicit() -> None:

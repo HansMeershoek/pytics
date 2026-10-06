@@ -16,7 +16,6 @@ from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.relationship import CategoricalCategoricalRelationship
 from pytics.analysis.relationship import NumericCategoricalRelationship
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.semantics.candidate import CandidateDisposition
 from pytics.semantics.column_evidence import BasicColumnEvidence
 from pytics.semantics.column_evidence import collect_basic_column_evidence
@@ -380,7 +379,7 @@ def test_generic_mixed_frame_activates_existing_relationships_without_mutation()
         SemanticType.NUMERIC,
         SemanticType.IDENTIFIER,
     ]
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     assert summary.n_supported_pairs == 10
     assert summary.n_ineligible_pairs == 5
     assert summary.n_unimplemented_family_pairs == 0

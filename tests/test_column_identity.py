@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pytics.analysis.anomaly import build_anomaly_summary
 from pytics.analysis.column_label import ColumnLabelIdentity
 from pytics.analysis.column_label import ColumnLabelKind
 from pytics.analysis.column_label import identify_column_labels
@@ -25,7 +24,6 @@ from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.findings import FindingCode
 from pytics.analysis.findings import collect_profile_findings
 from pytics.analysis.findings.profile import column_subjects
-from pytics.analysis.relationships.collector import build_relationships_summary
 from pytics.analysis.target import TargetPosition
 from pytics.analysis.target import resolve_target_position
 from pytics.semantics.interpretation import SemanticType
@@ -145,16 +143,12 @@ def test_numeric_nan_label_completes_anomaly_and_relationship_analysis() -> None
     assert observed_labels_equal(anomaly[0].label, float("nan"))
     assert anomaly[0].label is nan_column.label
     assert anomaly[0].observations[0].row_position == 5
-    summary = build_anomaly_summary(analysis)
-    assert summary.numeric_univariate == anomaly
-    assert summary.numeric_univariate[0] is not anomaly[0]
 
     relationships = analysis.relationship_analysis.relationships
     assert len(relationships) == 1
     assert (relationships[0].left_position, relationships[0].right_position) == (0, 1)
     assert observed_labels_equal(relationships[0].left_label, float("nan"))
     assert relationships[0].right_label == "other"
-    assert build_relationships_summary(analysis).relationships == relationships
 
     again = analyze_dataframe(_nan_numeric_frame())
     assert {anomaly[0], again.anomaly_analysis.numeric_univariate[0]} == {anomaly[0]}

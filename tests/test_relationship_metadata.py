@@ -43,12 +43,10 @@ from pytics.analysis.relationship import OmnibusTestMethod
 from pytics.analysis.relationship import PairPopulation
 from pytics.analysis.relationship import RelationshipAnalysis
 from pytics.analysis.relationship import RelationshipFamily
-from pytics.analysis.relationship import RelationshipsSummary
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
 from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
-from pytics.analysis.relationship import build_relationships_summary
 from pytics.semantics.interpretation import SemanticType
 
 _RETAINED = (pd.DataFrame, pd.Series, pd.Index, np.ndarray)
@@ -62,7 +60,6 @@ _DATASET_FIELDS = (
     "unimplemented_family_counts",
     "relationships",
 )
-_SUMMARY_FIELDS = ("n_rows", "n_columns", *_DATASET_FIELDS[1:])
 _ABSENT_DATASET_CLAIMS = (
     "primary_method",
     "population",
@@ -137,12 +134,8 @@ def _eta_squared(values: list[float], groups: list[str]) -> tuple[float, float]:
 def test_dataset_container_keeps_coverage_and_not_one_method() -> None:
     analysis = analyze_dataframe(_mixed_frame())
     retained = analysis.relationship_analysis
-    summary = build_relationships_summary(analysis)
     assert [field.name for field in dataclasses.fields(RelationshipAnalysis)] == list(
         _DATASET_FIELDS
-    )
-    assert [field.name for field in dataclasses.fields(RelationshipsSummary)] == list(
-        _SUMMARY_FIELDS
     )
     assert [field.name for field in dataclasses.fields(DatasetAnalysis)] == [
         "n_rows",
@@ -161,7 +154,7 @@ def test_dataset_container_keeps_coverage_and_not_one_method() -> None:
     assert analysis.target_leakage is None
     assert analysis.target_diagnostic is None
     _assert_no_dataset_claims(retained)
-    _assert_no_dataset_claims(summary)
+    _assert_no_retained_source(retained)
     assert tuple(RelationshipFamily) == (
         RelationshipFamily.NUMERIC_NUMERIC,
         RelationshipFamily.NUMERIC_CATEGORICAL,
@@ -182,7 +175,7 @@ def test_dataset_container_keeps_coverage_and_not_one_method() -> None:
 def test_mixed_dataset_records_are_self_describing() -> None:
     frame = _mixed_frame()
     analysis = analyze_dataframe(frame)
-    summary = build_relationships_summary(analysis)
+    summary = analysis.relationship_analysis
     assert [column.inferred.selected_type for column in analysis.columns] == [
         SemanticType.NUMERIC,
         SemanticType.NUMERIC,
@@ -250,9 +243,7 @@ def test_mixed_dataset_records_are_self_describing() -> None:
 
 
 def test_numeric_numeric_statistics_stay_on_the_pair() -> None:
-    relationship = build_relationships_summary(
-        analyze_dataframe(_mixed_frame())
-    ).relationships[0]
+    relationship = (analyze_dataframe(_mixed_frame())).relationship_analysis.relationships[0]
     assert isinstance(relationship, NumericNumericRelationship)
     x = [1, 2, 3, 4, 5, 6]
     y = [2, 1, 4, 3, 6, 5]
@@ -288,7 +279,7 @@ def test_numeric_numeric_statistics_stay_on_the_pair() -> None:
 
 
 def test_numeric_categorical_statistics_stay_on_the_pair() -> None:
-    summary = build_relationships_summary(analyze_dataframe(_mixed_frame()))
+    summary = (analyze_dataframe(_mixed_frame())).relationship_analysis
     pair = summary.relationships[1]
     assert isinstance(pair, NumericCategoricalRelationship)
     eta, statistic = _eta_squared(
@@ -307,16 +298,14 @@ def test_numeric_categorical_statistics_stay_on_the_pair() -> None:
     assert pair.groups[0].descriptive.mean == pytest.approx(1.5)
     assert pair.groups[1].n == 2
 
-    degenerate = build_relationships_summary(
-        analyze_dataframe(
+    degenerate = (analyze_dataframe(
             pd.DataFrame(
                 {
                     "y": [1, 1, 2, 2],
                     "g": pd.Categorical(["a", "a", "b", "b"]),
                 }
             )
-        )
-    ).relationships[0]
+        )).relationship_analysis.relationships[0]
     assert isinstance(degenerate, NumericCategoricalRelationship)
     assert degenerate.effect.value == 1.0
     assert degenerate.omnibus.statistic is None
@@ -338,9 +327,7 @@ def test_population_rules_stay_on_the_family_record() -> None:
             "g": pd.Categorical(["a", "b", "a", None, "b"]),
         }
     )
-    numeric, by_x, by_y = build_relationships_summary(
-        analyze_dataframe(frame)
-    ).relationships
+    numeric, by_x, by_y = analyze_dataframe(frame).relationship_analysis.relationships
     assert isinstance(numeric, NumericNumericRelationship)
     assert isinstance(by_x, NumericCategoricalRelationship)
     assert isinstance(by_y, NumericCategoricalRelationship)
@@ -382,58 +369,6 @@ def test_version_capability_is_not_a_dataset_field() -> None:
     assert "boolean_boolean" not in {
         family.value for family in UnimplementedRelationshipFamily
     }
-
-
-def test_summary_copies_records_without_source_or_recalculation(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    analysis = analyze_dataframe(_mixed_frame())
-
-    def _fail(*args: object, **kwargs: object) -> None:
-        raise AssertionError("summary builder used a source-dependent operation")
-
-    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_boolean_column", _fail)
-    monkeypatch.setattr(collector_module, "_association_methods", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_numeric_boolean", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
-    monkeypatch.setattr(boolean_boolean_module, "fisher_exact", _fail)
-    monkeypatch.setattr(numeric_boolean_module, "student_t", _fail)
-    monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "spearmanr", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "pearsonr", _fail)
-    monkeypatch.setattr(numeric_numeric_module, "norm", _fail)
-    monkeypatch.setattr(numeric_categorical_module, "f_oneway", _fail)
-    monkeypatch.setattr(column_module, "analyze_series", _fail)
-    monkeypatch.setattr(column_module, "resolve_semantics", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    summary = build_relationships_summary(analysis)
-    assert summary == RelationshipsSummary(
-        n_rows=analysis.n_rows,
-        n_columns=analysis.n_columns,
-        n_total_pairs=analysis.relationship_analysis.n_total_pairs,
-        n_supported_pairs=analysis.relationship_analysis.n_supported_pairs,
-        n_analyzed_pairs=analysis.relationship_analysis.n_analyzed_pairs,
-        n_unimplemented_family_pairs=(
-            analysis.relationship_analysis.n_unimplemented_family_pairs
-        ),
-        n_ineligible_pairs=analysis.relationship_analysis.n_ineligible_pairs,
-        unimplemented_family_counts=(
-            analysis.relationship_analysis.unimplemented_family_counts
-        ),
-        relationships=summary.relationships,
-    )
-    retained_relationships = analysis.relationship_analysis.relationships
-    assert summary.relationships[0] == retained_relationships[0]
-    assert summary.relationships[0] is not retained_relationships[0]
-    assert summary.relationships[1] is not retained_relationships[1]
-    _assert_no_dataset_claims(summary)
-    _assert_no_retained_source(summary)
-    _assert_no_retained_source(analysis.relationship_analysis)
 
 
 def test_components_reject_another_familys_reason() -> None:
@@ -538,9 +473,7 @@ def test_components_reject_another_familys_reason() -> None:
             right_label="a",
             n_total_rows=4,
             n_paired=4,
-            methods=build_relationships_summary(
-                analyze_dataframe(pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 5]}))
-            )
+            methods=(analyze_dataframe(pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 3, 2, 5]}))).relationship_analysis
             .relationships[0]
             .methods,  # type: ignore[attr-defined]
         )

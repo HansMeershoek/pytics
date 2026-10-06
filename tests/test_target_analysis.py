@@ -32,11 +32,9 @@ from pytics.analysis.target import TargetPosition
 from pytics.analysis.target import TargetRecordRole
 from pytics.analysis.target import TargetRelationship
 from pytics.analysis.target import TargetStatus
-from pytics.analysis.target import build_target_summary
 from pytics.analysis.target import project_target_analysis
 from pytics.analysis.target import resolve_target_position
 from pytics.analysis.target import status_for_target
-from pytics.analysis.variables import build_variables_summary
 from pytics.semantics.candidate import CandidateAssessment
 from pytics.semantics.candidate import CandidateDisposition
 from pytics.semantics.interpretation import Confidence
@@ -140,12 +138,14 @@ def test_no_target_leaves_dataset_analysis_unchanged() -> None:
     same = analyze_dataframe(frame, target=None)
     assert plain.target_analysis is None
     assert plain == same
-    assert build_target_summary(plain) is None
     targeted = analyze_dataframe(frame, target="amount")
     assert plain.target_leakage is None
     assert plain.target_diagnostic is None
     assert targeted.target_leakage is not None
     assert targeted.target_diagnostic is not None
+    _assert_no_source(targeted.target_analysis)
+    _assert_no_source(targeted.target_leakage)
+    _assert_no_source(targeted.target_diagnostic)
     assert (
         dataclasses.replace(
             targeted,
@@ -309,15 +309,8 @@ def test_boolean_and_categorical_facts_match_retained_descriptions() -> None:
     assert categorical.categorical_facts is not None
     assert [level.value for level in categorical.categorical_facts.levels] == ["a", "b"]
     assert [level.count for level in categorical.categorical_facts.levels] == [2, 1]
-    detail = build_variables_summary(without_target).variables[1].detail
-    assert detail is not None
-    assert (
-        categorical.categorical_facts.most_frequent_count == detail.most_frequent_count
-    )
-    assert categorical.categorical_facts.singleton_count == detail.singleton_count
-    assert categorical.categorical_facts.most_frequent_proportion == (
-        detail.most_frequent_ratio
-    )
+    assert categorical.categorical_facts.most_frequent_count == 2
+    assert categorical.categorical_facts.singleton_count == 1
     assert (
         categorical.categorical_facts.n_non_missing
         == categorical.population.n_target_non_missing
@@ -663,50 +656,6 @@ def test_requesting_a_target_does_not_rerun_relationship_calculation(
     assert projected == targeted.target_analysis
 
 
-def test_summary_copies_facts_after_calculators_are_disabled(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    analysis = analyze_dataframe(_mixed_frame(), target="amount")
-    monkeypatch.setattr(collector_module, "_read_numeric_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_categorical_column", _fail)
-    monkeypatch.setattr(collector_module, "_read_boolean_column", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_numeric_boolean", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_numeric_categorical", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_boolean", _fail)
-    monkeypatch.setattr(collector_module, "_analyze_categorical_categorical", _fail)
-    monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)
-    monkeypatch.setattr(collector_module, "adjust_primary_p_values", _fail)
-    monkeypatch.setattr(adjustment_module, "adjust_primary_p_values", _fail)
-    monkeypatch.setattr(column_module, "analyze_series", _fail)
-    monkeypatch.setattr(column_module, "resolve_semantics", _fail)
-    monkeypatch.setattr(numeric_module, "collect_numeric_descriptive_analysis", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    monkeypatch.setattr(target_module, "project_target_analysis", _fail)
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    summary = build_target_summary(analysis)
-    retained = analysis.target_analysis
-    assert summary is not None and retained is not None
-    assert summary.position == retained.position
-    assert summary.status is retained.status
-    assert summary.population == retained.population
-    assert summary.numeric_facts == retained.numeric_facts
-    assert summary.numeric_facts is not retained.numeric_facts
-    copied = summary.relationships[0].relationship
-    retained_record = retained.relationships[0].relationship
-    assert copied == retained_record
-    assert copied is not retained_record
-    assert copied.mean_difference_test.frequentist.p_value == (
-        retained_record.mean_difference_test.frequentist.p_value
-    )
-    assert copied.mean_difference_test.frequentist.adjusted_p_value == (
-        retained_record.mean_difference_test.frequentist.adjusted_p_value
-    )
-    _assert_no_source(summary)
-    _assert_no_source(retained)
-    with pytest.raises(TypeError, match="DatasetAnalysis"):
-        build_target_summary(analysis.columns)
-
-
 def test_target_projection_rejects_inconsistent_records() -> None:
     frame = pd.DataFrame(
         {"y": [1.0, 2.0, 3.0], "x": [1.0, 2.0, 4.0], "z": [2.0, 3.0, 4.0]}
@@ -842,59 +791,6 @@ def test_public_profile_is_not_the_target_analysis_entry_point() -> None:
     assert pytics.profile is not analyze_dataframe
 
 
-def test_summaries_for_each_supported_kind_copy_only_that_kind() -> None:
-    numeric = analyze_dataframe(
-        pd.DataFrame({"y": [1.0, 2.0, 3.0], "x": [1.0, 2.0, 4.0]}),
-        target="y",
-    )
-    boolean = analyze_dataframe(
-        pd.DataFrame(
-            {
-                "y": _flag([True, False, True, False]),
-                "x": [1.0, 2.0, 3.0, 4.0],
-            }
-        ),
-        target="y",
-    )
-    categorical = analyze_dataframe(
-        pd.DataFrame(
-            {
-                "y": pd.Series(["a", "a", "b"], dtype="category"),
-                "x": [1.0, 2.0, 3.0],
-            }
-        ),
-        target="y",
-    )
-    unsupported = analyze_dataframe(
-        pd.DataFrame(
-            {
-                "y": pd.to_datetime(["2020-01-01", "2020-01-02"]),
-                "x": [1.0, 2.0],
-            }
-        ),
-        target="y",
-    )
-    for analysis in (numeric, boolean, categorical, unsupported):
-        summary = build_target_summary(analysis)
-        retained = analysis.target_analysis
-        assert summary is not None and retained is not None
-        assert summary.n_other_columns == retained.n_other_columns
-        assert summary.n_calculated_relationships == retained.n_calculated_relationships
-        assert summary.n_unimplemented_relationships == (
-            retained.n_unimplemented_relationships
-        )
-        assert summary.n_ineligible_relationships == retained.n_ineligible_relationships
-        assert summary.numeric_facts == retained.numeric_facts
-        assert summary.boolean_facts == retained.boolean_facts
-        assert summary.categorical_facts == retained.categorical_facts
-        if retained.numeric_facts is not None:
-            assert summary.numeric_facts is not retained.numeric_facts
-        if retained.boolean_facts is not None:
-            assert summary.boolean_facts is not retained.boolean_facts
-        if retained.categorical_facts is not None:
-            assert summary.categorical_facts is not retained.categorical_facts
-
-
 def test_boolean_target_requires_retained_counts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1018,11 +914,11 @@ def test_attachment_and_record_guards() -> None:
                 ),
             ),
         )
-    summary = build_target_summary(analysis)
-    assert summary is not None
+    retained_relationship = target.relationships[0].relationship
+    assert retained_relationship is not None
     copied_link = dataclasses.replace(
         target.relationships[0],
-        relationship=summary.relationships[0].relationship,
+        relationship=dataclasses.replace(retained_relationship),
     )
     with pytest.raises(ValueError, match="retained relationship record"):
         DatasetAnalysis(

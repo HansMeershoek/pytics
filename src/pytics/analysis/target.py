@@ -16,7 +16,7 @@ does not assign a classification or regression problem type, and it
 does not label a target balanced or imbalanced. The diagnostic model,
 which does assign a predictive task, is a separate pass in
 ``target_diagnostic_fit``. Leakage evidence is a separate pass in
-``target_leakage``. The summary copies both retained results.
+``target_leakage``.
 """
 
 from __future__ import annotations
@@ -26,11 +26,9 @@ from enum import Enum
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import Union
 
 from pytics.analysis.boolean import BooleanDescriptiveAnalysis
 from pytics.analysis.categorical import CategoricalDescriptiveAnalysis
-from pytics.analysis.categorical import copy_categorical_descriptive_analysis
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column_label import install_column_label_equality
 from pytics.analysis.column_label import observed_labels_equal
@@ -57,10 +55,6 @@ from pytics.analysis.relationships.models.numeric_categorical import (
 from pytics.analysis.relationships.models.numeric_numeric import (
     NumericNumericRelationship,
 )
-from pytics.analysis.target_diagnostic import TargetDiagnosticAnalysis
-from pytics.analysis.target_diagnostic import copy_target_diagnostic
-from pytics.analysis.target_leakage import TargetLeakageAnalysis
-from pytics.analysis.target_leakage import copy_target_leakage
 from pytics.semantics.interpretation import Confidence
 from pytics.semantics.interpretation import InferenceSource
 from pytics.semantics.interpretation import SemanticType
@@ -302,66 +296,6 @@ class TargetAnalysis:
         return _count_coverage(self.relationships, SelectedPairCoverage.INELIGIBLE)
 
 
-@dataclass(frozen=True)
-class TargetSummary:
-    """Product projection of a retained target analysis.
-
-    The summary copies identity, semantic state, population, descriptive
-    facts, relationship links, leakage evidence, and the diagnostic-model
-    result. It does not read a DataFrame, infer a semantic type,
-    calculate a statistic, adjust a p-value, compare leakage values, or
-    fit a model. Copied records are new frozen objects with the same
-    values.
-    """
-
-    position: int
-    label: object
-    selected_type: Optional[SemanticType]
-    resolution_status: ResolutionStatus
-    confidence: Optional[Confidence]
-    inference_source: Optional[InferenceSource]
-    status: TargetStatus
-    population: TargetPopulation
-    numeric_facts: Optional[NumericDescriptiveAnalysis]
-    boolean_facts: Optional[BooleanDescriptiveAnalysis]
-    categorical_facts: Optional[CategoricalDescriptiveAnalysis]
-    relationships: Tuple[TargetRelationship, ...]
-    leakage: TargetLeakageAnalysis
-    diagnostic: TargetDiagnosticAnalysis
-
-    def __post_init__(self) -> None:
-        _require_target_contents(self)
-        _require_type(self.leakage, TargetLeakageAnalysis, "leakage")
-        _require_type(self.diagnostic, TargetDiagnosticAnalysis, "diagnostic")
-        if self.leakage.target_position != self.position:
-            raise ValueError("the leakage result must name the summarized target")
-        if self.diagnostic.target_position != self.position:
-            raise ValueError("the diagnostic must name the summarized target")
-
-    @property
-    def n_other_columns(self) -> int:
-        """Columns other than the target. One link each."""
-        return len(self.relationships)
-
-    @property
-    def n_calculated_relationships(self) -> int:
-        """Links that hold a copied relationship record."""
-        return _count_coverage(self.relationships, SelectedPairCoverage.CALCULATED)
-
-    @property
-    def n_unimplemented_relationships(self) -> int:
-        """Links whose recognized family is not calculated."""
-        return _count_coverage(
-            self.relationships,
-            SelectedPairCoverage.UNIMPLEMENTED,
-        )
-
-    @property
-    def n_ineligible_relationships(self) -> int:
-        """Links the relationship contract does not treat as candidates."""
-        return _count_coverage(self.relationships, SelectedPairCoverage.INELIGIBLE)
-
-
 def status_for_target(
     selected_type: Optional[SemanticType],
     resolution_status: ResolutionStatus,
@@ -475,50 +409,6 @@ def project_target_analysis(
     )
 
 
-def build_target_summary(analysis: object) -> Optional[TargetSummary]:
-    """Project retained target facts into a product summary.
-
-    The argument must already be a ``DatasetAnalysis``. ``None`` means
-    the caller did not request a target. A DataFrame is not accepted
-    and is not analyzed. Statistics are not recomputed.
-    """
-    from pytics.analysis.dataset import DatasetAnalysis as DatasetAnalysisType
-    from pytics.analysis.relationships.collector import (
-        _copy_relationship as copy_relationship,
-    )
-
-    if not isinstance(analysis, DatasetAnalysisType):
-        raise TypeError("build_target_summary expects a DatasetAnalysis")
-    retained = analysis.target_analysis
-    if retained is None:
-        return None
-    leakage = analysis.target_leakage
-    if leakage is None:
-        raise ValueError("target analysis requires its leakage result")
-    return TargetSummary(
-        position=retained.position,
-        label=retained.label,
-        selected_type=retained.selected_type,
-        resolution_status=retained.resolution_status,
-        confidence=retained.confidence,
-        inference_source=retained.inference_source,
-        status=retained.status,
-        population=TargetPopulation(
-            n_total_rows=retained.population.n_total_rows,
-            n_target_non_missing=retained.population.n_target_non_missing,
-            n_target_missing=retained.population.n_target_missing,
-        ),
-        numeric_facts=_copy_numeric_facts(retained.numeric_facts),
-        boolean_facts=_copy_boolean_facts(retained.boolean_facts),
-        categorical_facts=_copy_categorical_facts(retained.categorical_facts),
-        relationships=tuple(
-            _copy_link(link, copy_relationship) for link in retained.relationships
-        ),
-        leakage=copy_target_leakage(leakage),
-        diagnostic=copy_target_diagnostic(analysis.target_diagnostic),
-    )
-
-
 def _require_target_attachment(
     target: Optional[TargetAnalysis],
     columns: Tuple[ColumnAnalysis, ...],
@@ -567,7 +457,7 @@ def _require_target_attachment(
 
 
 def _require_target_contents(
-    target: Union[TargetAnalysis, TargetSummary],
+    target: TargetAnalysis,
 ) -> None:
     _require_count(target.position, "position")
     if target.selected_type is not None:
@@ -617,7 +507,7 @@ def _require_confidence_boundary(
         raise ValueError("a candidate-derived or unresolved target has no confidence")
 
 
-def _require_facts(target: Union[TargetAnalysis, TargetSummary]) -> None:
+def _require_facts(target: TargetAnalysis) -> None:
     numeric = target.numeric_facts
     boolean = target.boolean_facts
     categorical = target.categorical_facts
@@ -806,60 +696,6 @@ def _require_relationship_record(relationship: object) -> None:
         ),
     ):
         raise TypeError("relationships must contain calculated relationship records")
-
-
-def _copy_link(
-    link: TargetRelationship, copy_relationship: object
-) -> TargetRelationship:
-    relationship = link.relationship
-    copied = None if relationship is None else copy_relationship(relationship)
-    return TargetRelationship(
-        other_position=link.other_position,
-        other_label=link.other_label,
-        other_selected_type=link.other_selected_type,
-        other_resolution_status=link.other_resolution_status,
-        coverage=link.coverage,
-        unimplemented_family=link.unimplemented_family,
-        target_side=link.target_side,
-        record_role=link.record_role,
-        relationship=copied,
-    )
-
-
-def _copy_numeric_facts(
-    facts: Optional[NumericDescriptiveAnalysis],
-) -> Optional[NumericDescriptiveAnalysis]:
-    if facts is None:
-        return None
-    return NumericDescriptiveAnalysis(
-        finite_count=facts.finite_count,
-        minimum=facts.minimum,
-        maximum=facts.maximum,
-        mean=facts.mean,
-        median=facts.median,
-        standard_deviation=facts.standard_deviation,
-        q1=facts.q1,
-        q3=facts.q3,
-    )
-
-
-def _copy_boolean_facts(
-    facts: Optional[BooleanDescriptiveAnalysis],
-) -> Optional[BooleanDescriptiveAnalysis]:
-    if facts is None:
-        return None
-    return BooleanDescriptiveAnalysis(
-        true_count=facts.true_count,
-        false_count=facts.false_count,
-    )
-
-
-def _copy_categorical_facts(
-    facts: Optional[CategoricalDescriptiveAnalysis],
-) -> Optional[CategoricalDescriptiveAnalysis]:
-    if facts is None:
-        return None
-    return copy_categorical_descriptive_analysis(facts)
 
 
 def _require_column_tuple(columns: Tuple[ColumnAnalysis, ...], n_rows: int) -> None:

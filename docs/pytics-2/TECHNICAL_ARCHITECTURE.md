@@ -230,6 +230,8 @@ ComparisonReport
 
 The profile shape and the compare information architecture are related but not the same list. Compare navigation also has duplicates. The sketch above has no `duplicate_changes` field. That mismatch inside the illustration is unresolved as a rendered layout. [DEC-113](DECISIONS.md#dec-113) does not adopt these class names. The public result uses `ProfileResult` and `ComparisonResult` and does not prebuild these sections as separate copies.
 
+[DEC-120](DECISIONS.md#dec-120) retires the six product summaries that copied a finished analysis into another frozen object: variables, relationships, target, missingness, duplicates, and anomalies. The analytical truth stays on `DatasetAnalysis` and `DatasetComparison`. `ProfileResult` and `ComparisonResult` reference those records. `DatasetOverview` remains, because compare still uses its semantic partition. Earlier paragraphs in this file that describe those builders record the slices that added them. They are not a second current read path.
+
 ## Shared statistics
 
 General relationships, target analysis, missingness relationships, dataset comparison, and drift reuse one statistical layer wherever that is analytically appropriate ([DEC-037](DECISIONS.md#dec-037), `REQ-T-05`).

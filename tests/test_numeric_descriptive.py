@@ -16,29 +16,16 @@ import pytest
 import pytics
 import pytics.analysis.column as column_module
 import pytics.analysis.numeric as numeric_module
-import pytics.analysis.variables as variables_module
-from pytics.analysis.anomaly import anomaly_analysis_for_columns
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import ColumnEvidence
 from pytics.analysis.column import analyze_series
-from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
-from pytics.analysis.duplicate import DuplicateAnalysis
-from pytics.analysis.duplicate import build_duplicate_summary
-from pytics.analysis.missing import build_missing_summary
 from pytics.analysis.overview import build_dataset_overview
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
-from pytics.analysis.relationship import relationship_analysis_for_columns
-from tests.missing_margins import missing_analysis_for_margins
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.numeric import _on_segment
 from pytics.analysis.numeric import collect_numeric_descriptive_analysis
-from pytics.analysis.variables import BooleanVariableDetail
-from pytics.analysis.variables import CategoricalVariableDetail
-from pytics.analysis.variables import IdentifierVariableDetail
-from pytics.analysis.variables import NumericVariableDetail
-from pytics.analysis.variables import build_variables_summary
 from pytics.semantics.candidate import CandidateAssessment
 from pytics.semantics.candidate import CandidateDisposition
 from pytics.semantics.column_evidence import BasicColumnEvidence
@@ -453,7 +440,7 @@ def test_binary_looking_numbers_stay_numeric_and_are_described():
         assert described.mean == pytest.approx(0.5)
 
 
-def test_variables_copy_descriptive_facts_and_keep_structure():
+def test_descriptive_attachment_follows_the_selected_type():
     frame = pd.DataFrame(
         {
             "amount": [-2.0, -1.5, 0.0, 4.0, np.nan],
@@ -466,42 +453,26 @@ def test_variables_copy_descriptive_facts_and_keep_structure():
         }
     )
     analysis = analyze_dataframe(frame)
-    summary = build_variables_summary(analysis)
-    amount = summary.variables[0]
-    detail = amount.detail
-    source = analysis.columns[0].numeric_analysis
-    structure = analysis.columns[0].evidence.numeric_structure
-    assert isinstance(detail, NumericVariableDetail)
+    amount = analysis.columns[0]
+    source = amount.numeric_analysis
+    structure = amount.evidence.numeric_structure
     assert source is not None and structure is not None
-    assert detail.descriptive == source
-    assert detail.descriptive is not source
-    assert detail.descriptive is not None
-    assert (
-        detail.finite_count == structure.finite_count == detail.descriptive.finite_count
-    )
-    assert detail.positive_count == structure.positive_count == 1
-    assert detail.negative_count == structure.negative_count == 2
-    assert detail.zero_count == structure.zero_count == 1
-    assert detail.integer_like_count == structure.integer_like_count
-    assert detail.descriptive.minimum == -2.0
-    assert detail.descriptive.maximum == 4.0
-    assert detail.descriptive.mean == pytest.approx((-2.0 - 1.5 + 4.0) / 4.0)
-    group = summary.variables[1].detail
-    assert isinstance(group, CategoricalVariableDetail)
-    assert group.descriptive is not None
-    assert group.descriptive == analysis.columns[1].categorical_analysis
-    assert group.descriptive is not analysis.columns[1].categorical_analysis
-    assert isinstance(summary.variables[2].detail, IdentifierVariableDetail)
-    assert summary.variables[2].detail.uuid_count == 5
-    assert summary.variables[3].selected_type is SemanticType.BOOLEAN
-    assert isinstance(summary.variables[3].detail, BooleanVariableDetail)
-    assert not isinstance(summary.variables[3].detail, NumericVariableDetail)
-    assert summary.variables[4].selected_type is SemanticType.CONSTANT
-    assert summary.variables[4].detail is None
+    assert source.finite_count == structure.finite_count
+    assert structure.positive_count == 1
+    assert structure.negative_count == 2
+    assert structure.zero_count == 1
+    assert source.minimum == -2.0
+    assert source.maximum == 4.0
+    assert source.mean == pytest.approx((-2.0 - 1.5 + 4.0) / 4.0)
+    assert analysis.columns[1].categorical_analysis is not None
+    assert analysis.columns[2].evidence.pattern is not None
+    assert analysis.columns[2].evidence.pattern.uuid_count == 5
+    assert analysis.columns[3].inferred.selected_type is SemanticType.BOOLEAN
+    assert analysis.columns[3].boolean_analysis is not None
     assert analysis.columns[3].numeric_analysis is None
+    assert analysis.columns[4].inferred.selected_type is SemanticType.CONSTANT
     assert analysis.columns[4].numeric_analysis is None
-    _walk(summary)
-    _walk(analysis.columns[0].numeric_analysis)
+    _walk(source)
 
 
 def test_results_do_not_retain_source_arrays_or_semantic_evidence():
@@ -516,10 +487,6 @@ def test_results_do_not_retain_source_arrays_or_semantic_evidence():
         text = path.read_text(encoding="utf-8")
         assert "NumericDescriptiveAnalysis" not in text
         assert "collect_numeric_descriptive_analysis" not in text
-    variables_source = Path(variables_module.__file__).read_text(encoding="utf-8")
-    assert "ddof" not in variables_source
-    assert "quantile" not in variables_source
-    assert "np." not in variables_source
     tree = ast.parse(Path(numeric_module.__file__).read_text(encoding="utf-8"))
     modules = [
         node.module
@@ -747,24 +714,9 @@ def test_models_are_frozen_and_reject_inconsistent_state():
             q1=1,
             q3=1,
         )
-    with pytest.raises(ValueError, match="descriptive finite_count"):
-        NumericVariableDetail(
-            n_non_missing=3,
-            finite_count=3,
-            positive_count=3,
-            negative_count=0,
-            zero_count=0,
-            positive_infinity_count=0,
-            negative_infinity_count=0,
-            integer_like_count=3,
-            non_integer_like_count=0,
-            is_non_decreasing=True,
-            is_non_increasing=False,
-            descriptive=_one_value(),
-        )
 
 
-def test_numeric_detail_may_omit_descriptive_analysis():
+def test_a_selected_numeric_column_keeps_structure_without_a_descriptive_result():
     analyzed = analyze_series(pd.Series([1, 2, 3], dtype="int64"), label="amount")
     column = ColumnAnalysis(
         position=0,
@@ -773,43 +725,9 @@ def test_numeric_detail_may_omit_descriptive_analysis():
         evidence=analyzed.evidence,
         inferred=analyzed.inferred,
     )
-    summary = build_variables_summary(
-        DatasetAnalysis(
-            n_rows=3,
-            n_columns=1,
-            n_cells=3,
-            columns=(column,),
-            missing_analysis=missing_analysis_for_margins(
-                3,
-                (column.evidence.basic.n_missing,),
-            ),
-            duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
-            relationship_analysis=relationship_analysis_for_columns(
-                (column,),
-                n_rows=3,
-            ),
-            anomaly_analysis=anomaly_analysis_for_columns((column,), n_rows=3),
-        )
-    )
-    detail = summary.variables[0].detail
-    assert isinstance(detail, NumericVariableDetail)
-    assert detail.finite_count == 3
-    assert detail.descriptive is None
-    with pytest.raises(TypeError, match="NumericDescriptiveAnalysis"):
-        NumericVariableDetail(
-            n_non_missing=3,
-            finite_count=3,
-            positive_count=3,
-            negative_count=0,
-            zero_count=0,
-            positive_infinity_count=0,
-            negative_infinity_count=0,
-            integer_like_count=3,
-            non_integer_like_count=0,
-            is_non_decreasing=True,
-            is_non_increasing=False,
-            descriptive=object(),  # type: ignore[arg-type]
-        )
+    assert column.numeric_analysis is None
+    assert column.evidence.numeric_structure is not None
+    assert column.evidence.numeric_structure.finite_count == 3
 
 
 def test_collector_rejects_a_non_real_numeric_array(monkeypatch: pytest.MonkeyPatch):
@@ -874,26 +792,7 @@ def test_ambiguous_column_without_descriptive_analysis_has_no_detail():
         ),
     )
     assert column.numeric_analysis is None
-    summary = build_variables_summary(
-        DatasetAnalysis(
-            n_rows=3,
-            n_columns=1,
-            n_cells=3,
-            columns=(column,),
-            missing_analysis=missing_analysis_for_margins(
-                3,
-                (column.evidence.basic.n_missing,),
-            ),
-            duplicate_analysis=DuplicateAnalysis(duplicate_groups=()),
-            relationship_analysis=relationship_analysis_for_columns(
-                (column,),
-                n_rows=3,
-            ),
-            anomaly_analysis=anomaly_analysis_for_columns((column,), n_rows=3),
-        )
-    )
-    assert summary.variables[0].resolution_status is ResolutionStatus.AMBIGUOUS
-    assert summary.variables[0].detail is None
+    assert column.inferred.resolution.status is ResolutionStatus.AMBIGUOUS
 
 
 def _float_limit() -> float:
@@ -1089,9 +988,7 @@ def test_unrepresentable_scaled_mean_stays_unavailable(
         numeric_module._difference(np.float64(2.0), np.float64(1.0))  # type: ignore[arg-type]
 
 
-def test_extreme_numeric_column_does_not_abort_dataset_analysis(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_extreme_numeric_column_does_not_abort_dataset_analysis() -> None:
     limit = _float_limit()
     frame = pd.DataFrame(
         {
@@ -1123,31 +1020,10 @@ def test_extreme_numeric_column_does_not_abort_dataset_analysis(
     assert pair.spearman.estimate.availability is ResultAvailability.AVAILABLE
     assert extreme.standard_deviation is None
     overview = build_dataset_overview(analysis)
-    missing = build_missing_summary(analysis)
-    duplicates = build_duplicate_summary(analysis)
     assert overview.n_rows == 4
-    assert missing.n_columns == 3
-    assert duplicates.n_rows == 4
-
-    def _recompute(*_args: object, **_kwargs: object) -> None:
-        raise AssertionError("variables builder recomputed a descriptive statistic")
-
-    monkeypatch.setattr(
-        numeric_module,
-        "collect_numeric_descriptive_analysis",
-        _recompute,
-    )
-    summary = build_variables_summary(analysis)
-    detail = summary.variables[0].detail
-    assert isinstance(detail, NumericVariableDetail)
-    assert detail.descriptive is not extreme
-    assert detail.descriptive == extreme
-    assert detail.descriptive is not None
-    assert detail.descriptive.standard_deviation is None
-    assert detail.descriptive.mean == extreme.mean
-    ordinary_detail = summary.variables[1].detail
-    assert isinstance(ordinary_detail, NumericVariableDetail)
-    assert ordinary_detail.descriptive == ordinary
+    assert analysis.n_columns == 3
+    assert analysis.n_rows == 4
+    assert analysis.duplicate_analysis.available is True
 
 
 def test_robust_integer_deviation_does_not_make_float64_correlation_exact() -> None:

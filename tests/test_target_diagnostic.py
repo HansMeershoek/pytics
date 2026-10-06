@@ -30,7 +30,6 @@ from pytics.analysis.categorical import ObservedCategoryCount
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
 from pytics.analysis.target import TargetStatus
-from pytics.analysis.target import build_target_summary
 from pytics.analysis.target import project_target_analysis
 from pytics.analysis.target_diagnostic import ClassificationEvaluation
 from pytics.analysis.target_diagnostic import DiagnosticClassCount
@@ -48,7 +47,6 @@ from pytics.analysis.target_diagnostic import PredictorEncoding
 from pytics.analysis.target_diagnostic import PredictorImportance
 from pytics.analysis.target_diagnostic import TargetDiagnosticAnalysis
 from pytics.analysis.target_diagnostic import ValidationStrategy
-from pytics.analysis.target_diagnostic import copy_target_diagnostic
 from pytics.analysis.target_diagnostic import predictive_task_for
 from pytics.analysis.target_diagnostic import semantic_predictor_decision
 from pytics.analysis.target_diagnostic_fit import analyze_target_diagnostic
@@ -1074,34 +1072,16 @@ def test_result_records_reject_inconsistent_values() -> None:
         dataclasses.replace(retained.design, validation_fraction=1.0)
 
 
-def test_retained_result_holds_no_model_or_source_objects(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_retained_result_holds_no_model_or_source_objects() -> None:
     analysis = analyze_dataframe(_multiclass_frame(), target="y")
     retained = analysis.target_diagnostic
     _assert_plain(retained)
-    monkeypatch.setattr(fit_module, "analyze_target_diagnostic", _fail)
-    monkeypatch.setattr(fit_module, "_permutation_importance", _fail)
-    monkeypatch.setattr(fit_module, "_block_mover", _fail)
-    monkeypatch.setattr(fit_module, "_validation_permutations", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_target_diagnostic", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    monkeypatch.setattr(Pipeline, "fit", _fail)
-    monkeypatch.setattr(Pipeline, "predict", _fail)
-    monkeypatch.setattr(Pipeline, "predict_proba", _fail)
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    summary = build_target_summary(analysis)
-    assert summary.diagnostic == retained
-    assert summary.diagnostic is not retained
-    assert summary.diagnostic.evaluation is not retained.evaluation
-    _assert_plain(summary.diagnostic)
-    copied = copy_target_diagnostic(retained)
-    assert copied == retained
-    for item in copied.importance.predictors:
+    assert retained is not None
+    assert retained.importance is not None
+    assert retained.evaluation is not None
+    for item in retained.importance.predictors:
         assert math.isfinite(item.mean) and math.isfinite(item.standard_deviation)
-    assert copied.evaluation.log_loss.improvement > 0.0
-    with pytest.raises(TypeError, match="TargetDiagnosticAnalysis"):
-        copy_target_diagnostic(analysis)  # type: ignore[arg-type]
+    assert retained.evaluation.log_loss.improvement > 0.0
 
 
 def test_inputs_must_be_the_analysis_of_the_frame() -> None:
@@ -1182,20 +1162,6 @@ def test_non_finite_probabilities_or_importance_are_numerical_failures(
 
     monkeypatch.setattr(fit_module, "_negative_log_loss", lambda *a, **k: math.nan)
     assert _diagnostic(frame, "y").status is DiagnosticStatus.NUMERICAL_FAILURE
-
-
-def test_summary_requires_the_target_diagnostic() -> None:
-    analysis = analyze_dataframe(_binary_frame(n=12), target="y")
-    summary = build_target_summary(analysis)
-    with pytest.raises(TypeError, match="diagnostic"):
-        dataclasses.replace(summary, diagnostic="model")
-    with pytest.raises(ValueError, match="summarized target"):
-        dataclasses.replace(
-            summary,
-            diagnostic=TargetDiagnosticAnalysis(
-                target_position=1, status=DiagnosticStatus.TARGET_TYPE_UNSUPPORTED
-            ),
-        )
 
 
 def test_fit_inputs_are_checked_before_reading_values() -> None:

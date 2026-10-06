@@ -9,7 +9,6 @@ they are not a method registry.
 
 from pytics.analysis.relationships.collector import _labels_match
 from pytics.analysis.relationships.collector import _require_relationship_attachment
-from pytics.analysis.relationships.collector import build_relationships_summary
 from pytics.analysis.relationships.collector import collect_relationship_analysis
 from pytics.analysis.relationships.collector import relationship_analysis_for_columns
 from pytics.analysis.relationships.models import AssociationMethod
@@ -65,7 +64,6 @@ from pytics.analysis.relationships.models import PairPopulation
 from pytics.analysis.relationships.models import RelationshipAnalysis
 from pytics.analysis.relationships.models import RelationshipFamily
 from pytics.analysis.relationships.models import RelationshipRecord
-from pytics.analysis.relationships.models import RelationshipsSummary
 from pytics.analysis.relationships.models import ResultAvailability
 from pytics.analysis.relationships.models import StandardizedDifferenceMethod
 from pytics.analysis.relationships.models import StandardizedMeanDifference

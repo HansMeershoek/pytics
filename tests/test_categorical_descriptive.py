@@ -15,21 +15,14 @@ import pytest
 import pytics
 import pytics.analysis.categorical as categorical_module
 import pytics.analysis.column as column_module
-import pytics.analysis.dataset as dataset_module
-import pytics.analysis.relationships.adjustment as adjustment_module
-import pytics.analysis.relationships.collector as collector_module
 import pytics.analysis.target as target_module
 from pytics.analysis.categorical import CategoricalDescriptiveAnalysis
 from pytics.analysis.categorical import ObservedCategoryCount
 from pytics.analysis.categorical import collect_categorical_descriptive_analysis
-from pytics.analysis.categorical import copy_categorical_descriptive_analysis
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column import analyze_series
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.dataset import analyze_dataframe
-from pytics.analysis.target import build_target_summary
-from pytics.analysis.variables import CategoricalVariableDetail
-from pytics.analysis.variables import build_variables_summary
 from pytics.semantics.interpretation import SemanticType
 
 _RETAINED = (pd.DataFrame, pd.Series, pd.Index, np.ndarray, np.generic)
@@ -399,20 +392,9 @@ def test_categorical_target_exposes_the_distribution_without_a_verdict():
             and record.right_position == link.relationship.right_position
         )
         assert link.relationship is retained
-    summary = build_variables_summary(plain)
-    detail = summary.variables[0].detail
-    assert isinstance(detail, CategoricalVariableDetail)
-    assert detail.descriptive == facts
-    assert detail.descriptive is not facts
-    copied = build_target_summary(analysis)
-    assert copied is not None
-    assert copied.categorical_facts == facts
-    assert copied.categorical_facts is not facts
 
 
-def test_summary_reads_the_distribution_after_collectors_fail(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_target_attachment_rejects_a_copied_categorical_distribution() -> None:
     frame = pd.DataFrame(
         {
             "city": pd.Series(["a", "a", "b", None], dtype="category"),
@@ -434,39 +416,16 @@ def test_summary_reads_the_distribution_after_collectors_fail(
             anomaly_analysis=analysis.anomaly_analysis,
             target_analysis=dataclasses.replace(
                 analysis.target_analysis,
-                categorical_facts=copy_categorical_descriptive_analysis(
+                categorical_facts=dataclasses.replace(
                     analysis.target_analysis.categorical_facts
                 ),
             ),
         )
-
-    def _fail(*_args: object, **_kwargs: object) -> None:
-        raise AssertionError("target summary reread the source")
-
-    monkeypatch.setattr(
-        categorical_module, "collect_categorical_descriptive_analysis", _fail
-    )
-    monkeypatch.setattr(
-        column_module, "collect_categorical_descriptive_analysis", _fail
-    )
-    monkeypatch.setattr(column_module, "analyze_series", _fail)
-    monkeypatch.setattr(dataset_module, "analyze_dataframe", _fail)
-    monkeypatch.setattr(collector_module, "collect_relationship_analysis", _fail)
-    monkeypatch.setattr(collector_module, "adjust_primary_p_values", _fail)
-    monkeypatch.setattr(adjustment_module, "adjust_primary_p_values", _fail)
-    monkeypatch.setattr(target_module, "project_target_analysis", _fail)
-    monkeypatch.setattr(pd.Series, "value_counts", _fail)
-    monkeypatch.setattr(pd.DataFrame, "iloc", _fail)
-    summary = build_target_summary(analysis)
-    assert summary is not None
-    assert summary.categorical_facts is not None
-    assert [
-        (level.value, level.count) for level in summary.categorical_facts.levels
-    ] == [
+    facts = analysis.target_analysis.categorical_facts
+    assert [(level.value, level.count) for level in facts.levels] == [
         ("a", 2),
         ("b", 1),
     ]
-    _walk(summary)
     _walk(analysis.target_analysis)
 
 
@@ -535,8 +494,6 @@ def test_models_reject_inconsistent_distributions():
         ObservedCategoryCount(value=float("nan"), count=1)
     with pytest.raises(TypeError, match="hashable"):
         ObservedCategoryCount(value=["a"], count=1)
-    with pytest.raises(TypeError, match="CategoricalDescriptiveAnalysis"):
-        copy_categorical_descriptive_analysis(None)  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="observed category counts"):
         CategoricalDescriptiveAnalysis(
             n_non_missing=1,
@@ -559,7 +516,6 @@ def test_models_reject_inconsistent_distributions():
     )
     assert blank.n_non_missing == 0
     assert blank.levels == ()
-    assert copy_categorical_descriptive_analysis(empty) == empty
     assert not hasattr(pytics, "CategoricalDescriptiveAnalysis")
     assert not hasattr(pytics, "collect_categorical_descriptive_analysis")
 
@@ -596,18 +552,6 @@ def test_column_analysis_rejects_a_mismatched_distribution():
             evidence=analyzed.evidence,
             inferred=analyzed.inferred,
             categorical_analysis=CategoricalDescriptiveAnalysis(
-                n_non_missing=1,
-                ordered=False,
-                levels=(ObservedCategoryCount(value="a", count=1),),
-            ),
-        )
-    with pytest.raises(ValueError, match="descriptive n_non_missing"):
-        CategoricalVariableDetail(
-            n_non_missing=3,
-            n_unique_non_missing=2,
-            most_frequent_count=2,
-            singleton_count=1,
-            descriptive=CategoricalDescriptiveAnalysis(
                 n_non_missing=1,
                 ordered=False,
                 levels=(ObservedCategoryCount(value="a", count=1),),
