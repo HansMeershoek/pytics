@@ -221,12 +221,19 @@ def _evidence_from_values(
     string_structure: StringStructureEvidence,
     observed: pd.Series,
 ) -> PatternEvidence:
-    """Count every pattern from one pass over the non-missing strings.
+    """Count every pattern from the non-missing strings.
 
     Each value must already be a Python ``str``. The original string is
     tested once. Patterns are not exclusive: one string may increment
     more than one count. No match list is retained.
+
+    When the known distinct count is at most half the non-missing
+    count, each exact string is classified once and weighted by its
+    occurrences. That table is not retained. Otherwise each value is read.
     """
+    basic = string_structure.basic
+    if _repeated_enough(basic.n_unique_non_missing, basic.n_non_missing):
+        return _weighted_pattern(string_structure, observed)
     uuid_count = 0
     ipv4_count = 0
     ipv6_count = 0
@@ -252,6 +259,68 @@ def _evidence_from_values(
             hex_64_count += 1
         elif width == 128:
             hex_128_count += 1
+    return PatternEvidence(
+        string_structure=string_structure,
+        uuid_count=uuid_count,
+        ipv4_count=ipv4_count,
+        ipv6_count=ipv6_count,
+        hex_32_count=hex_32_count,
+        hex_40_count=hex_40_count,
+        hex_64_count=hex_64_count,
+        hex_128_count=hex_128_count,
+    )
+
+
+def _repeated_enough(n_unique: Optional[int], n_non_missing: int) -> bool:
+    """Internal performance gate. Not a semantic threshold."""
+    if type(n_unique) is not int:
+        return False
+    return n_unique * 2 <= n_non_missing
+
+
+def _exact_string_counts(observed: pd.Series) -> dict[str, int]:
+    """Count strings after ``isinstance``. A non-string is not hashed."""
+    counts: dict[str, int] = {}
+    for value in observed:
+        if not isinstance(value, str):
+            raise TypeError(_APPLICABILITY_ERROR)
+        seen = counts.get(value)
+        if seen is None:
+            counts[value] = 1
+        else:
+            counts[value] = seen + 1
+    return counts
+
+
+def _weighted_pattern(
+    string_structure: StringStructureEvidence,
+    observed: pd.Series,
+) -> PatternEvidence:
+    """Classify each exact string once and weight each pattern by its count."""
+    counts = _exact_string_counts(observed)
+    uuid_count = 0
+    ipv4_count = 0
+    ipv6_count = 0
+    hex_32_count = 0
+    hex_40_count = 0
+    hex_64_count = 0
+    hex_128_count = 0
+    for value, weight in counts.items():
+        if _is_uuid_syntax(value):
+            uuid_count += weight
+        if _is_ipv4_syntax(value):
+            ipv4_count += weight
+        if _is_ipv6_syntax(value):
+            ipv6_count += weight
+        width = _fixed_hex_width(value)
+        if width == 32:
+            hex_32_count += weight
+        elif width == 40:
+            hex_40_count += weight
+        elif width == 64:
+            hex_64_count += weight
+        elif width == 128:
+            hex_128_count += weight
     return PatternEvidence(
         string_structure=string_structure,
         uuid_count=uuid_count,
@@ -307,10 +376,14 @@ def _has_explicit_uuid_shape(value: str) -> bool:
 def _is_ipv4_syntax(value: str) -> bool:
     """Return whether the entire original string is an IPv4 address.
 
-    ``ipaddress.IPv4Address`` is the validator. The string is not stripped
-    or rewritten first. Network syntax, including a CIDR suffix, is not an
-    address match. Address properties are not classified.
+    ``ipaddress.IPv4Address`` is the validator. A string without exactly
+    three dots cannot be that syntax, so it is not submitted to the
+    parser. The string is not stripped or rewritten first. Network
+    syntax, including a CIDR suffix, is not an address match. Address
+    properties are not classified.
     """
+    if value.count(".") != 3:
+        return False
     try:
         ipaddress.IPv4Address(value)
     except ValueError:
@@ -322,11 +395,14 @@ def _is_ipv6_syntax(value: str) -> bool:
     """Return whether the entire original string is an IPv6 address.
 
     ``ipaddress.IPv6Address`` is the validator, including the compressed
-    and expanded spellings it accepts. The string is not canonicalized,
-    and a successful parse is not compared back to a normalized form.
-    Network syntax is not an address match. Address properties are not
-    classified.
+    and expanded spellings it accepts. A string with fewer than two
+    colons cannot be that syntax, so it is not submitted to the parser.
+    The string is not canonicalized, and a successful parse is not
+    compared back to a normalized form. Network syntax is not an address
+    match. Address properties are not classified.
     """
+    if value.count(":") < 2:
+        return False
     try:
         ipaddress.IPv6Address(value)
     except ValueError:

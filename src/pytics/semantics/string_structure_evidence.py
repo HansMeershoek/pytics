@@ -216,14 +216,20 @@ def _evidence_from_values(
     basic: BasicColumnEvidence,
     observed: pd.Series,
 ) -> StringStructureEvidence:
-    """Derive every stored fact from one pass over non-missing values.
+    """Derive every stored fact from the non-missing values.
 
     Each value must already be a Python ``str``. ``isinstance(value, str)``
     accepts subclasses. It does not accept ``bytes``. The original string
     is not stripped, case-folded, or Unicode-normalized. Empty, whitespace,
     alphabetic, digit, and other are recorded together so the same string
     can contribute to several counts.
+
+    When the known distinct count is at most half the non-missing
+    count, each exact string is classified once and weighted by its
+    occurrences. That table is not retained. Otherwise each value is read.
     """
+    if _repeated_enough(basic.n_unique_non_missing, basic.n_non_missing):
+        return _weighted_structure(basic, observed)
     empty_string_count = 0
     whitespace_only_count = 0
     contains_whitespace_count = 0
@@ -250,6 +256,74 @@ def _evidence_from_values(
         contains_alpha_count += contains_alpha
         contains_digit_count += contains_digit
         contains_other_count += contains_other
+        if min_length is None or length < min_length:
+            min_length = length
+        if max_length is None or length > max_length:
+            max_length = length
+    return StringStructureEvidence(
+        basic=basic,
+        empty_string_count=empty_string_count,
+        whitespace_only_count=whitespace_only_count,
+        contains_whitespace_count=contains_whitespace_count,
+        contains_alpha_count=contains_alpha_count,
+        contains_digit_count=contains_digit_count,
+        contains_other_count=contains_other_count,
+        min_length=min_length,
+        max_length=max_length,
+    )
+
+
+def _repeated_enough(n_unique: Optional[int], n_non_missing: int) -> bool:
+    """Internal performance gate. Not a semantic threshold."""
+    if type(n_unique) is not int:
+        return False
+    return n_unique * 2 <= n_non_missing
+
+
+def _exact_string_counts(observed: pd.Series) -> dict[str, int]:
+    """Count strings after ``isinstance``. A non-string is not hashed."""
+    counts: dict[str, int] = {}
+    for value in observed:
+        if not isinstance(value, str):
+            raise AnalyticalInapplicability(_APPLICABILITY_ERROR)
+        seen = counts.get(value)
+        if seen is None:
+            counts[value] = 1
+        else:
+            counts[value] = seen + 1
+    return counts
+
+
+def _weighted_structure(
+    basic: BasicColumnEvidence,
+    observed: pd.Series,
+) -> StringStructureEvidence:
+    """Classify each exact string once and weight the flags by its count."""
+    counts = _exact_string_counts(observed)
+    empty_string_count = 0
+    whitespace_only_count = 0
+    contains_whitespace_count = 0
+    contains_alpha_count = 0
+    contains_digit_count = 0
+    contains_other_count = 0
+    min_length: Optional[int] = None
+    max_length: Optional[int] = None
+    for value, weight in counts.items():
+        (
+            is_empty,
+            is_whitespace_only,
+            contains_whitespace,
+            contains_alpha,
+            contains_digit,
+            contains_other,
+            length,
+        ) = _observe_string(value)
+        empty_string_count += is_empty * weight
+        whitespace_only_count += is_whitespace_only * weight
+        contains_whitespace_count += contains_whitespace * weight
+        contains_alpha_count += contains_alpha * weight
+        contains_digit_count += contains_digit * weight
+        contains_other_count += contains_other * weight
         if min_length is None or length < min_length:
             min_length = length
         if max_length is None or length > max_length:

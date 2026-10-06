@@ -330,13 +330,56 @@ def _evidence_from_values(
     """Place every non-missing string in one family.
 
     The original string is classified once. No match list is retained.
+
+    When the known distinct count is at most half the non-missing
+    count, each exact string is classified once and weighted by its
+    occurrences. That table is not retained. Otherwise each value is read.
     """
+    basic = string_structure.basic
+    if _repeated_enough(basic.n_unique_non_missing, basic.n_non_missing):
+        return _weighted_representation(string_structure, observed)
     totals = [0] * _FAMILY_COUNT
     for value in observed:
         if not isinstance(value, str):
             raise TypeError(_APPLICABILITY_ERROR)
         family = _classify(value)
         totals[_FAMILY_INDEX[family]] += 1
+    return RepresentationEvidence(
+        string_structure=string_structure,
+        counts=tuple(totals),
+    )
+
+
+def _repeated_enough(n_unique: Optional[int], n_non_missing: int) -> bool:
+    """Internal performance gate. Not a semantic threshold."""
+    if type(n_unique) is not int:
+        return False
+    return n_unique * 2 <= n_non_missing
+
+
+def _exact_string_counts(observed: pd.Series) -> dict[str, int]:
+    """Count strings after ``isinstance``. A non-string is not hashed."""
+    counts: dict[str, int] = {}
+    for value in observed:
+        if not isinstance(value, str):
+            raise TypeError(_APPLICABILITY_ERROR)
+        seen = counts.get(value)
+        if seen is None:
+            counts[value] = 1
+        else:
+            counts[value] = seen + 1
+    return counts
+
+
+def _weighted_representation(
+    string_structure: StringStructureEvidence,
+    observed: pd.Series,
+) -> RepresentationEvidence:
+    """Classify each exact string once and weight its family by its count."""
+    counts = _exact_string_counts(observed)
+    totals = [0] * _FAMILY_COUNT
+    for value, weight in counts.items():
+        totals[_FAMILY_INDEX[_classify(value)]] += weight
     return RepresentationEvidence(
         string_structure=string_structure,
         counts=tuple(totals),
