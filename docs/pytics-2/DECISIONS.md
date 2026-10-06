@@ -1433,6 +1433,16 @@ DOWNSTREAM ANALYSIS
 | Rationale | On current HEAD, those three collectors classified every non-missing string, including duplicates. A 100,000-row column of four labels took about 1.2 s, and a 500,000-row column of the same four labels took about 6.0 s. Classifying each distinct string once and weighting the counts reproduced the row-wise evidence. Separately, every string was passed to `ipaddress`, and ordinary labels raised and discarded an address error. A shape check removes that work without changing which strings match. |
 | Implications | No public API, configuration, status, or semantic threshold was added. Collectors still do not call `Series.value_counts` or `Series.nunique`. An ineligible direct call still raises the same exception type, and a value is not hashed before that eligibility check. [OPEN-037](#open-questions) records TSK-050 and does not choose the next slice. No later slice is approved. |
 
+## DEC-122
+
+| | |
+| --- | --- |
+| Title | Obsolete local and generated artifacts leave the current tree |
+| Status | Accepted |
+| Decision | TSK-051 removes machine-local `.venv-py311/`, the generated legacy reports `test_report.html` and `test_report.pdf`, and the obsolete backup and scratch files `pyproject.toml.bak` and `Prompt` from the current tree. `.gitignore` rejects `.venv/`, `.venv-*/`, `.mypy_cache/`, `*.bak`, `/test_report.html`, and `/test_report.pdf`. Git history is not rewritten. No production, API, dependency, or CI behavior changes. Python support and CI repair stay deferred. |
+| Rationale | Those paths were local environment files, generated 1.1.5 renderer output, or unused scratch. They were not part of the current package. Leaving them tracked made the current tree look like the retired renderer and a machine-specific environment were still part of Pytics. |
+| Implications | [OPEN-033](#open-033) is resolved. The files remain in older commits. No history rewrite is authorized. `requirements-pinned.txt` stays. Python version metadata, dependency floors, the CI matrix, and the current pytest collection failure are not this decision. No later analytical slice is approved. |
+
 ## Open questions
 
 These are not decisions. Do not implement an answer.
@@ -1526,10 +1536,6 @@ What About narrative, motivation, and contact details should be shown? Do not in
 ### OPEN-032
 
 Do the 1.1.5 hard limits of 1,000,000 rows and 1,000 columns continue, change, or disappear? Mode names are accepted ([DEC-058](#dec-058)). Exact mode behavior is [OPEN-010](#open-questions). Neither decides these limits.
-
-### OPEN-033
-
-Repository hygiene, not a product decision: should the tracked `.venv-py311/` tree, `test_report.html`, `test_report.pdf`, `pyproject.toml.bak`, and similar artifacts remain? This planning task does not add, delete, or untrack them.
 
 ### OPEN-035
 
@@ -1684,6 +1690,15 @@ Resolved items stay here so the original question is not lost. They are not acti
 | Resolved by | [DEC-040](#dec-040) |
 | Original question | Which inputs besides a pandas DataFrame are in scope? The 1.1.5 README claims CSV and Parquet paths. The 2.0 API is not frozen, and pandas-first does not by itself accept or reject paths. |
 | Resolution | Core is DataFrame-only. Core does not load CSV, Parquet, or other paths. Exact signatures remain [OPEN-004](#open-questions). |
+
+### OPEN-033
+
+| | |
+| --- | --- |
+| Status | Resolved |
+| Resolved by | [DEC-122](#dec-122) |
+| Original question | Repository hygiene, not a product decision: should the tracked `.venv-py311/` tree, `test_report.html`, `test_report.pdf`, `pyproject.toml.bak`, and similar artifacts remain? This planning task does not add, delete, or untrack them. |
+| Resolution | TSK-051 removes `.venv-py311/`, `test_report.html`, `test_report.pdf`, `pyproject.toml.bak`, and `Prompt` from current `main`. They were present in the baseline repository. Git history still contains them. `.gitignore` now rejects `.venv/`, `.venv-*/`, `.mypy_cache/`, `*.bak`, `/test_report.html`, and `/test_report.pdf`. |
 
 ### OPEN-034
 

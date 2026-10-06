@@ -24,6 +24,8 @@ wheels/
 venv/
 env/
 ENV/
+.venv/
+.venv-*/
 
 # IDE
 .idea/
@@ -35,6 +37,7 @@ ENV/
 .coverage
 htmlcov/
 .pytest_cache/
+.mypy_cache/
 .tox/
 
 # Documentation
@@ -47,4 +50,7 @@ examples/*.png
 
 # Misc
 .DS_Store
-Thumbs.db 
+Thumbs.db
+*.bak
+/test_report.html
+/test_report.pdf 

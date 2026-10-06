@@ -57,11 +57,6 @@ When suggesting enhancements:
    pip install -e ".[dev]"
    ```
 
-5. Set up pre-commit hooks:
-   ```bash
-   pre-commit install
-   ```
-
 ## Development Process
 
 1. Create a new branch:

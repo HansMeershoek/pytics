@@ -52,16 +52,16 @@ Other tracked items that are not the library:
 
 | Path | Observed fact |
 | --- | --- |
-| `Prompt` | Earlier notebook-profiler brief. It is not the 2.0 contract. |
+| `Prompt` | Earlier notebook-profiler brief. It was present in the baseline repository. It is not the 2.0 contract, and it is not tracked on current `main`. |
 | `README.md` | User documentation for the released package. |
 | `RELEASE_NOTES.md` | Title still says v1.0.0. The sample API is `Profile(...).generate_report()` / `to_pdf()`. |
-| `CONTRIBUTING.md` | Tells contributors to run `pre-commit install`. No pre-commit config is tracked. |
+| `CONTRIBUTING.md` | The baseline text told contributors to run `pre-commit install`. No pre-commit config was tracked. That instruction is no longer in the current file. |
 | `examples/generate_screenshots.py` | Imports `pandas_profiler`, and calls `include_sections`. |
 | `test_install.py` | Imports `pandas_profiler`. |
 | `test_import.py`, `test_kaleido.py`, `test_pdf_gen.py` | Standalone scripts. They are outside `tests/` and are not part of the pytest path. `test_pdf_gen.py` comments that it expects v1.1.4. |
-| `test_report.html`, `test_report.pdf` | Generated report artifacts tracked in git. |
-| `pyproject.toml.bak` | Backup of the packaging file, tracked in git. |
-| `.venv-py311/` | A Python 3.11.6 virtual environment tracked in git. Its `pyvenv.cfg` points at a machine path under `C:\Users\hnsmr\...`. `.gitignore` ignores `venv/`, `env/`, and `ENV/`, not `.venv-py311/`. |
+| `test_report.html`, `test_report.pdf` | Generated report artifacts. They were tracked in the baseline repository. They are not tracked on current `main`. |
+| `pyproject.toml.bak` | Backup of the packaging file. It was tracked in the baseline repository. It is not tracked on current `main`. |
+| `.venv-py311/` | A Python 3.11.6 virtual environment. It was tracked in the baseline repository. Its `pyvenv.cfg` pointed at a machine path under `C:\Users\hnsmr\...`. The baseline `.gitignore` ignored `venv/`, `env/`, and `ENV/`, not `.venv-py311/`. It is not tracked on current `main`. |
 
 CI (`.github/workflows/python-test.yml`) tests Python 3.9, 3.10, and 3.11. `requires-python` is `>=3.8`. Classifiers stop at 3.11. The briefing's local environment is Python 3.14.8. Those facts are recorded together and are not reconciled here.
 
