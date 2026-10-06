@@ -64,7 +64,7 @@ Each count is retained even when another count is mathematically related. There 
 Derived convenience facts are read-only computations from those counts. They are not a second stored source of truth.
 
 - `missing_ratio` is `n_missing / n_total` when `n_total > 0`, and `None` when `n_total == 0`.
-- `unique_ratio_non_missing` is `n_unique_non_missing / n_non_missing` when `n_non_missing > 0`, and `None` when `n_non_missing == 0`.
+- `unique_ratio_non_missing` is `n_unique_non_missing / n_non_missing` when `n_non_missing > 0` and the distinct count is known, and `None` when `n_non_missing == 0` or the distinct count is unavailable. `None` is not zero. `n_unique_non_missing` is `0` only for a known empty distinct count ([DEC-119](DECISIONS.md#dec-119)).
 - `has_missing` is `n_missing > 0`.
 - `is_empty` is `n_non_missing == 0`.
 - `is_constant` is `n_non_missing > 0` and `n_unique_non_missing == 1`.
@@ -188,7 +188,7 @@ Resolution consumes a structural interpretation and candidate assessments that w
 
 `RESOLVED` means one justified reading was selected. A supplied Empty, Constant, Boolean, Datetime, or Timedelta interpretation resolves to that reading. Candidate assessments do not replace it. The confidence already on that interpretation is kept. With no structural reading, exactly one `SUPPORTED` candidate resolves to that semantic type. That selection does not construct a `SemanticInterpretation`. The interpretation requires a confidence, and a candidate assessment does not carry a justified High, Medium, or Low value. The inferred result supplies the observed physical dtype separately and still does not construct that interpretation ([DEC-086](DECISIONS.md#dec-086)).
 
-`INSUFFICIENT_EVIDENCE` means there is no structural reading and no supported candidate. An empty candidate collection is the same outcome. There is no fallback semantic type. This is abstention at the resolution layer. It is distinct from `None`.
+`INSUFFICIENT_EVIDENCE` means there is no structural reading and no supported candidate. An empty candidate collection is the same outcome. There is no fallback semantic type. This is abstention at the resolution layer. It is distinct from `None`. TSK-048 also uses this status when the exact distinct count is unavailable ([DEC-119](DECISIONS.md#dec-119)). The reason is `Exact distinct values are unavailable.` The column is not Empty and not Constant. No candidate was assessed.
 
 `AMBIGUOUS` means more than one candidate is `SUPPORTED` and no reviewed rule selects between them. The result does not select a semantic type. Input order, enum order, and the number of supporting statements are not used. A `CONTRADICTED` candidate is not selected and does not block a different supported candidate. Two assessments for the same semantic type are rejected rather than merged.
 
@@ -474,7 +474,7 @@ TSK-022 records observed missingness structure in `pytics.analysis` ([DEC-093](D
 | REQ-I-05 | Do not run uncontrolled combinatorial searches over all possible column combinations. | Accepted |
 | REQ-I-06 | Fuzzy or near-duplicate analysis is not a default core operation. | Accepted as a boundary. |
 
-TSK-023 records exact duplicate rows in `pytics.analysis` ([DEC-094](DECISIONS.md#dec-094)). A duplicate group is one complete row value that occurs more than once. Membership is physical row position. The index and the column labels are not part of the row. Pandas factorize equality is the rule, including one shared code for pandas-missing values in a column. `n_unique_rows` and `n_excess_duplicate_rows` are separate counts. Excess rows are occurrences beyond one of each distinct row value. The pass does not decide that a repeated row is an error. It does not normalize case, whitespace, or close numbers. Identifier duplicates, conflicting duplicates, and partial duplicates are not this pass. The rendered Duplicates view is not this summary. The dataset overview copies the unique-row and excess-row counts only.
+TSK-023 records exact duplicate rows in `pytics.analysis` ([DEC-094](DECISIONS.md#dec-094)). A duplicate group is one complete row value that occurs more than once. Membership is physical row position. The index and the column labels are not part of the row. Pandas factorize equality is the rule, including one shared code for pandas-missing values in a column. `n_unique_rows` and `n_excess_duplicate_rows` are separate counts. Excess rows are occurrences beyond one of each distinct row value. The pass does not decide that a repeated row is an error. It does not normalize case, whitespace, or close numbers. Identifier duplicates, conflicting duplicates, and partial duplicates are not this pass. The rendered Duplicates view is not this summary. The dataset overview copies the unique-row and excess-row counts only. TSK-048 marks the analysis unavailable when a compared cell is unhashable and the frame has at least two rows ([DEC-119](DECISIONS.md#dec-119)). The counts are then `None`, not zero. A frame with fewer than two rows stays an available empty result.
 
 Fuzzy or near-duplicate analysis may eventually become optional or deep functionality. That capability is **Future investigation** ([OPEN-020](DECISIONS.md#open-questions)). TSK-023 does not define it.
 

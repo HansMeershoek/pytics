@@ -101,12 +101,14 @@ def _structural_columns(
 
 def _duplicate_rows(analysis: DatasetAnalysis) -> Tuple[Finding, ...]:
     duplicates = analysis.duplicate_analysis
-    if duplicates.n_duplicate_groups == 0:
+    n_groups = duplicates.n_duplicate_groups
+    n_in_groups = duplicates.n_rows_in_duplicate_groups
+    if n_groups is None or n_in_groups is None or n_groups == 0:
         return ()
     evidence = DuplicateRowsEvidence(
         n_rows=analysis.n_rows,
-        n_duplicate_groups=duplicates.n_duplicate_groups,
-        n_rows_in_duplicate_groups=duplicates.n_rows_in_duplicate_groups,
+        n_duplicate_groups=n_groups,
+        n_rows_in_duplicate_groups=n_in_groups,
     )
     return (finding(FindingCode.DUPLICATE_ROWS, None, evidence),)
 

@@ -365,8 +365,9 @@ class VariableSummary:
 
     The four counts and ``missing_ratio`` come from basic evidence.
     ``unique_ratio_non_missing`` divides distinct non-missing values by
-    non-missing values, and is ``None`` when that count is zero. It is
-    not an identifier threshold and not a ratio over all rows.
+    non-missing values. It is ``None`` when that count is zero, and
+    ``None`` when the distinct count is unavailable. It is not an
+    identifier threshold and not a ratio over all rows.
 
     ``detail`` follows ``selected_type``. It is absent when that type
     has no specialized detail in this result, and when the retained
@@ -381,7 +382,7 @@ class VariableSummary:
     n_total: int
     n_missing: int
     n_non_missing: int
-    n_unique_non_missing: int
+    n_unique_non_missing: Optional[int]
     detail: Optional[VariableDetail] = None
 
     def __post_init__(self) -> None:
@@ -395,13 +396,22 @@ class VariableSummary:
         _require_count(self.n_total, "n_total")
         _require_count(self.n_missing, "n_missing")
         _require_count(self.n_non_missing, "n_non_missing")
-        _require_count(self.n_unique_non_missing, "n_unique_non_missing")
         if self.n_missing > self.n_total:
             raise ValueError("n_missing cannot exceed n_total")
         if self.n_non_missing != self.n_total - self.n_missing:
             raise ValueError("n_non_missing must equal n_total - n_missing")
-        if self.n_unique_non_missing > self.n_non_missing:
-            raise ValueError("n_unique_non_missing cannot exceed n_non_missing")
+        if self.n_unique_non_missing is None:
+            if self.n_non_missing == 0:
+                raise ValueError(
+                    "an empty non-missing population has a known distinct "
+                    "count of 0"
+                )
+        else:
+            _require_count(self.n_unique_non_missing, "n_unique_non_missing")
+            if self.n_unique_non_missing > self.n_non_missing:
+                raise ValueError(
+                    "n_unique_non_missing cannot exceed n_non_missing"
+                )
         _require_detail(self.selected_type, self.detail)
         _require_detail_consistency(self)
 
@@ -417,9 +427,12 @@ class VariableSummary:
     def unique_ratio_non_missing(self) -> Optional[float]:
         """Distinct non-missing values divided by non-missing values.
 
-        ``None`` when there is no non-missing value. The denominator is
-        not the row count.
+        ``None`` when there is no non-missing value, and ``None`` when
+        the distinct count is unavailable. The denominator is not the
+        row count. ``None`` is not zero.
         """
+        if self.n_unique_non_missing is None:
+            return None
         return _ratio(self.n_unique_non_missing, self.n_non_missing)
 
 
@@ -579,9 +592,12 @@ def _categorical_detail(
     if evidence is None:
         return None
     basic = evidence.basic
+    n_unique = basic.n_unique_non_missing
+    if n_unique is None:
+        raise ValueError("categorical detail requires an exact distinct count")
     return CategoricalVariableDetail(
         n_non_missing=basic.n_non_missing,
-        n_unique_non_missing=basic.n_unique_non_missing,
+        n_unique_non_missing=n_unique,
         most_frequent_count=evidence.most_frequent_count,
         singleton_count=evidence.singleton_count,
         descriptive=_copied_categorical(column.categorical_analysis),
@@ -717,6 +733,8 @@ def _require_numeric_uniqueness(
     has one distinct value when it has more than one observation. A
     finite population with one distinct value is both directions.
     """
+    if summary.n_unique_non_missing is None:
+        return
     finite = detail.finite_count == detail.n_non_missing
     both = detail.is_non_decreasing is True and detail.is_non_increasing is True
     if (

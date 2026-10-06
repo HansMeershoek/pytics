@@ -158,13 +158,15 @@ def test_collect_and_interpret_reject_non_series():
         interpret_empty_or_constant(frame)  # type: ignore[arg-type]
 
 
-def test_unhashable_values_raise_and_are_not_normalized():
+def test_unhashable_values_are_not_empty_or_constant():
     series = pd.Series([[1], [2]])
     original = series.copy(deep=True)
 
-    with pytest.raises(TypeError, match="unhashable"):
-        collect_basic_column_evidence(series)
+    evidence = collect_basic_column_evidence(series)
 
+    assert evidence.n_unique_non_missing is None
+    assert evidence.is_constant is False
+    assert interpret_empty_or_constant(series) is None
     pd.testing.assert_series_equal(series, original)
 
 

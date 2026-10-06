@@ -222,13 +222,19 @@ def test_missing_like_literals_stay_observed_values():
     assert interpret_empty_or_constant(series) is None
 
 
-def test_unhashable_values_raise_and_are_not_normalized():
+def test_unhashable_values_leave_the_distinct_count_unavailable():
     series = pd.Series([[1], [2]])
     original = series.copy(deep=True)
 
-    with pytest.raises(TypeError, match="unhashable"):
-        collect_basic_column_evidence(series)
+    evidence = collect_basic_column_evidence(series)
 
+    assert evidence.n_total == 2
+    assert evidence.n_missing == 0
+    assert evidence.n_non_missing == 2
+    assert evidence.n_unique_non_missing is None
+    assert evidence.unique_ratio_non_missing is None
+    assert evidence.is_empty is False
+    assert evidence.is_constant is False
     pd.testing.assert_series_equal(series, original)
 
 

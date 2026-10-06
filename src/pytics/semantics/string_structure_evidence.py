@@ -30,6 +30,7 @@ from typing import Optional
 
 import pandas as pd
 
+from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.semantics.column_evidence import BasicColumnEvidence
 from pytics.semantics.physical import PhysicalDtype
 from pytics.semantics.physical import PhysicalDtypeFamily
@@ -159,7 +160,8 @@ def collect_string_structure_evidence(
     ``str``, including subclasses such as ``numpy.str_``. ``bytes`` are not
     strings and are not decoded. There is no second scan for frequencies,
     no sampling, and no string coercion. An ineligible Series raises
-    ``TypeError``. Counts that disagree with ``basic`` raise ``ValueError``.
+    ``AnalyticalInapplicability``. Counts that disagree with ``basic``
+    raise ``ValueError``. An unexpected ``TypeError`` still propagates.
     """
     if not isinstance(series, pd.Series):
         raise TypeError("collect_string_structure_evidence expects a pandas Series")
@@ -175,7 +177,7 @@ def collect_string_structure_evidence(
         # No non-missing value means there is no positive evidence that the
         # object column holds strings. Absence of a contradiction is not
         # enough.
-        raise TypeError(_APPLICABILITY_ERROR)
+        raise AnalyticalInapplicability(_APPLICABILITY_ERROR)
     return _evidence_from_values(basic, observed)
 
 
@@ -189,7 +191,7 @@ def _require_applicable_family(physical: PhysicalDtype) -> None:
         PhysicalDtypeFamily.STRING,
         PhysicalDtypeFamily.OBJECT,
     ):
-        raise TypeError(_APPLICABILITY_ERROR)
+        raise AnalyticalInapplicability(_APPLICABILITY_ERROR)
 
 
 def _non_missing_values(
@@ -232,7 +234,7 @@ def _evidence_from_values(
     max_length: Optional[int] = None
     for value in observed:
         if not isinstance(value, str):
-            raise TypeError(_APPLICABILITY_ERROR)
+            raise AnalyticalInapplicability(_APPLICABILITY_ERROR)
         (
             is_empty,
             is_whitespace_only,

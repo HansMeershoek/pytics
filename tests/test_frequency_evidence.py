@@ -345,8 +345,8 @@ def test_unhashable_values_fail_without_a_second_normalization_policy():
     series = pd.Series([[1], [2]])
     original = series.copy(deep=True)
 
-    with pytest.raises(TypeError, match="unhashable"):
-        collect_basic_column_evidence(series)
+    evidence = collect_basic_column_evidence(series)
+    assert evidence.n_unique_non_missing is None
 
     basic = BasicColumnEvidence(
         n_total=2,

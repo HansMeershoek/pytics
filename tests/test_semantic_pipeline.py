@@ -787,10 +787,12 @@ def test_non_series_input_is_rejected():
         infer_series_semantics([1, 2, 3])  # type: ignore[arg-type]
 
 
-def test_unhashable_values_propagate():
+def test_unhashable_values_are_insufficient_evidence():
     series = pd.Series([[1], [2]])
-    with pytest.raises(TypeError, match="unhashable"):
-        infer_series_semantics(series)
+    result = infer_series_semantics(series)
+    assert result.selected_type is None
+    assert result.resolution.status is ResolutionStatus.INSUFFICIENT_EVIDENCE
+    assert result.resolution.reason == "Exact distinct values are unavailable."
 
 
 def test_unrelated_string_collector_type_error_propagates(

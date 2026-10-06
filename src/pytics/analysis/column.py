@@ -50,6 +50,7 @@ from pytics.analysis.categorical import collect_categorical_descriptive_analysis
 from pytics.analysis.numeric import NumericDescriptiveAnalysis
 from pytics.analysis.numeric import collect_numeric_descriptive_analysis
 from pytics.semantics.candidate import CandidateAssessment
+from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.semantics.column_evidence import BasicColumnEvidence
 from pytics.semantics.column_evidence import collect_basic_column_evidence
 from pytics.semantics.core_candidates import assess_categorical_candidate
@@ -73,6 +74,8 @@ from pytics.semantics.physical import classify_physical_dtype
 from pytics.semantics.representation_evidence import RepresentationEvidence
 from pytics.semantics.representation_evidence import collect_representation_evidence
 from pytics.semantics.physical_timedelta import interpret_precedence_from_evidence
+from pytics.semantics.resolution import ResolutionStatus
+from pytics.semantics.resolution import SemanticResolution
 from pytics.semantics.resolution import resolve_semantics
 from pytics.semantics.string_structure_evidence import StringStructureEvidence
 from pytics.semantics.string_structure_evidence import (
@@ -94,12 +97,6 @@ _STRING_FAMILIES = frozenset(
         PhysicalDtypeFamily.OBJECT,
     }
 )
-# The string-structure collector uses this phrase for a population that is
-# not a Python string population. That rejection is applicability, not an
-# invalid Series.
-_INELIGIBLE_STRING_POPULATION = "every non-missing value is a Python str"
-
-
 @dataclass(frozen=True)
 class ColumnEvidence:
     """Evidence retained for one column.
@@ -248,6 +245,13 @@ def analyze_series(
         raise ValueError("position must be a non-negative int")
     physical = classify_physical_dtype(series)
     basic = collect_basic_column_evidence(series)
+    if basic.n_unique_non_missing is None:
+        return _column_without_distinct_count(
+            series_position=position,
+            label=label,
+            physical=physical,
+            basic=basic,
+        )
     structural = interpret_precedence_from_evidence(basic, physical)
     if structural is not None:
         resolution = resolve_semantics(structural_interpretation=structural)
@@ -300,6 +304,33 @@ def analyze_series(
         numeric_analysis=numeric_analysis,
         boolean_analysis=boolean_analysis,
         categorical_analysis=categorical_analysis,
+    )
+
+
+def _column_without_distinct_count(
+    *,
+    series_position: int,
+    label: object,
+    physical: PhysicalDtype,
+    basic: BasicColumnEvidence,
+) -> ColumnAnalysis:
+    """Keep identity and safe counts when exact distinctness is unavailable.
+
+    No semantic candidate is assessed. The resolution is insufficient
+    evidence because the distinct count those rules need was not observed.
+    Downstream eligibility follows that state.
+    """
+    resolution = SemanticResolution(
+        status=ResolutionStatus.INSUFFICIENT_EVIDENCE,
+        reason="Exact distinct values are unavailable.",
+        candidates=(),
+    )
+    return ColumnAnalysis(
+        position=series_position,
+        label=label,
+        physical=physical,
+        evidence=ColumnEvidence(basic=basic),
+        inferred=build_inferred_semantic_result(physical, resolution),
     )
 
 
@@ -499,16 +530,14 @@ def _collect_applicable_string_structure(
 ) -> Optional[StringStructureEvidence]:
     """Return string structure, or None when the collector rejects it.
 
-    An applicability ``TypeError`` means this population is not string
+    ``AnalyticalInapplicability`` means this population is not string
     evidence. Mixed object values and ``bytes`` are that case. They are
-    not coerced, and they are not an inference failure. Any other error
-    still propagates.
+    not coerced, and they are not an inference failure. Any other error,
+    including an unexpected ``TypeError``, still propagates.
     """
     try:
         return collect_string_structure_evidence(series, basic, physical)
-    except TypeError as exc:
-        if _INELIGIBLE_STRING_POPULATION not in str(exc):
-            raise
+    except AnalyticalInapplicability:
         return None
 
 

@@ -19,6 +19,7 @@ import pytics.semantics.physical_boolean as physical_boolean_module
 import pytics.semantics.physical_datetime as physical_datetime_module
 import pytics.semantics.physical_timedelta as physical_timedelta_module
 import pytics.semantics.string_structure_evidence as string_module
+from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.semantics.column_evidence import BasicColumnEvidence
 from pytics.semantics.column_evidence import collect_basic_column_evidence
 from pytics.semantics.interpretation import Confidence
@@ -290,7 +291,7 @@ def test_str_subclasses_are_eligible_object_values():
 )
 def test_ineligible_object_series_raise_type_error(series: pd.Series):
     assert classify_physical_dtype(series).family is PhysicalDtypeFamily.OBJECT
-    with pytest.raises(TypeError, match=_APPLICABILITY):
+    with pytest.raises(AnalyticalInapplicability, match=_APPLICABILITY):
         _collect(series)
 
 
@@ -300,7 +301,7 @@ def test_all_missing_object_stays_empty_in_the_precedence_chain():
 
     assert reading is not None
     assert reading.semantic_type is SemanticType.EMPTY
-    with pytest.raises(TypeError, match=_APPLICABILITY):
+    with pytest.raises(AnalyticalInapplicability, match=_APPLICABILITY):
         _collect(series)
 
 
@@ -311,7 +312,7 @@ def test_categorical_string_labels_are_not_string_structure():
     for series in (unordered, ordered):
         physical = classify_physical_dtype(series)
         assert physical.family is PhysicalDtypeFamily.CATEGORICAL
-        with pytest.raises(TypeError, match=_APPLICABILITY):
+        with pytest.raises(AnalyticalInapplicability, match=_APPLICABILITY):
             _collect(series)
     assert classify_physical_dtype(ordered).categorical_ordered is True
 
@@ -351,7 +352,7 @@ def test_categorical_string_labels_are_not_string_structure():
 def test_unsupported_physical_families_raise_type_error(series: pd.Series):
     assert classify_physical_dtype(series).family is not PhysicalDtypeFamily.STRING
     assert classify_physical_dtype(series).family is not PhysicalDtypeFamily.OBJECT
-    with pytest.raises(TypeError, match=_APPLICABILITY):
+    with pytest.raises(AnalyticalInapplicability, match=_APPLICABILITY):
         _collect(series)
 
 
@@ -359,7 +360,7 @@ def test_numpy_byte_strings_are_not_decoded():
     series = pd.Series(np.array([b"ab", b"c1"]))
 
     assert classify_physical_dtype(series).family is PhysicalDtypeFamily.STRING
-    with pytest.raises(TypeError, match=_APPLICABILITY):
+    with pytest.raises(AnalyticalInapplicability, match=_APPLICABILITY):
         _collect(series)
 
 

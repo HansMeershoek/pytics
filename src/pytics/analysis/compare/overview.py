@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Tuple
 
 from pytics.analysis.compare.values import CountComparison
+from pytics.analysis.compare.values import OptionalCountComparison
 from pytics.analysis.compare.values import _require_count
 from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.overview import build_dataset_overview
@@ -59,10 +60,10 @@ class DatasetOverviewComparison:
     n_non_missing_cells: CountComparison
     n_complete_rows: CountComparison
     n_rows_with_missing: CountComparison
-    n_unique_rows: CountComparison
-    n_excess_duplicate_rows: CountComparison
-    n_duplicate_groups: CountComparison
-    n_rows_in_duplicate_groups: CountComparison
+    n_unique_rows: OptionalCountComparison
+    n_excess_duplicate_rows: OptionalCountComparison
+    n_duplicate_groups: OptionalCountComparison
+    n_rows_in_duplicate_groups: OptionalCountComparison
     empty_column_count: CountComparison
     constant_column_count: CountComparison
     identifier_column_count: CountComparison
@@ -79,10 +80,6 @@ class DatasetOverviewComparison:
             "n_non_missing_cells",
             "n_complete_rows",
             "n_rows_with_missing",
-            "n_unique_rows",
-            "n_excess_duplicate_rows",
-            "n_duplicate_groups",
-            "n_rows_in_duplicate_groups",
             "empty_column_count",
             "constant_column_count",
             "identifier_column_count",
@@ -91,6 +88,14 @@ class DatasetOverviewComparison:
         ):
             if not isinstance(getattr(self, field), CountComparison):
                 raise TypeError(f"{field} must be a CountComparison")
+        for field in (
+            "n_unique_rows",
+            "n_excess_duplicate_rows",
+            "n_duplicate_groups",
+            "n_rows_in_duplicate_groups",
+        ):
+            if not isinstance(getattr(self, field), OptionalCountComparison):
+                raise TypeError(f"{field} must be an OptionalCountComparison")
         if not isinstance(self.semantic_type_counts, tuple):
             raise TypeError("semantic_type_counts must be a tuple")
         seen = []
@@ -137,19 +142,19 @@ def overview_comparison(
             reference.n_rows - reference.missing_analysis.n_complete_rows,
             comparison.n_rows - comparison.missing_analysis.n_complete_rows,
         ),
-        n_unique_rows=CountComparison(
+        n_unique_rows=OptionalCountComparison(
             reference_overview.n_unique_rows,
             comparison_overview.n_unique_rows,
         ),
-        n_excess_duplicate_rows=CountComparison(
+        n_excess_duplicate_rows=OptionalCountComparison(
             reference_overview.n_excess_duplicate_rows,
             comparison_overview.n_excess_duplicate_rows,
         ),
-        n_duplicate_groups=CountComparison(
+        n_duplicate_groups=OptionalCountComparison(
             reference.duplicate_analysis.n_duplicate_groups,
             comparison.duplicate_analysis.n_duplicate_groups,
         ),
-        n_rows_in_duplicate_groups=CountComparison(
+        n_rows_in_duplicate_groups=OptionalCountComparison(
             reference.duplicate_analysis.n_rows_in_duplicate_groups,
             comparison.duplicate_analysis.n_rows_in_duplicate_groups,
         ),

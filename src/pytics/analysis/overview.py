@@ -89,8 +89,8 @@ class DatasetOverview:
     n_cells: int
     n_missing_cells: int
     n_non_missing_cells: int
-    n_unique_rows: int
-    n_excess_duplicate_rows: int
+    n_unique_rows: Optional[int]
+    n_excess_duplicate_rows: Optional[int]
     semantic_type_counts: Tuple[SemanticTypeCount, ...]
     insufficient_evidence_columns: Tuple[ColumnRef, ...]
     ambiguous_columns: Tuple[ColumnRef, ...]
@@ -108,16 +108,25 @@ class DatasetOverview:
             raise ValueError("n_cells must equal n_rows * n_columns")
         if self.n_missing_cells + self.n_non_missing_cells != self.n_cells:
             raise ValueError("missing and non-missing cells must sum to n_cells")
-        _require_count(self.n_unique_rows, "n_unique_rows")
-        _require_count(self.n_excess_duplicate_rows, "n_excess_duplicate_rows")
-        if self.n_unique_rows > self.n_rows:
-            raise ValueError("n_unique_rows cannot exceed n_rows")
-        if self.n_excess_duplicate_rows != self.n_rows - self.n_unique_rows:
-            raise ValueError(
-                "n_excess_duplicate_rows must equal n_rows - n_unique_rows"
-            )
-        if self.n_rows > 0 and self.n_unique_rows < 1:
-            raise ValueError("a dataset with rows has at least one unique row")
+        unique_rows = self.n_unique_rows
+        excess_rows = self.n_excess_duplicate_rows
+        if unique_rows is None or excess_rows is None:
+            if unique_rows is not None or excess_rows is not None:
+                raise ValueError(
+                    "n_unique_rows and n_excess_duplicate_rows are both known "
+                    "or both unavailable"
+                )
+        else:
+            _require_count(unique_rows, "n_unique_rows")
+            _require_count(excess_rows, "n_excess_duplicate_rows")
+            if unique_rows > self.n_rows:
+                raise ValueError("n_unique_rows cannot exceed n_rows")
+            if excess_rows != self.n_rows - unique_rows:
+                raise ValueError(
+                    "n_excess_duplicate_rows must equal n_rows - n_unique_rows"
+                )
+            if self.n_rows > 0 and unique_rows < 1:
+                raise ValueError("a dataset with rows has at least one unique row")
         counts = _validate_semantic_counts(self.semantic_type_counts)
         groups = (
             ("insufficient_evidence_columns", self.insufficient_evidence_columns),
@@ -185,10 +194,12 @@ class DatasetOverview:
     def unique_row_ratio(self) -> Optional[float]:
         """Distinct row values divided by all rows.
 
-        ``None`` when there are no rows. This is the same ratio as the
-        duplicate summary. It is not a quality score.
+        ``None`` when there are no rows, and ``None`` when the distinct
+        row count is unavailable. This is the same ratio as the duplicate
+        summary when that count is known. It is not a quality score.
+        ``None`` is not zero.
         """
-        if self.n_rows == 0:
+        if self.n_rows == 0 or self.n_unique_rows is None:
             return None
         return self.n_unique_rows / self.n_rows
 
@@ -196,10 +207,11 @@ class DatasetOverview:
     def excess_duplicate_row_ratio(self) -> Optional[float]:
         """Excess duplicate rows divided by all rows.
 
-        ``None`` when there are no rows. Excess rows are occurrences
-        beyond one of each distinct row value.
+        ``None`` when there are no rows, and ``None`` when the excess
+        count is unavailable. Excess rows are occurrences beyond one of
+        each distinct row value. ``None`` is not zero.
         """
-        if self.n_rows == 0:
+        if self.n_rows == 0 or self.n_excess_duplicate_rows is None:
             return None
         return self.n_excess_duplicate_rows / self.n_rows
 

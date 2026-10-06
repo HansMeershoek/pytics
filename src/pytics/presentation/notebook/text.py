@@ -173,8 +173,13 @@ def html_text(value: str) -> str:
     return escape(value, quote=True)
 
 
-def format_count(value: int) -> str:
-    """Group digits for display. The canonical count is unchanged."""
+def format_count(value: Optional[int]) -> str:
+    """Group digits for display. The canonical count is unchanged.
+
+    ``None`` is an unavailable count. It is not shown as zero.
+    """
+    if value is None:
+        return "Unavailable"
     return f"{value:,}"
 
 

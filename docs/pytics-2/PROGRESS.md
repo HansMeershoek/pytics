@@ -2315,6 +2315,26 @@ Verification, 2026-10-05, local `.venv`, Python 3.14.8. HEAD remained `4f7da2a`.
 
 The baseline before this slice was 1894 passed, at 97% coverage (423 missed of 14,772). The penguins-shaped control stayed 5 Numeric, 3 Categorical, 28 calculated relationships, and 0 ineligible. Its chi-square tails met Cochran's convention, so they stayed in the relationship family. Epsilon squared is now stored beside eta squared, including small negative values where the naive eta squared is near zero. `Downloads/messy-company-data-10000.csv` stayed 10,000 × 17, 1 Numeric, 4 Categorical, 12 unresolved, 10 calculated relationships, 126 ineligible, and 13,387 missing cells, with the source frame unchanged. Three of its categorical pairs fail Cochran's convention, keep their computed p-values, and no longer have adjusted p-values. The other three stay valid and adjusted. Naive Cramér's V on Raw Company Name × Country stayed about 0.40; the corrected companion is about 0.37. Ordinary profile and compare timings, median of three runs after one warmup, before to after: penguins-shaped profile 0.082 s to 0.087 s, a 4,000 × 7 mixed frame 0.069 s to 0.068 s, penguins-shaped compare 0.188 s to 0.189 s, and the mixed compare 0.164 s to 0.166 s.
 
+### TSK-048 — Minimal core graceful abstention
+
+Completed 2026-10-06. Decision: [DEC-119](DECISIONS.md#dec-119).
+
+On HEAD `0abfb62`, one unhashable object column aborted `profile` in `collect_basic_column_evidence` because `Series.nunique` raised `TypeError`. The same cells made `pd.factorize` fail inside exact duplicate analysis when the frame had at least two rows. String-structure applicability and that duplicate failure both inspected the text of a `TypeError`.
+
+`n_unique_non_missing` is now `None` when that distinct count cannot be hashed. `0` is still a known empty distinct count. The column stays in the result with its physical dtype and missing counts, is not Empty or Constant, and resolves as `INSUFFICIENT_EVIDENCE` with the reason `Exact distinct values are unavailable.` No candidate evidence is collected. Relationships, anomaly, target, and compare descriptive eligibility follow that existing state. Duplicate analysis sets `available` false for two or more rows with an unhashable cell. Its counts are `None`, not zero, and no duplicate-row finding is emitted. A frame with fewer than two rows stays an available empty duplicate result. A one-row list column is not treated as Constant. `AnalyticalInapplicability` is the string-structure signal. Duplicate unhashability is confirmed with `hash` after `TypeError`, not by reading the message. An unexpected `TypeError` on hashable values still propagates. The notebook count formatter prints `Unavailable` for a missing count.
+
+Value-aware method eligibility is deferred. A physical categorical `Decimal` column beside a numeric column still raises when the relationship retainer rejects `Decimal`.
+
+Requirement states. `REQ-I-01` and `REQ-A-04` are advanced and not completed. No semantic threshold or relationship method changed. No row is Completed.
+
+Verification, 2026-10-06, local `.venv`, Python 3.14.8. HEAD remained `0abfb62`. Nothing was committed or staged.
+
+| Command | Result |
+| --- | --- |
+| `pytest tests -q` | 1918 passed. Total coverage 97% (517 missed of 15,209). |
+
+The baseline before this slice was 1905 passed, at 97% coverage. The penguins-shaped control stayed 5 Numeric, 3 Categorical, 28 calculated relationships, and 0 ineligible. `Downloads/messy-company-data-10000.csv` stayed 10,000 × 17, 1 Numeric, 4 Categorical, 12 unresolved, 10 calculated relationships, 126 ineligible, and 13,387 missing cells, with the source frame unchanged. Three categorical pairs still fail Cochran's convention, keep their computed p-values, and have no adjusted p-value. The other three stay valid and adjusted. A 344-row penguins-shaped profile completed in about 0.08 s. A 1,000-row frame with an unhashable column, which previously aborted, completed in about 0.013 s. That second figure is a completion time, not a before/after ratio.
+
 ## Documentation record — semantic foundation consolidation
 
 Recorded 2026-10-03, after TSK-005. Documentation only. No production file was changed. No test was changed. No dependency file was changed. No `TSK-###` was created. Nothing in this record marks a requirement Implemented.

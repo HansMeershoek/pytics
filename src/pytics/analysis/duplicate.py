@@ -21,6 +21,9 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 
+from pytics.semantics.column_evidence import AnalyticalInapplicability
+from pytics.semantics.column_evidence import _contains_unhashable_non_missing
+
 if TYPE_CHECKING:
     from pytics.analysis.dataset import DatasetAnalysis
 
@@ -80,13 +83,24 @@ class DuplicateAnalysis:
     Singleton row values are not stored. ``n_rows`` is not stored: the
     dataset analysis checks these groups against its own row count.
     Counts that do not need that row count are derived here.
+
+    ``available`` is false when exact grouping could not be performed.
+    The group tuple is then empty, and the derived counts are ``None``.
+    An available analysis with no groups means no row value was repeated.
     """
 
     duplicate_groups: Tuple[DuplicateGroup, ...]
+    available: bool = True
 
     def __post_init__(self) -> None:
+        if type(self.available) is not bool:
+            raise TypeError("available must be a bool")
         if not isinstance(self.duplicate_groups, tuple):
             raise TypeError("duplicate_groups must be a tuple")
+        if not self.available and self.duplicate_groups:
+            raise ValueError(
+                "unavailable duplicate analysis does not store groups"
+            )
         seen: set[int] = set()
         keys = []
         for group in self.duplicate_groups:
@@ -106,31 +120,52 @@ class DuplicateAnalysis:
             )
 
     @property
-    def n_duplicate_groups(self) -> int:
-        """How many row values occur more than once."""
+    def n_duplicate_groups(self) -> Optional[int]:
+        """How many row values occur more than once.
+
+        ``None`` when exact duplicate analysis is unavailable. ``None``
+        is not zero.
+        """
+        if not self.available:
+            return None
         return len(self.duplicate_groups)
 
     @property
-    def n_rows_in_duplicate_groups(self) -> int:
-        """Rows that belong to some duplicate group."""
+    def n_rows_in_duplicate_groups(self) -> Optional[int]:
+        """Rows that belong to some duplicate group.
+
+        ``None`` when exact duplicate analysis is unavailable.
+        """
+        if not self.available:
+            return None
         return _rows_in_duplicate_groups(self.duplicate_groups)
 
     @property
-    def n_excess_duplicate_rows(self) -> int:
+    def n_excess_duplicate_rows(self) -> Optional[int]:
         """Rows beyond one occurrence of each distinct row value.
 
         This equals ``n_rows - n_unique_rows`` once the dataset row count
-        is supplied. It is not a count of groups.
+        is supplied. It is not a count of groups. ``None`` when exact
+        duplicate analysis is unavailable.
         """
+        if not self.available:
+            return None
         return _excess_duplicate_rows(self.duplicate_groups)
 
-    def n_unique_rows(self, n_rows: int) -> int:
+    def n_unique_rows(self, n_rows: int) -> Optional[int]:
         """Distinct row values in a dataset of ``n_rows`` rows.
 
-        ``None`` is not used. Zero rows have zero distinct values. A
-        dataset with rows has at least one.
+        Zero rows have zero distinct values. A dataset with rows has at
+        least one when the analysis is available. ``None`` when exact
+        duplicate analysis is unavailable, including when ``n_rows`` is
+        positive. ``None`` is not zero.
         """
-        return _unique_row_count(n_rows, self.n_excess_duplicate_rows)
+        if not self.available:
+            return None
+        excess = self.n_excess_duplicate_rows
+        if excess is None:
+            raise ValueError("available duplicate analysis has an excess count")
+        return _unique_row_count(n_rows, excess)
 
 
 @dataclass(frozen=True)
@@ -152,7 +187,10 @@ class DuplicateSummary:
         _require_count(self.n_rows, "n_rows")
         analysis = DuplicateAnalysis(duplicate_groups=self.duplicate_groups)
         _require_positions_within_rows(analysis, self.n_rows)
-        _unique_row_count(self.n_rows, analysis.n_excess_duplicate_rows)
+        excess = analysis.n_excess_duplicate_rows
+        if excess is None:
+            raise ValueError("a duplicate summary requires available counts")
+        _unique_row_count(self.n_rows, excess)
 
     @property
     def n_duplicate_groups(self) -> int:
@@ -214,10 +252,12 @@ def collect_duplicate_analysis(frame: pd.DataFrame) -> DuplicateAnalysis:
     Column labels are not part of the row. The index is not part of the
     row. Duplicate labels stay separate physical columns. A frame with
     fewer than two rows has no duplicate group, including a frame whose
-    cells are unhashable. A frame with two or more rows and no columns
-    has one group containing every physical position, because every row
-    is the same empty value. Unhashable cell values in a compared column
-    raise ``TypeError``. The DataFrame is not modified.
+    cells are unhashable. That empty result is available: no pair of rows
+    was compared. A frame with two or more rows and no columns has one
+    group containing every physical position, because every row is the
+    same empty value. Unhashable cell values in a compared column make
+    the analysis unavailable. They do not become zero groups. The
+    DataFrame is not modified.
     """
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("collect_duplicate_analysis expects a pandas DataFrame")
@@ -228,7 +268,10 @@ def collect_duplicate_analysis(frame: pd.DataFrame) -> DuplicateAnalysis:
         return DuplicateAnalysis(
             duplicate_groups=(DuplicateGroup(row_positions=tuple(range(n_rows))),)
         )
-    codes = _row_codes(frame, n_rows, n_columns)
+    try:
+        codes = _row_codes(frame, n_rows, n_columns)
+    except AnalyticalInapplicability:
+        return DuplicateAnalysis(duplicate_groups=(), available=False)
     return DuplicateAnalysis(duplicate_groups=_groups_from_codes(codes))
 
 
@@ -245,6 +288,8 @@ def build_duplicate_summary(analysis: DatasetAnalysis) -> DuplicateSummary:
 
     if not isinstance(analysis, DatasetAnalysisType):
         raise TypeError("build_duplicate_summary expects a DatasetAnalysis")
+    if not analysis.duplicate_analysis.available:
+        raise ValueError("exact duplicate counts are unavailable")
     groups = tuple(
         DuplicateGroup(row_positions=tuple(group.row_positions))
         for group in analysis.duplicate_analysis.duplicate_groups
@@ -264,10 +309,15 @@ def _require_duplicate_attachment(
     _require_count(n_rows, "n_rows")
     _require_count(n_columns, "n_columns")
     _require_positions_within_rows(analysis, n_rows)
+    if not analysis.available:
+        return
     if n_columns == 0:
         _require_zero_column_groups(analysis, n_rows)
         return
-    _unique_row_count(n_rows, analysis.n_excess_duplicate_rows)
+    excess = analysis.n_excess_duplicate_rows
+    if excess is None:
+        raise ValueError("available duplicate analysis has an excess count")
+    _unique_row_count(n_rows, excess)
 
 
 def _row_codes(frame: pd.DataFrame, n_rows: int, n_columns: int) -> np.ndarray:
@@ -283,10 +333,9 @@ def _row_codes(frame: pd.DataFrame, n_rows: int, n_columns: int) -> np.ndarray:
         try:
             encoded, _uniques = pd.factorize(column, sort=False)
         except TypeError as exc:
-            message = str(exc).lower()
-            if "unhashable" not in message and "not hashable" not in message:
+            if not _contains_unhashable_non_missing(column):
                 raise
-            raise TypeError(
+            raise AnalyticalInapplicability(
                 "exact duplicate analysis cannot group unhashable values "
                 f"in column {position}"
             ) from exc

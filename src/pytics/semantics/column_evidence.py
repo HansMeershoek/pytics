@@ -27,27 +27,39 @@ class BasicColumnEvidence:
     exact, full-column, and unsampled. ``n_non_missing`` is stored, rather
     than recomputed by callers, and must equal ``n_total - n_missing``.
     ``n_unique_non_missing`` counts distinct non-missing values only.
+    ``0`` is a known empty distinct count. ``None`` means the exact
+    distinct count is unavailable because a non-missing value is
+    unhashable. Those two states are not the same.
 
     ``missing_ratio``, ``unique_ratio_non_missing``, ``has_missing``,
     ``is_empty``, and ``is_constant`` are read from those counts. They are
-    not fields. A ratio is ``None`` when its denominator is zero. The
-    constant value itself is not stored.
+    not fields. A ratio is ``None`` when its denominator is zero, and the
+    distinct ratio is also ``None`` when the distinct count is unavailable.
+    The constant value itself is not stored. An unavailable distinct count
+    is not a constant column.
     """
 
     n_total: int
     n_missing: int
     n_non_missing: int
-    n_unique_non_missing: int
+    n_unique_non_missing: Optional[int]
 
     def __post_init__(self) -> None:
         _require_count(self.n_total, "n_total")
         _require_count(self.n_missing, "n_missing")
         _require_count(self.n_non_missing, "n_non_missing")
-        _require_count(self.n_unique_non_missing, "n_unique_non_missing")
         if self.n_missing > self.n_total:
             raise ValueError("n_missing cannot exceed n_total")
         if self.n_non_missing != self.n_total - self.n_missing:
             raise ValueError("n_non_missing must equal n_total - n_missing")
+        if self.n_unique_non_missing is None:
+            if self.n_non_missing == 0:
+                raise ValueError(
+                    "an empty non-missing population has a known distinct "
+                    "count of 0"
+                )
+            return
+        _require_count(self.n_unique_non_missing, "n_unique_non_missing")
         if self.n_unique_non_missing > self.n_non_missing:
             raise ValueError("n_unique_non_missing cannot exceed n_non_missing")
 
@@ -65,10 +77,11 @@ class BasicColumnEvidence:
     def unique_ratio_non_missing(self) -> Optional[float]:
         """Distinct non-missing values divided by non-missing observations.
 
-        ``None`` when there is no non-missing observation. This is not an
-        identifier threshold.
+        ``None`` when there is no non-missing observation, and ``None``
+        when the distinct count itself is unavailable. This is not an
+        identifier threshold. ``None`` is not zero.
         """
-        if self.n_non_missing == 0:
+        if self.n_non_missing == 0 or self.n_unique_non_missing is None:
             return None
         return self.n_unique_non_missing / self.n_non_missing
 
@@ -91,7 +104,7 @@ class BasicColumnEvidence:
 
         A zero-length Series and an all-missing Series are empty, not
         constant. Missing observations beside that one value do not remove
-        the constant fact.
+        the constant fact. An unavailable distinct count is not constant.
         """
         return self.n_non_missing > 0 and self.n_unique_non_missing == 1
 
@@ -101,10 +114,11 @@ def collect_basic_column_evidence(series: pd.Series) -> BasicColumnEvidence:
 
     The Series is not copied and is not modified. The four counts use the
     full column. There is no sampling. ``n_unique_non_missing`` uses
-    ``Series.nunique(dropna=True)``. Unhashable non-missing values have no
-    pandas distinct-count and raise ``TypeError``; this function does not
-    stringify or otherwise normalize them. Derived facts are computed from
-    the stored counts and do not scan the Series again.
+    ``Series.nunique(dropna=True)``. When that operation raises
+    ``TypeError`` and a non-missing value is unhashable, the distinct
+    count is ``None``. The values are not stringified or otherwise
+    normalized. Any other ``TypeError`` propagates. Derived facts are
+    computed from the stored counts and do not scan the Series again.
     """
     if not isinstance(series, pd.Series):
         raise TypeError("collect_basic_column_evidence expects a pandas Series")
@@ -112,18 +126,40 @@ def collect_basic_column_evidence(series: pd.Series) -> BasicColumnEvidence:
     n_missing = int(series.isna().sum())
     n_non_missing = n_total - n_missing
     try:
-        n_unique_non_missing = int(series.nunique(dropna=True))
-    except TypeError as exc:
-        raise TypeError(
-            "n_unique_non_missing is unavailable when non-missing values "
-            "are unhashable"
-        ) from exc
+        n_unique_non_missing: Optional[int] = int(series.nunique(dropna=True))
+    except TypeError:
+        if not _contains_unhashable_non_missing(series):
+            raise
+        n_unique_non_missing = None
     return BasicColumnEvidence(
         n_total=n_total,
         n_missing=n_missing,
         n_non_missing=n_non_missing,
         n_unique_non_missing=n_unique_non_missing,
     )
+
+
+class AnalyticalInapplicability(Exception):
+    """A recognized limit of the source values.
+
+    This is not a programming defect. Callers catch this type only.
+    They do not inspect the message. An unexpected ``TypeError`` is a
+    different failure and must propagate.
+    """
+
+
+def _contains_unhashable_non_missing(series: pd.Series) -> bool:
+    """True when a non-missing value cannot be hashed.
+
+    This runs only after a grouping operation has already raised
+    ``TypeError``. It is not a scan of a column that grouped successfully.
+    """
+    for value in series.dropna():
+        try:
+            hash(value)
+        except TypeError:
+            return True
+    return False
 
 
 def _require_count(value: Any, field: str) -> None:

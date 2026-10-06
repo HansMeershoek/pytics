@@ -333,19 +333,25 @@ def test_object_missing_sentinels_share_one_duplicate_group():
     assert _summary(paired).n_unique_rows == 1
 
 
-def test_unhashable_cells_raise_when_rows_must_be_compared():
+def test_unhashable_cells_make_duplicate_analysis_unavailable():
     for values in ([[1, 2], [1, 2]], [{"a": 1}, {"a": 1}], [{"x", "y"}, {"y", "x"}]):
         frame = pd.DataFrame({"a": values})
-        with pytest.raises(TypeError, match="unhashable values in column 0"):
-            collect_duplicate_analysis(frame)
+        analysis = collect_duplicate_analysis(frame)
+        assert analysis.available is False
+        assert analysis.duplicate_groups == ()
+        assert analysis.n_duplicate_groups is None
+        assert analysis.n_unique_rows(len(frame)) is None
     mixed = pd.DataFrame({"a": [1, 1], "b": [[1], [2]]})
-    with pytest.raises(TypeError, match="unhashable values in column 1"):
-        collect_duplicate_analysis(mixed)
+    mixed_analysis = collect_duplicate_analysis(mixed)
+    assert mixed_analysis.available is False
+    assert mixed_analysis.n_excess_duplicate_rows is None
     single = collect_duplicate_analysis(pd.DataFrame({"a": [[1, 2]]}))
+    assert single.available is True
     assert single.n_unique_rows(1) == 1
     assert single.duplicate_groups == ()
-    with pytest.raises(TypeError, match="unhashable"):
-        analyze_dataframe(pd.DataFrame({"a": [[1, 2]]}))
+    profiled = analyze_dataframe(pd.DataFrame({"a": [[1, 2]]}))
+    assert profiled.duplicate_analysis.available is True
+    assert profiled.columns[0].evidence.basic.n_unique_non_missing is None
     tuples = _summary(pd.DataFrame({"a": [(1, 2), (1, 2), (1, 3)]}))
     assert tuples.duplicate_groups == (DuplicateGroup((0, 1)),)
 

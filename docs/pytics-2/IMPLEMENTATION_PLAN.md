@@ -2097,6 +2097,25 @@ Acceptance checks:
 
 Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
 
-## After TSK-047
+## TSK-048
 
-TSK-047 adds epsilon squared, Bergsma's bias-corrected Cramér's V, and Cochran's chi-square validity gate. It leaves notebook redesign, charts, standalone HTML, Markdown export, PDF, JSON serialization, the configuration object, semantic-override representation, Text selection, exact categorical tests, and Python 3.15 migration unselected. [DEC-118](DECISIONS.md#dec-118) records that boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
+Slice 048, minimal core graceful abstention. Approved after the Phase A audit. The broader design was not accepted.
+
+When the existing exact distinct count cannot hash a non-missing value, the profile continues. The column keeps its safe counts, the distinct count is `None` rather than zero, and resolution is `INSUFFICIENT_EVIDENCE` with no selected type. When exact duplicate grouping cannot hash a cell and the frame has at least two rows, duplicate analysis is explicitly unavailable and its counts are not zero. String-structure and duplicate applicability no longer match text inside a `TypeError`. Value-aware method eligibility, including categorical `Decimal`, `UUID`, and infinity, is deferred.
+
+Acceptance checks:
+
+1. A profile with a normal neighbor and a list, dict, or mixed unhashable column returns. The neighbor keeps its semantic type. The unhashable column has no selected type and a distinct count of `None`.
+2. An eligible relationship among the other columns is still calculated. An unhashable target stays unresolved through the existing target status.
+3. Duplicate analysis of two or more rows with unhashable cells is unavailable, emits no duplicate finding, and is not displayed as zero.
+4. Ordinary duplicates and the fewer-than-two-row short-circuit stay as they were. A one-row list column is not turned into Constant.
+5. An unexpected `TypeError` from distinct counting, factorization, or string structure on hashable values still propagates. A bytes column still skips string structure.
+6. A physical categorical `Decimal` column beside a numeric column still raises. That is the deferred vocabulary limitation.
+7. The penguins-shaped control and the messy-company control stay at their accepted counts, including the three sparse categorical pairs from [DEC-118](DECISIONS.md#dec-118).
+8. The full suite passes, total coverage stays at least 97%, and [DEC-119](DECISIONS.md#dec-119) records the rule.
+
+Verification of these checks is recorded in [PROGRESS.md](PROGRESS.md).
+
+## After TSK-048
+
+TSK-048 abstains when exact distinct counts or exact duplicate grouping cannot hash the source values. It leaves value-aware method eligibility unselected. That debt includes a physical categorical vocabulary that a relationship, target, leakage, or diagnostic reader cannot retain, such as `Decimal`, `UUID`, or infinity. [DEC-119](DECISIONS.md#dec-119) records the boundary. The next concrete implementation slice remains subject to a later human decision ([OPEN-037](DECISIONS.md#open-questions)). This section does not create a later task.
