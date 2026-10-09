@@ -2380,7 +2380,7 @@ Local Windows, Python 3.15.0 final: 1910 passed, total coverage 97%.
 
 Commit `b6c4332` corrects `test_row_and_column_order_preserve_adjusted_evidence` for minimal floating-point differences between row orders. Structural and categorical comparisons stay exact. Commit `8656216` restores the Python 3.15 CI install through the prerelease flag above.
 
-Outstanding maintenance. GitHub Actions reports a Node.js 20 deprecation for `actions/checkout@v4` and `actions/setup-python@v5`. Those actions are to be upgraded separately. They were not upgraded in this slice.
+Outstanding maintenance. GitHub Actions reported a Node.js 20 deprecation for `actions/checkout@v4` and `actions/setup-python@v5`. Those actions were not upgraded in this slice. The test workflow was upgraded afterward and is recorded below. `.github/workflows/publish-to-pypi.yml` still uses `actions/checkout@v4` and `actions/setup-python@v5`. That release workflow was not run for this record and remains separate.
 
 Requirement states. No requirement row is advanced.
 
@@ -2390,6 +2390,24 @@ Verification, 2026-10-09. Local Windows, Python 3.15.0 final. The Linux result i
 | --- | --- |
 | `pytest tests -q` | 1910 passed. Total coverage 97%. Local Windows, Python 3.15.0 final. |
 | GitHub Actions, Ubuntu 24.04 | Green for Python 3.11, 3.12, 3.13, 3.14, and 3.15. The 3.15 job used a prerelease. |
+
+### Maintenance — Node.js 24 actions in the test workflow
+
+Completed 2026-10-09, after TSK-052. The working tree was clean and `main` matched `origin/main`.
+
+`.github/workflows/python-test.yml` uses `actions/checkout@v7` and `actions/setup-python@v7`. Both actions run on Node.js 24. The Node.js 20 deprecation warning is gone from that workflow. The Python matrix remains 3.11 through 3.15 on Ubuntu 24.04. Python 3.15 still uses `allow-prereleases: ${{ matrix.python-version == '3.15' }}`. No production behavior changed.
+
+GitHub Actions on Ubuntu 24.04 is green again for Python 3.11, 3.12, 3.13, 3.14, and 3.15. The 3.15 job still uses a prerelease.
+
+`.github/workflows/publish-to-pypi.yml` still uses `actions/checkout@v4` and `actions/setup-python@v5`. That file was not changed. The release workflow was not run.
+
+Requirement states. No requirement row is advanced.
+
+Verification, 2026-10-09. The result below is the GitHub Actions run of the test workflow.
+
+| Check | Result |
+| --- | --- |
+| GitHub Actions, Ubuntu 24.04, test workflow | Green for Python 3.11, 3.12, 3.13, 3.14, and 3.15. The 3.15 job used a prerelease. The Node.js 20 deprecation warning is absent from that workflow. |
 
 ## Documentation record — semantic foundation consolidation
 
