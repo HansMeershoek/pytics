@@ -54,6 +54,9 @@ class UnavailabilityReason(Enum):
     """Why a component has no value.
 
     These are analytical states, not user-facing prose.
+    ``CATEGORY_VOCABULARY_NOT_RETAINABLE`` means the physical category
+    vocabulary could not be stored as itself. That pair keeps no category
+    labels, and every statistical component of the pair uses this reason.
     """
 
     INSUFFICIENT_PAIRED_OBSERVATIONS = "insufficient_paired_observations"
@@ -72,6 +75,7 @@ class UnavailabilityReason(Enum):
     MATHEMATICALLY_UNBOUNDED = "mathematically_unbounded"
     UNDEFINED_RATIO = "undefined_ratio"
     BIAS_CORRECTION_UNDEFINED = "bias_correction_undefined"
+    CATEGORY_VOCABULARY_NOT_RETAINABLE = "category_vocabulary_not_retainable"
 
 
 class MultipleTestingAdjustment(Enum):

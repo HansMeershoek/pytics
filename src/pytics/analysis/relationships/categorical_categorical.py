@@ -171,6 +171,37 @@ def _require_codes(
         raise TypeError(f"{side} categories must be a tuple")
 
 
+def _withheld_category_vocabulary(
+    *,
+    left_position: int,
+    left_label: object,
+    right_position: int,
+    right_label: object,
+    n_total_rows: int,
+    n_paired: int,
+) -> CategoricalCategoricalRelationship:
+    """Record one pair whose category vocabulary cannot be retained.
+
+    No category scalar is stored. ``n_paired`` is the count already taken
+    from the integer codes. Every statistical component shares one reason.
+    """
+    reason = UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE
+    association, corrected, independence = _unavailable_effects(reason)
+    return CategoricalCategoricalRelationship(
+        left_position=left_position,
+        left_label=left_label,
+        right_position=right_position,
+        right_label=right_label,
+        n_total_rows=n_total_rows,
+        n_paired=n_paired,
+        table=_empty_table(),
+        association=association,
+        corrected_association=corrected,
+        expected_counts=_unavailable_diagnostics(reason),
+        independence=independence,
+    )
+
+
 def _empty_table() -> CategoricalContingencyTable:
     return CategoricalContingencyTable(
         left_levels=(),

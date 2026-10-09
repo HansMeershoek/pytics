@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import decimal
 import math
 from typing import Iterable
 from typing import Sequence
@@ -22,6 +23,7 @@ from pytics.analysis.compare import compare_dataframes
 from pytics.analysis.compare import compare_dataset_analyses
 from pytics.analysis.compare.distribution_models import DistributionDriftStatus
 from pytics.analysis.dataset import analyze_dataframe
+from pytics.analysis.relationships.models import RelationshipFamily
 from pytics.analysis.relationships.models import ResultAvailability
 from pytics.analysis.relationships.numeric_numeric import independent_pearson_equality
 from pytics.analysis.relationships.models import UnimplementedRelationshipFamily
@@ -755,3 +757,200 @@ def test_effect_change_rejects_a_missing_side_and_a_false_reversal() -> None:
             sign_reversal=True,
             reason=None,
         )
+
+
+def _decimal_categories(*values: str) -> pd.Categorical:
+    return pd.Categorical([decimal.Decimal(value) for value in values])
+
+
+def _numeric_groups(categories: object, values: Sequence[float]) -> pd.DataFrame:
+    return pd.DataFrame({"y": list(values), "g": categories})
+
+
+def _category_pair(left: object, right: object) -> pd.DataFrame:
+    return pd.DataFrame({"left": left, "right": right})
+
+
+def test_unretained_numeric_vocabulary_is_not_same_or_changed() -> None:
+    withheld = _numeric_groups(
+        _decimal_categories("1", "1", "2", "2"),
+        [1.0, 2.0, 3.0, 4.0],
+    )
+    other = _numeric_groups(
+        _decimal_categories("3", "4", "3", "4"),
+        [4.0, 3.0, 2.0, 1.0],
+    )
+    both = _pair(compare_dataframes(withheld, other))
+    assert both.grouping_vocabulary is not None
+    assert both.grouping_vocabulary.status is VocabularyStatus.NOT_RETAINABLE
+    assert both.grouping_vocabulary.reference_n_levels == 0
+    assert both.grouping_vocabulary.comparison_n_levels == 0
+    assert both.primary is not None
+    assert both.primary.reason is EffectChangeReason.BOTH_EFFECTS_UNAVAILABLE
+    assert both.primary.change is None
+    assert both.complementary[0].reason is EffectChangeReason.BOTH_EFFECTS_UNAVAILABLE
+    assert both == _pair(compare_dataframes(withheld, other))
+
+    observed = _numeric_groups(
+        pd.Categorical(["a", "a", "b", "b"]),
+        [1.0, 1.0, 2.0, 2.0],
+    )
+    one_side = _pair(compare_dataframes(withheld, observed))
+    assert one_side.grouping_vocabulary is not None
+    assert one_side.grouping_vocabulary.status is VocabularyStatus.NOT_RETAINABLE
+    assert one_side.grouping_vocabulary.reference_n_levels == 0
+    assert one_side.grouping_vocabulary.comparison_n_levels == 2
+    assert one_side.primary is not None
+    assert one_side.primary.reason is EffectChangeReason.REFERENCE_EFFECT_UNAVAILABLE
+    assert one_side.primary.reference is None
+    assert one_side.primary.comparison == pytest.approx(1.0)
+    assert one_side.primary.change is None
+    assert one_side == _pair(compare_dataframes(withheld, observed))
+
+
+def test_observed_numeric_vocabularies_keep_same_and_changed() -> None:
+    shared = _numeric_groups(
+        pd.Categorical(["a", "a", "b", "b"]),
+        [0.0, 1.0, 2.0, 3.0],
+    )
+    same = _pair(compare_dataframes(shared, shared.copy()))
+    assert same.grouping_vocabulary is not None
+    assert same.grouping_vocabulary.status is VocabularyStatus.SAME
+    assert same.primary is not None
+    assert same.primary.availability is ResultAvailability.AVAILABLE
+    assert same.primary.change == pytest.approx(0.0)
+
+    added = _numeric_groups(
+        pd.Categorical(["a", "a", "b", "b", "c", "c"]),
+        [0.0, 1.0, 2.0, 3.0, 9.0, 9.0],
+    )
+    changed = _pair(compare_dataframes(shared, added))
+    assert changed.grouping_vocabulary is not None
+    assert changed.grouping_vocabulary.status is VocabularyStatus.CHANGED
+    assert changed.grouping_vocabulary.reference_n_levels == 2
+    assert changed.grouping_vocabulary.comparison_n_levels == 3
+    assert changed.primary is not None
+    assert changed.primary.availability is ResultAvailability.AVAILABLE
+
+
+def test_empty_paired_numeric_vocabulary_stays_an_observed_empty_set() -> None:
+    empty = _numeric_groups(
+        pd.Categorical(["a", "b", "a"]),
+        [float("inf"), float("-inf"), float("nan")],
+    )
+    record = _pair(compare_dataframes(empty, empty))
+    assert record.grouping_vocabulary is not None
+    assert record.grouping_vocabulary.status is VocabularyStatus.SAME
+    assert record.grouping_vocabulary.reference_n_levels == 0
+    assert record.grouping_vocabulary.comparison_n_levels == 0
+    assert record.primary is not None
+    assert record.primary.reason is EffectChangeReason.BOTH_EFFECTS_UNAVAILABLE
+
+    populated = _numeric_groups(
+        pd.Categorical(["a", "b", "a"]),
+        [1.0, 1.0, 2.0],
+    )
+    changed = _pair(compare_dataframes(empty, populated))
+    assert changed.grouping_vocabulary is not None
+    assert changed.grouping_vocabulary.status is VocabularyStatus.CHANGED
+
+
+def test_unretained_contingency_vocabulary_is_not_same_or_changed() -> None:
+    withheld = _category_pair(
+        _decimal_categories("1", "1", "2", "2"),
+        _decimal_categories("3", "3", "4", "4"),
+    )
+    other = _category_pair(
+        _decimal_categories("5", "6", "5", "6"),
+        _decimal_categories("7", "7", "8", "8"),
+    )
+    both = _pair(compare_dataframes(withheld, other))
+    vocabulary = both.contingency_vocabulary
+    assert vocabulary is not None
+    assert vocabulary.status is VocabularyStatus.NOT_RETAINABLE
+    assert vocabulary.first.status is VocabularyStatus.NOT_RETAINABLE
+    assert vocabulary.second.status is VocabularyStatus.NOT_RETAINABLE
+    assert vocabulary.reference_shape == (0, 0)
+    assert vocabulary.comparison_shape == (0, 0)
+    assert both.primary is not None
+    assert both.primary.reason is EffectChangeReason.BOTH_EFFECTS_UNAVAILABLE
+    assert both.complementary[0].reason is EffectChangeReason.BOTH_EFFECTS_UNAVAILABLE
+    assert both == _pair(compare_dataframes(withheld, other))
+
+    observed = _category_pair(
+        pd.Categorical(["a", "a", "b", "b"]),
+        pd.Categorical(["x", "x", "y", "y"]),
+    )
+    one_side = _pair(compare_dataframes(withheld, observed))
+    vocabulary = one_side.contingency_vocabulary
+    assert vocabulary is not None
+    assert vocabulary.status is VocabularyStatus.NOT_RETAINABLE
+    assert vocabulary.first.status is VocabularyStatus.NOT_RETAINABLE
+    assert vocabulary.second.status is VocabularyStatus.NOT_RETAINABLE
+    assert vocabulary.reference_shape == (0, 0)
+    assert vocabulary.comparison_shape == (2, 2)
+    assert one_side.primary is not None
+    assert one_side.primary.reason is EffectChangeReason.REFERENCE_EFFECT_UNAVAILABLE
+    assert one_side.primary.comparison == pytest.approx(1.0)
+    assert one_side.primary.change is None
+    assert one_side == _pair(compare_dataframes(withheld, observed))
+
+
+def test_observed_contingency_vocabularies_keep_same_and_changed() -> None:
+    reference = _category_pair(
+        pd.Categorical(["a", "a", "b", "b"]),
+        pd.Categorical(["x", "x", "y", "y"]),
+    )
+    same = _pair(compare_dataframes(reference, reference.copy()))
+    assert same.contingency_vocabulary is not None
+    assert same.contingency_vocabulary.status is VocabularyStatus.SAME
+    assert same.primary is not None
+    assert same.primary.availability is ResultAvailability.AVAILABLE
+    assert same.primary.change == pytest.approx(0.0)
+
+    changed_frame = _category_pair(
+        pd.Categorical(["a", "a", "b", "b"]),
+        pd.Categorical(["x", "x", "z", "z"]),
+    )
+    changed = _pair(compare_dataframes(reference, changed_frame))
+    assert changed.contingency_vocabulary is not None
+    assert changed.contingency_vocabulary.status is VocabularyStatus.CHANGED
+    assert changed.primary is not None
+    assert changed.primary.availability is ResultAvailability.AVAILABLE
+
+
+def test_unretained_vocabulary_leaves_a_numeric_pair_unchanged() -> None:
+    def frame(second: Sequence[float]) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "n1": [1.0, 2.0, 3.0, 4.0],
+                "n2": list(second),
+                "g": _decimal_categories("1", "1", "2", "2"),
+            }
+        )
+
+    values = [1.0, 2.0, 3.0, 5.0]
+    result = compare_dataframes(frame(values), frame(values))
+    records = list(result.relationships)
+    assert len(records) == 3
+    numeric = [
+        record
+        for record in records
+        if record.reference.family is RelationshipFamily.NUMERIC_NUMERIC
+    ]
+    assert len(numeric) == 1
+    assert numeric[0].grouping_vocabulary is None
+    assert numeric[0].pearson_change_test is not None
+    assert numeric[0].primary is not None
+    assert numeric[0].primary.availability is ResultAvailability.AVAILABLE
+    grouped = [record for record in records if record.grouping_vocabulary is not None]
+    assert len(grouped) == 2
+    assert all(
+        record.grouping_vocabulary is not None
+        and record.grouping_vocabulary.status is VocabularyStatus.NOT_RETAINABLE
+        for record in grouped
+    )
+    assert (
+        result.relationships
+        == compare_dataframes(frame(values), frame(values)).relationships
+    )

@@ -31,6 +31,9 @@ from pytics.analysis.relationships.adjustment import adjust_primary_p_values
 from pytics.analysis.relationships.boolean_boolean import _read_boolean_column
 from pytics.analysis.relationships.boolean_boolean import analyze as _analyze_boolean
 from pytics.analysis.relationships.categorical_categorical import (
+    _withheld_category_vocabulary as _withheld_categorical_categorical,
+)
+from pytics.analysis.relationships.categorical_categorical import (
     analyze as _analyze_categorical_categorical,
 )
 from pytics.analysis.relationships.models import BooleanBooleanRelationship
@@ -48,12 +51,17 @@ from pytics.analysis.relationships.models import _require_nonnegative
 from pytics.analysis.relationships.numeric_boolean import (
     analyze as _analyze_numeric_boolean,
 )
+from pytics.analysis.relationships.numeric_categorical import _physical_category_codes
 from pytics.analysis.relationships.numeric_categorical import _read_categorical_column
+from pytics.analysis.relationships.numeric_categorical import (
+    _withheld_category_vocabulary as _withheld_numeric_categorical,
+)
 from pytics.analysis.relationships.numeric_categorical import (
     analyze as _analyze_numeric_categorical,
 )
 from pytics.analysis.relationships.numeric_numeric import _association_methods
 from pytics.analysis.relationships.numeric_numeric import _read_numeric_column
+from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.semantics.interpretation import SemanticType
 
 
@@ -174,6 +182,12 @@ def _relationships_for_frame(
     several Numeric or Categorical columns. A Boolean column is read once
     even when it pairs with several Boolean or Numeric columns. Those
     preparations are local to this function.
+
+    A categorical column whose vocabulary cannot be retained does not
+    discard the other pairs. Each supported pair that uses that column
+    keeps its family record, with every statistical component unavailable
+    and no category labels stored. ``n_paired`` still counts the paired
+    rows from the integer codes.
     """
     classification = _classify_columns(columns)
     if not classification.supported_pairs:
@@ -188,10 +202,10 @@ def _relationships_for_frame(
         position: _read_numeric_column(frame.iloc[:, position])
         for position in numeric_positions
     }
-    categorical_columns = {
-        position: _read_categorical_column(frame.iloc[:, position])
-        for position in categorical_positions
-    }
+    categorical_columns, withheld_codes = _prepare_categorical_columns(
+        frame,
+        categorical_positions,
+    )
     boolean_columns = {
         position: _read_boolean_column(frame.iloc[:, position])
         for position in boolean_positions
@@ -240,6 +254,7 @@ def _relationships_for_frame(
                     columns,
                     numeric_columns,
                     categorical_columns,
+                    withheld_codes,
                     left,
                     right,
                     n_rows,
@@ -253,6 +268,7 @@ def _relationships_for_frame(
                 _categorical_categorical_record(
                     columns,
                     categorical_columns,
+                    withheld_codes,
                     left,
                     right,
                     n_rows,
@@ -317,10 +333,27 @@ def _numeric_numeric_record(
     )
 
 
+def _prepare_categorical_columns(
+    frame: pd.DataFrame,
+    positions: Tuple[int, ...],
+) -> Tuple[dict, Dict[int, np.ndarray]]:
+    """Read each categorical column. An unretainable vocabulary keeps codes only."""
+    retained: dict = {}
+    withheld: Dict[int, np.ndarray] = {}
+    for position in positions:
+        series = frame.iloc[:, position]
+        try:
+            retained[position] = _read_categorical_column(series)
+        except AnalyticalInapplicability:
+            withheld[position] = _physical_category_codes(series)
+    return retained, withheld
+
+
 def _numeric_categorical_record(
     columns: Tuple[ColumnAnalysis, ...],
     numeric_columns: dict,
     categorical_columns: dict,
+    withheld_codes: Dict[int, np.ndarray],
     left: int,
     right: int,
     n_rows: int,
@@ -331,6 +364,21 @@ def _numeric_categorical_record(
         columns[left].inferred.selected_type,
     )
     numeric_values, numeric_finite = numeric_columns[numeric_position]
+    if categorical_position in withheld_codes:
+        return _withheld_numeric_categorical(
+            left_position=left,
+            left_label=columns[left].label,
+            right_position=right,
+            right_label=columns[right].label,
+            numeric_position=numeric_position,
+            categorical_position=categorical_position,
+            n_total_rows=n_rows,
+            n_paired=_n_paired_codes(
+                withheld_codes[categorical_position],
+                n_rows,
+                numeric_finite,
+            ),
+        )
     category_codes, categories = categorical_columns[categorical_position]
     return _analyze_numeric_categorical(
         numeric_values,
@@ -402,10 +450,22 @@ def _numeric_boolean_record(
 def _categorical_categorical_record(
     columns: Tuple[ColumnAnalysis, ...],
     categorical_columns: dict,
+    withheld_codes: Dict[int, np.ndarray],
     left: int,
     right: int,
     n_rows: int,
 ) -> CategoricalCategoricalRelationship:
+    if left in withheld_codes or right in withheld_codes:
+        left_codes = _codes_for(left, categorical_columns, withheld_codes)
+        right_codes = _codes_for(right, categorical_columns, withheld_codes)
+        return _withheld_categorical_categorical(
+            left_position=left,
+            left_label=columns[left].label,
+            right_position=right,
+            right_label=columns[right].label,
+            n_total_rows=n_rows,
+            n_paired=_n_paired_codes(left_codes, n_rows, right_codes >= 0),
+        )
     left_codes, left_categories = categorical_columns[left]
     right_codes, right_categories = categorical_columns[right]
     return _analyze_categorical_categorical(
@@ -419,6 +479,33 @@ def _categorical_categorical_record(
         right_label=columns[right].label,
         n_total_rows=n_rows,
     )
+
+
+def _codes_for(
+    position: int,
+    categorical_columns: dict,
+    withheld_codes: Dict[int, np.ndarray],
+) -> np.ndarray:
+    if position in withheld_codes:
+        return withheld_codes[position]
+    codes, _categories = categorical_columns[position]
+    return codes
+
+
+def _n_paired_codes(
+    codes: np.ndarray,
+    n_rows: int,
+    *row_masks: np.ndarray,
+) -> int:
+    """Count rows with an observed code and every extra mask true."""
+    if codes.shape != (n_rows,):
+        raise ValueError("relationship inputs must contain one entry per row")
+    observed = codes >= 0
+    for mask in row_masks:
+        if np.shape(mask) != (n_rows,):
+            raise ValueError("relationship inputs must contain one entry per row")
+        observed = observed & np.asarray(mask, dtype=bool)
+    return int(np.count_nonzero(observed))
 
 
 def _role_positions(

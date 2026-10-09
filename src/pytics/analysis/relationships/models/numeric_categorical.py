@@ -37,6 +37,7 @@ _GROUP_EFFECT_REASONS = frozenset(
         UnavailabilityReason.ZERO_TOTAL_VARIATION,
         UnavailabilityReason.PRECISION_COLLAPSED,
         UnavailabilityReason.NON_FINITE_RESULT,
+        UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE,
     }
 )
 _ANOVA_COMPONENT_REASONS = _GROUP_EFFECT_REASONS | {
@@ -225,7 +226,11 @@ class NumericCategoricalRelationship:
     ``omnibus`` is classical one-way ANOVA. Those are separate components.
     This record has no correlation method, no confidence interval, and no
     primary-method field. A component can be unavailable without
-    discarding the record.
+    discarding the record. When the physical category vocabulary cannot
+    be retained as itself, every component shares
+    ``CATEGORY_VOCABULARY_NOT_RETAINABLE``, ``groups`` is empty, and
+    ``n_paired`` is still the paired-row count. Those labels are not
+    stored.
 
     ``population`` is the finite-numeric, observed-category rule.
     ``n_total_rows``, ``n_paired``, and ``n_excluded`` are the pair counts
@@ -260,11 +265,11 @@ class NumericCategoricalRelationship:
         for group in self.groups:
             _require_type(group, CategoricalGroupSummary, "groups")
             counted += group.n
-        if counted != self.n_paired:
-            raise ValueError("group sizes must sum to n_paired")
         _require_type(self.effect, GroupEffectEstimate, "effect")
         _require_type(self.corrected_effect, GroupEffectEstimate, "corrected_effect")
         _require_type(self.omnibus, OmnibusAnovaResult, "omnibus")
+        if counted != self.n_paired and not _vocabulary_groups_withheld(self):
+            raise ValueError("group sizes must sum to n_paired")
         _require_numeric_categorical_components(self)
 
     @property
@@ -309,6 +314,13 @@ def _require_numeric_categorical_components(
     if effect.method is not GroupEffectMethod.ETA_SQUARED:
         raise ValueError("the descriptive effect is eta squared")
     if effect.availability is ResultAvailability.UNAVAILABLE:
+        if (
+            effect.reason is UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE
+            and relationship.groups
+        ):
+            raise ValueError(
+                "a category vocabulary that cannot be retained has no groups"
+            )
         if omnibus.statistic_availability is not ResultAvailability.UNAVAILABLE:
             raise ValueError("an undefined effect has no F statistic")
         if omnibus.statistic_reason is not effect.reason:
@@ -370,6 +382,15 @@ def _require_numeric_categorical_components(
     if frequentist.reason is not UnavailabilityReason.NON_FINITE_RESULT:
         raise ValueError("a non-finite omnibus result stays non-finite")
     _require_epsilon_companion(relationship)
+
+
+def _vocabulary_groups_withheld(relationship: NumericCategoricalRelationship) -> bool:
+    """True when empty groups are the withheld vocabulary, not an empty population."""
+    return (
+        not relationship.groups
+        and relationship.effect.reason
+        is UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE
+    )
 
 
 def _require_epsilon_squared(value: Optional[float]) -> None:

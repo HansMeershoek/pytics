@@ -47,6 +47,7 @@ from pytics.analysis.dataset import DatasetAnalysis
 from pytics.analysis.relationships.models import RelationshipFamily
 from pytics.analysis.relationships.models import RelationshipRecord
 from pytics.analysis.relationships.models import ResultAvailability
+from pytics.analysis.relationships.models import UnavailabilityReason
 from pytics.analysis.relationships.models.coverage import SelectedPairCoverage
 from pytics.analysis.relationships.models.coverage import classify_selected_pair
 from pytics.analysis.relationships.numeric_numeric import independent_pearson_equality
@@ -342,6 +343,10 @@ def _drift(
             grouping = _grouping(
                 reference_payload.categories,  # type: ignore[attr-defined]
                 comparison_payload.categories,  # type: ignore[attr-defined]
+                retained=_vocabulary_retained(
+                    reference_payload.eta_squared_reason,  # type: ignore[attr-defined]
+                    comparison_payload.eta_squared_reason,  # type: ignore[attr-defined]
+                ),
             )
         elif family is RelationshipFamily.CATEGORICAL_CATEGORICAL:
             contingency = _contingency(reference_payload, comparison_payload)
@@ -568,15 +573,24 @@ def _unavailable_pearson(reason: PearsonChangeReason) -> PearsonCorrelationChang
     )
 
 
+def _vocabulary_retained(*reasons: Optional[UnavailabilityReason]) -> bool:
+    """False when either side withheld its category identity."""
+    withheld = UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE
+    return all(reason is not withheld for reason in reasons)
+
+
 def _grouping(
     reference_levels: Tuple[object, ...],
     comparison_levels: Tuple[object, ...],
+    *,
+    retained: bool = True,
 ) -> GroupingVocabulary:
-    status = (
-        VocabularyStatus.SAME
-        if _same_levels(reference_levels, comparison_levels)
-        else VocabularyStatus.CHANGED
-    )
+    if not retained:
+        status = VocabularyStatus.NOT_RETAINABLE
+    elif _same_levels(reference_levels, comparison_levels):
+        status = VocabularyStatus.SAME
+    else:
+        status = VocabularyStatus.CHANGED
     return GroupingVocabulary(
         status=status,
         reference_n_levels=len(reference_levels),
@@ -589,14 +603,29 @@ def _contingency(reference: object, comparison: object) -> ContingencyVocabulary
         comparison, CategoricalCategoricalState
     ):
         raise TypeError("contingency vocabulary reads two categorical states")
-    first = _grouping(reference.first_levels, comparison.first_levels)
-    second = _grouping(reference.second_levels, comparison.second_levels)
-    status = (
-        VocabularyStatus.CHANGED
-        if first.status is VocabularyStatus.CHANGED
-        or second.status is VocabularyStatus.CHANGED
-        else VocabularyStatus.SAME
+    retained = _vocabulary_retained(
+        reference.cramers_v_reason,
+        comparison.cramers_v_reason,
     )
+    first = _grouping(
+        reference.first_levels,
+        comparison.first_levels,
+        retained=retained,
+    )
+    second = _grouping(
+        reference.second_levels,
+        comparison.second_levels,
+        retained=retained,
+    )
+    if not retained:
+        status = VocabularyStatus.NOT_RETAINABLE
+    elif (
+        first.status is VocabularyStatus.CHANGED
+        or second.status is VocabularyStatus.CHANGED
+    ):
+        status = VocabularyStatus.CHANGED
+    else:
+        status = VocabularyStatus.SAME
     return ContingencyVocabulary(
         first=first,
         second=second,

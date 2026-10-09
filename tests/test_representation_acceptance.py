@@ -170,5 +170,6 @@ def test_penguins_shaped_table_stays_categorical_and_numeric():
     ]
     summary = analysis.relationship_analysis
     assert summary.n_supported_pairs == 28
+    assert summary.n_analyzed_pairs == summary.n_supported_pairs
     assert summary.n_ineligible_pairs == 0
     assert summary.n_unimplemented_family_pairs == 0

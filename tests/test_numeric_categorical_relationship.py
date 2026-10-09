@@ -32,6 +32,7 @@ from pytics.analysis.relationship import OmnibusTestMethod
 from pytics.analysis.relationship import RelationshipFamily
 from pytics.analysis.relationship import ResultAvailability
 from pytics.analysis.relationship import UnavailabilityReason
+from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.analysis.relationship import UnimplementedFamilyCount
 from pytics.analysis.relationship import UnimplementedRelationshipFamily
 from pytics.analysis.relationship import relationship_analysis_for_columns
@@ -776,7 +777,7 @@ def test_category_scalars_have_an_explicit_boundary() -> None:
     assert type(complex_relationship.groups[0].category) is complex
     assert complex_relationship.groups[0].category == 1 + 2j
 
-    with pytest.raises(TypeError, match="cannot be retained"):
+    with pytest.raises(AnalyticalInapplicability, match="cannot be retained"):
         numeric_categorical_module._retain_category(object())
     with pytest.raises(TypeError, match="container"):
         numeric_categorical_module._retain_category(np.array([1, 2]))
@@ -952,7 +953,9 @@ def test_models_reject_inconsistent_numeric_categorical_records() -> None:
             n_rows=4,
             relationships=(dataclasses.replace(relationship, right_label="z"),),
         )
-    numeric_numeric = (analyze_dataframe(pd.DataFrame({"y": [1, 2, 3, 4], "g": [2, 3, 4, 5]}))).relationship_analysis.relationships[0]
+    numeric_numeric = (
+        analyze_dataframe(pd.DataFrame({"y": [1, 2, 3, 4], "g": [2, 3, 4, 5]}))
+    ).relationship_analysis.relationships[0]
     with pytest.raises(TypeError, match="numeric-categorical pair"):
         relationship_analysis_for_columns(
             (numeric, categorical),

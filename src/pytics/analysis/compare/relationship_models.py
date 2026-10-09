@@ -150,11 +150,13 @@ class VocabularyStatus(Enum):
 
     Order is not part of the comparison. A changed set does not by itself
     make a numeric effect change unavailable, and it is not proof that
-    the effect moved.
+    the effect moved. ``NOT_RETAINABLE`` means at least one side did not
+    retain its category identity, so the sets are not compared.
     """
 
     SAME = "same"
     CHANGED = "changed"
+    NOT_RETAINABLE = "not_retainable"
 
 
 class PearsonChangeNull(Enum):
@@ -545,7 +547,11 @@ class EffectChange:
 
 @dataclass(frozen=True)
 class GroupingVocabulary:
-    """Observed categories of one grouping variable across the two datasets."""
+    """Observed categories of one grouping variable across the two datasets.
+
+    ``NOT_RETAINABLE`` is not an observed empty set. A zero level count
+    on that status means the labels were not stored.
+    """
 
     status: VocabularyStatus
     reference_n_levels: int
@@ -555,6 +561,8 @@ class GroupingVocabulary:
         _require_type(self.status, VocabularyStatus, "status")
         _require_count(self.reference_n_levels, "reference_n_levels")
         _require_count(self.comparison_n_levels, "comparison_n_levels")
+        if self.status is VocabularyStatus.NOT_RETAINABLE:
+            return
         same_count = self.reference_n_levels == self.comparison_n_levels
         if self.status is VocabularyStatus.SAME and not same_count:
             raise ValueError("the same category set has the same level count")
@@ -572,7 +580,9 @@ class ContingencyVocabulary:
 
     ``reference_shape`` is ``(n_first, n_second)`` on the reference.
     A changed shape or a changed level set is ``CHANGED`` overall.
-    Cramér's V can still be subtracted when the shape changes.
+    An unretained axis makes the contingency vocabulary
+    ``NOT_RETAINABLE`` instead. Cramér's V can still be subtracted
+    when the shape changes.
     """
 
     first: GroupingVocabulary
@@ -597,6 +607,20 @@ class ContingencyVocabulary:
             self.second.comparison_n_levels,
         ):
             raise ValueError("comparison shape must match the two level counts")
+        not_retained = (
+            self.first.status is VocabularyStatus.NOT_RETAINABLE
+            or self.second.status is VocabularyStatus.NOT_RETAINABLE
+        )
+        if self.status is VocabularyStatus.NOT_RETAINABLE:
+            if not not_retained:
+                raise ValueError(
+                    "an unretained contingency vocabulary names an unretained axis"
+                )
+            return
+        if not_retained:
+            raise ValueError(
+                "an unretained axis leaves the contingency vocabulary unretained"
+            )
         changed = (
             self.first.status is VocabularyStatus.CHANGED
             or self.second.status is VocabularyStatus.CHANGED

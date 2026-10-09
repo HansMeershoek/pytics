@@ -55,7 +55,9 @@ import pandas as pd
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.column_label import labels_are_float_nan
 from pytics.analysis.relationships.boolean_boolean import _read_boolean_column
+from pytics.analysis.relationships.numeric_categorical import _physical_category_codes
 from pytics.analysis.relationships.numeric_categorical import _read_categorical_column
+from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.analysis.relationships.numeric_numeric import _read_numeric_column
 from pytics.semantics.interpretation import SemanticType
 from pytics.semantics.resolution import ResolutionStatus
@@ -85,9 +87,11 @@ class ExactDuplicateStatus(Enum):
     applicable target row. It is mechanical sameness, not a leakage
     verdict. ``MISSINGNESS_BLOCKS_EQUALITY`` means the jointly observed
     values match and at least one applicable row has no comparable
-    predictor value. ``INCOMPATIBLE_REPRESENTATION`` means the semantic
+    predictor value.     ``INCOMPATIBLE_REPRESENTATION`` means the semantic
     types are not compared. ``INSUFFICIENT_POPULATION`` means there is
-    no jointly observed row.
+    no jointly observed row. ``CATEGORY_VOCABULARY_NOT_RETAINABLE``
+    means a categorical comparison was not performed because a category
+    scalar could not be retained. It is not an equality result.
     """
 
     EXACT_DUPLICATE = "exact_duplicate"
@@ -95,6 +99,7 @@ class ExactDuplicateStatus(Enum):
     MISSINGNESS_BLOCKS_EQUALITY = "missingness_blocks_equality"
     INCOMPATIBLE_REPRESENTATION = "incompatible_representation"
     INSUFFICIENT_POPULATION = "insufficient_population"
+    CATEGORY_VOCABULARY_NOT_RETAINABLE = "category_vocabulary_not_retainable"
 
 
 class MappingStatus(Enum):
@@ -189,6 +194,10 @@ class ExactDuplicateEvidence:
         if self.status is ExactDuplicateStatus.INCOMPATIBLE_REPRESENTATION:
             if _exact_measured(self):
                 raise ValueError("an incompatible representation is not compared")
+            return
+        if self.status is ExactDuplicateStatus.CATEGORY_VOCABULARY_NOT_RETAINABLE:
+            if _exact_measured(self):
+                raise ValueError("an unretained category vocabulary is not compared")
             return
         _require_exact_reconciliation(self)
         if self.status is ExactDuplicateStatus.EXACT_DUPLICATE:
@@ -415,7 +424,13 @@ def analyze_target_leakage(
     population = _population_for(target, applicability)
     if applicability is not LeakageApplicability.APPLICABLE:
         return _analysis(column, applicability, population, ())
-    applicable, target_float, target_codes, target_categories = _read_target(
+    (
+        applicable,
+        target_float,
+        target_codes,
+        target_categories,
+        target_vocabulary_retained,
+    ) = _read_target(
         frame.iloc[:, target.position],
         target.selected_type,
     )
@@ -431,6 +446,7 @@ def analyze_target_leakage(
             target_float=target_float,
             target_codes=target_codes,
             target_categories=target_categories,
+            target_vocabulary_retained=target_vocabulary_retained,
         )
         for item in columns
         if item.position != target.position
@@ -599,24 +615,34 @@ def _read_target(
     series: pd.Series,
     selected: Optional[SemanticType],
 ) -> Tuple[
-    np.ndarray, Optional[np.ndarray], Optional[np.ndarray], Optional[Tuple[object, ...]]
+    np.ndarray,
+    Optional[np.ndarray],
+    Optional[np.ndarray],
+    Optional[Tuple[object, ...]],
+    bool,
 ]:
     """Return the applicable mask and the target's comparison image.
 
     The float image is set for Numeric. Codes and categories are set for
     Boolean and Categorical. Boolean codes are 0 and 1. Categorical codes
     are the physical category codes. Missing and non-finite rows are not
-    applicable.
+    applicable. The final flag is false when the categorical vocabulary
+    could not be retained; the codes are still returned and the labels
+    are not.
     """
     if selected is SemanticType.NUMERIC:
         image = _numeric_float_image(series)
-        return np.isfinite(image), image, None, None
+        return np.isfinite(image), image, None, None, True
     if selected is SemanticType.BOOLEAN:
         codes = _boolean_codes(series)
-        return codes >= 0, None, codes, None
-    codes, categories = _read_categorical_column(series)
+        return codes >= 0, None, codes, None, True
+    try:
+        codes, categories = _read_categorical_column(series)
+    except AnalyticalInapplicability:
+        codes = np.asarray(_physical_category_codes(series), dtype=np.int64)
+        return codes >= 0, None, codes, None, False
     codes = np.asarray(codes, dtype=np.int64)
-    return codes >= 0, None, codes, categories
+    return codes >= 0, None, codes, categories, True
 
 
 def _diagnose_predictor(
@@ -629,6 +655,7 @@ def _diagnose_predictor(
     target_float: Optional[np.ndarray],
     target_codes: Optional[np.ndarray],
     target_categories: Optional[Tuple[object, ...]],
+    target_vocabulary_retained: bool,
 ) -> PredictorLeakage:
     selected = column.inferred.selected_type
     need_exact = selected in _EXACT_TYPES and selected is target_type
@@ -653,17 +680,26 @@ def _diagnose_predictor(
             else _mapping_not_applicable()
         )
         return _predictor(column, exact, mapping)
+    predictor_vocabulary_retained = True
     if selected is SemanticType.BOOLEAN:
         codes = _boolean_codes(series)
         categories: Optional[Tuple[object, ...]] = None
     elif selected is SemanticType.CATEGORICAL:
-        codes, categories = _read_categorical_column(series)
+        try:
+            codes, categories = _read_categorical_column(series)
+        except AnalyticalInapplicability:
+            codes = _physical_category_codes(series)
+            categories = None
+            predictor_vocabulary_retained = False
         codes = np.asarray(codes, dtype=np.int64)
     else:
         codes = _identifier_codes(series)
         categories = None
     observed = codes >= 0
-    if need_exact and selected is SemanticType.BOOLEAN:
+    vocabulary_retained = predictor_vocabulary_retained and target_vocabulary_retained
+    if need_exact and selected is SemanticType.CATEGORICAL and not vocabulary_retained:
+        exact = _unretained_vocabulary_exact()
+    elif need_exact and selected is SemanticType.BOOLEAN:
         exact = _exact_from_codes(codes, target_codes, applicable, n_applicable)
     elif need_exact:
         exact = _exact_from_categories(
@@ -966,6 +1002,17 @@ def _mapping_without_values(need_mapping: bool, n_applicable: int) -> MappingEvi
     )
 
 
+def _unretained_vocabulary_exact() -> ExactDuplicateEvidence:
+    return ExactDuplicateEvidence(
+        status=ExactDuplicateStatus.CATEGORY_VOCABULARY_NOT_RETAINABLE,
+        n_applicable_rows=0,
+        n_joint_rows=0,
+        n_predictor_unobserved=0,
+        n_equal_rows=0,
+        n_unequal_rows=0,
+    )
+
+
 def _incompatible_exact() -> ExactDuplicateEvidence:
     return ExactDuplicateEvidence(
         status=ExactDuplicateStatus.INCOMPATIBLE_REPRESENTATION,
@@ -1057,7 +1104,10 @@ def _require_population_attachment(
 
 def _require_predictor_population(item: PredictorLeakage, n_applicable: int) -> None:
     exact = item.exact_duplicate
-    if exact.status is not ExactDuplicateStatus.INCOMPATIBLE_REPRESENTATION:
+    if exact.status not in (
+        ExactDuplicateStatus.INCOMPATIBLE_REPRESENTATION,
+        ExactDuplicateStatus.CATEGORY_VOCABULARY_NOT_RETAINABLE,
+    ):
         if exact.n_applicable_rows != n_applicable:
             raise ValueError("exact-duplicate rows must be the applicable target rows")
     mapping = item.deterministic_mapping

@@ -54,6 +54,7 @@ import numpy as np
 import pandas as pd
 
 from pytics.analysis.categorical import _label_storage_codes
+from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.semantics.physical import PhysicalDtypeFamily
 from pytics.semantics.physical import classify_physical_dtype
 from scipy.stats import f_oneway
@@ -150,22 +151,72 @@ def _read_categorical_column(
                 "or string or object label storage"
             )
         return _label_storage_codes(series)
+    codes = _physical_category_codes(series)
+    categories = tuple(_retain_category(value) for value in series.cat.categories)
+    return codes, categories
+
+
+def _physical_category_codes(series: pd.Series) -> np.ndarray:
+    """Return a copy of the physical category codes.
+
+    Category scalars are not read and are not retained. ``-1`` remains
+    the pandas missing sentinel.
+    """
+    if not isinstance(series.dtype, pd.CategoricalDtype):
+        raise TypeError("physical category codes require a categorical dtype")
     codes = np.asarray(series.cat.codes.to_numpy(copy=True))
     if codes.ndim != 1:
         raise ValueError("category codes must be one-dimensional")
     if codes.dtype.kind not in {"i", "u"}:
         codes = codes.astype(np.intp, copy=False)
-    categories = tuple(_retain_category(value) for value in series.cat.categories)
-    return codes, categories
+    return codes
+
+
+def _withheld_category_vocabulary(
+    *,
+    left_position: int,
+    left_label: object,
+    right_position: int,
+    right_label: object,
+    numeric_position: int,
+    categorical_position: int,
+    n_total_rows: int,
+    n_paired: int,
+) -> NumericCategoricalRelationship:
+    """Record one pair whose category vocabulary cannot be retained.
+
+    No category scalar is stored. ``n_paired`` is the count already taken
+    from the integer codes and the finite numeric mask. Every statistical
+    component shares one reason.
+    """
+    effect, corrected_effect, omnibus = _unavailable_pair(
+        UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE
+    )
+    return NumericCategoricalRelationship(
+        left_position=left_position,
+        left_label=left_label,
+        right_position=right_position,
+        right_label=right_label,
+        numeric_position=numeric_position,
+        categorical_position=categorical_position,
+        n_total_rows=n_total_rows,
+        n_paired=n_paired,
+        groups=(),
+        effect=effect,
+        corrected_effect=corrected_effect,
+        omnibus=omnibus,
+    )
 
 
 def _retain_category(value: object) -> object:
     """Return a source category scalar that the relationship model can store.
 
     NumPy scalars become Python scalars. Tuples are retained element by
-    element. Pandas Timestamp, Timedelta, Period, and Interval values
-    stay those scalars; they are not containers. Other types are outside
-    this slice and are not serialized.
+    element.     Pandas Timestamp, Timedelta, Period, and Interval values
+    stay those scalars; they are not containers. A scalar outside this
+    closed vocabulary raises ``AnalyticalInapplicability`` and is not
+    serialized. Containers and non-finite accepted scalars still raise
+    ``TypeError``.
     """
     if isinstance(value, tuple):
         return tuple(_retain_category(item) for item in value)
@@ -194,7 +245,7 @@ def _retain_category(value: object) -> object:
         return value
     if isinstance(value, (pd.Timestamp, pd.Timedelta, pd.Period, pd.Interval)):
         return value
-    raise TypeError(
+    raise AnalyticalInapplicability(
         f"category value type {type(value).__name__} cannot be retained "
         "without stringifying it"
     )

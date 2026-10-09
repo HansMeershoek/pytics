@@ -41,6 +41,7 @@ _ASSOCIATION_REASONS = frozenset(
         UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS,
         UnavailabilityReason.CONSTANT_PAIRED_VALUES,
         UnavailabilityReason.NON_FINITE_RESULT,
+        UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE,
     }
 )
 _CORRECTED_ASSOCIATION_REASONS = _ASSOCIATION_REASONS | {
@@ -52,6 +53,7 @@ _DIAGNOSTIC_REASONS = frozenset(
     {
         UnavailabilityReason.INSUFFICIENT_PAIRED_OBSERVATIONS,
         UnavailabilityReason.NON_FINITE_RESULT,
+        UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE,
     }
 )
 
@@ -336,8 +338,11 @@ class CategoricalCategoricalRelationship:
 
     ``n_paired`` counts rows where both categorical values are
     non-missing. ``n_excluded`` is every other row. Missing values are
-    not imputed and are not a table level. ``table`` stores the observed
+    not imputed and are not a table level.     ``table`` stores the observed
     positive cells and both margins. The paired codes are not stored.
+    When the physical category vocabulary cannot be retained as itself,
+    every component shares ``CATEGORY_VOCABULARY_NOT_RETAINABLE``, the
+    table keeps no levels, and ``n_paired`` is still the paired-row count.
 
     ``association`` is classical Cramér's V. ``corrected_association`` is
     the Bergsma bias-corrected companion. ``expected_counts`` diagnoses
@@ -371,7 +376,7 @@ class CategoricalCategoricalRelationship:
         )
         _require_type(self.expected_counts, ExpectedCountDiagnostics, "expected_counts")
         _require_type(self.independence, CategoricalIndependenceTest, "independence")
-        if self.table.grand_total != self.n_paired:
+        if self.table.grand_total != self.n_paired and not _any_vocabulary_reason(self):
             raise ValueError("contingency grand total must equal n_paired")
         _require_categorical_components(self)
 
@@ -494,6 +499,9 @@ def _require_categorical_components(
         raise ValueError("the descriptive association is classical Cramér's V")
     if corrected.method is not CategoricalAssociationMethod.BIAS_CORRECTED_CRAMERS_V:
         raise ValueError("the corrected association is bias-corrected Cramér's V")
+    if _any_vocabulary_reason(relationship):
+        _require_withheld_vocabulary(relationship)
+        return
     if n_paired == 0:
         _require_same_reason(
             association,
@@ -525,6 +533,41 @@ def _require_categorical_components(
         )
     _require_diagnostics_for_populated_table(diagnostics, n_left, n_right)
     _require_inferential_validity(independence, diagnostics, n_left, n_right)
+
+
+def _any_vocabulary_reason(relationship: CategoricalCategoricalRelationship) -> bool:
+    """True when any component names the withheld category vocabulary."""
+    reason = UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE
+    return (
+        relationship.association.reason is reason
+        or relationship.corrected_association.reason is reason
+        or relationship.independence.statistic_reason is reason
+        or relationship.independence.frequentist.reason is reason
+        or relationship.expected_counts.reason is reason
+    )
+
+
+def _require_withheld_vocabulary(
+    relationship: CategoricalCategoricalRelationship,
+) -> None:
+    """An unretained vocabulary stores no levels and one shared reason."""
+    reason = UnavailabilityReason.CATEGORY_VOCABULARY_NOT_RETAINABLE
+    table = relationship.table
+    if table.left_levels or table.right_levels or table.observed_counts:
+        raise ValueError(
+            "a category vocabulary that cannot be retained has no contingency levels"
+        )
+    if table.left_totals or table.right_totals:
+        raise ValueError(
+            "a category vocabulary that cannot be retained has no contingency totals"
+        )
+    _require_same_reason(
+        relationship.association,
+        relationship.corrected_association,
+        relationship.independence,
+        reason,
+    )
+    _require_diagnostic_reason(relationship.expected_counts, reason)
 
 
 def _require_same_reason(

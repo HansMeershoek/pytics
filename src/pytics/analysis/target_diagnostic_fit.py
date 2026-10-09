@@ -51,6 +51,7 @@ from pytics.analysis.categorical import _retain_category
 from pytics.analysis.column import ColumnAnalysis
 from pytics.analysis.relationships.boolean_boolean import _read_boolean_column
 from pytics.analysis.relationships.numeric_categorical import _read_categorical_column
+from pytics.semantics.column_evidence import AnalyticalInapplicability
 from pytics.analysis.relationships.numeric_numeric import _read_numeric_column
 from pytics.analysis.target import TargetAnalysis
 from pytics.analysis.target import TargetStatus
@@ -151,7 +152,19 @@ def analyze_target_diagnostic(
             design=design,
             population=population,
         )
-    rows, y, class_values = _read_target(frame.iloc[:, position], target.selected_type)
+    try:
+        rows, y, class_values = _read_target(
+            frame.iloc[:, position],
+            target.selected_type,
+        )
+    except AnalyticalInapplicability:
+        return TargetDiagnosticAnalysis(
+            target_position=position,
+            status=DiagnosticStatus.TARGET_VOCABULARY_NOT_RETAINABLE,
+            task=task,
+            design=design,
+            population=population,
+        )
     if rows.size != population.n_modeling:
         raise ValueError("frame target values do not match the target analysis")
     screened, images = _screen_semantics(
@@ -363,8 +376,12 @@ def _screen_semantics(
             if column.position in duplicates:
                 decision = PredictorDecision.IDENTICAL_TO_TARGET
             else:
-                image = _read_predictor(frame.iloc[:, column.position], selected)
-                images[column.position] = image[rows]
+                try:
+                    image = _read_predictor(frame.iloc[:, column.position], selected)
+                except AnalyticalInapplicability:
+                    decision = PredictorDecision.VOCABULARY_NOT_RETAINABLE
+                else:
+                    images[column.position] = image[rows]
         screened.append((column, decision))
     return tuple(screened), images
 

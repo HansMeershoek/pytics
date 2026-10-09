@@ -123,6 +123,9 @@ DIAGNOSTIC_STATUS_LABEL = {
     DiagnosticStatus.NUMERICAL_FAILURE: (
         "Not collected — the numerical result was not finite"
     ),
+    DiagnosticStatus.TARGET_VOCABULARY_NOT_RETAINABLE: (
+        "Not collected — the category vocabulary was not retained"
+    ),
 }
 
 TASK_LABEL = {

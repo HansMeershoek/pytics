@@ -45,7 +45,9 @@ class DiagnosticStatus(Enum):
     evaluated. ``TARGET_TYPE_UNSUPPORTED`` follows target analysis: the
     target is unsupported, ineligible, or unresolved there.
     ``NUMERICAL_FAILURE`` means predictions or validation scores were
-    not finite float64 values.
+    not finite float64 values. ``TARGET_VOCABULARY_NOT_RETAINABLE``
+    means the categorical target identity could not be retained, so no
+    model was fitted.
     """
 
     AVAILABLE = "available"
@@ -57,6 +59,7 @@ class DiagnosticStatus(Enum):
     VALIDATION_SPLIT_IMPOSSIBLE = "validation_split_impossible"
     NO_ELIGIBLE_PREDICTORS = "no_eligible_predictors"
     NUMERICAL_FAILURE = "numerical_failure"
+    TARGET_VOCABULARY_NOT_RETAINABLE = "target_vocabulary_not_retainable"
 
 
 class PredictiveTask(Enum):
@@ -101,7 +104,9 @@ class PredictorDecision(Enum):
     Timedelta, and Text are ``UNSUPPORTED_TYPE``. ``IDENTICAL_TO_TARGET``
     means leakage evidence recorded an exact duplicate on every
     applicable target row. The diagnostic excludes that column and does
-    not compare it again. The decision is not itself a leakage verdict.
+    not compare it again. ``VOCABULARY_NOT_RETAINABLE`` means a
+    categorical predictor's vocabulary could not be retained, so the
+    column was not encoded. The decision is not itself a leakage verdict.
     The remaining exclusions are read from the training rows only.
     """
 
@@ -112,6 +117,7 @@ class PredictorDecision(Enum):
     UNRESOLVED = "unresolved"
     UNSUPPORTED_TYPE = "unsupported_type"
     IDENTICAL_TO_TARGET = "identical_to_target"
+    VOCABULARY_NOT_RETAINABLE = "vocabulary_not_retainable"
     NO_TRAINING_VARIATION = "no_training_variation"
     TOO_MANY_LEVELS = "too_many_levels"
     SCALE_NOT_FINITE = "scale_not_finite"
@@ -183,6 +189,7 @@ _TARGET_STATUSES = frozenset(
         DiagnosticStatus.INSUFFICIENT_TARGET_POPULATION,
         DiagnosticStatus.INSUFFICIENT_TARGET_VARIATION,
         DiagnosticStatus.VALIDATION_SPLIT_IMPOSSIBLE,
+        DiagnosticStatus.TARGET_VOCABULARY_NOT_RETAINABLE,
     }
 )
 _SCREENED_STATUSES = frozenset(
@@ -363,6 +370,7 @@ _CANDIDATE_DECISIONS = frozenset(
     {
         PredictorDecision.INCLUDED,
         PredictorDecision.IDENTICAL_TO_TARGET,
+        PredictorDecision.VOCABULARY_NOT_RETAINABLE,
         PredictorDecision.NO_TRAINING_VARIATION,
         PredictorDecision.TOO_MANY_LEVELS,
         PredictorDecision.SCALE_NOT_FINITE,
