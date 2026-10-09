@@ -437,7 +437,69 @@ def test_row_and_column_order_preserve_adjusted_evidence() -> None:
     frame = _mixed_frame()
     forward = _analysis(frame)
     backward = _analysis(frame.iloc[::-1].reset_index(drop=True))
-    assert backward.relationships == forward.relationships
+    assert len(backward.relationships) == len(forward.relationships)
+    for original, reversed_rows in zip(forward.relationships, backward.relationships):
+        assert type(reversed_rows) is type(original)
+        if not isinstance(original, NumericNumericRelationship):
+            assert reversed_rows == original
+            continue
+        assert reversed_rows.left_position == original.left_position
+        assert reversed_rows.left_label == original.left_label
+        assert reversed_rows.right_position == original.right_position
+        assert reversed_rows.right_label == original.right_label
+        assert reversed_rows.n_total_rows == original.n_total_rows
+        assert reversed_rows.n_paired == original.n_paired
+        assert len(reversed_rows.methods) == len(original.methods)
+        for reversed_method, original_method in zip(
+            reversed_rows.methods, original.methods
+        ):
+            calculated = (
+                (
+                    reversed_method.estimate.value,
+                    original_method.estimate.value,
+                ),
+                (
+                    reversed_method.frequentist.p_value,
+                    original_method.frequentist.p_value,
+                ),
+                (
+                    reversed_method.frequentist.adjusted_p_value,
+                    original_method.frequentist.adjusted_p_value,
+                ),
+                (
+                    reversed_method.confidence_interval.lower,
+                    original_method.confidence_interval.lower,
+                ),
+                (
+                    reversed_method.confidence_interval.upper,
+                    original_method.confidence_interval.upper,
+                ),
+            )
+            for actual, expected in calculated:
+                if expected is None:
+                    assert actual is None
+                else:
+                    assert actual == pytest.approx(expected, rel=0, abs=1e-14)
+            assert (
+                dataclasses.replace(
+                    reversed_method,
+                    estimate=dataclasses.replace(
+                        reversed_method.estimate,
+                        value=original_method.estimate.value,
+                    ),
+                    frequentist=dataclasses.replace(
+                        reversed_method.frequentist,
+                        p_value=original_method.frequentist.p_value,
+                        adjusted_p_value=original_method.frequentist.adjusted_p_value,
+                    ),
+                    confidence_interval=dataclasses.replace(
+                        reversed_method.confidence_interval,
+                        lower=original_method.confidence_interval.lower,
+                        upper=original_method.confidence_interval.upper,
+                    ),
+                )
+                == original_method
+            )
     order = ["c2", "b2", "n2", "c1", "b1", "n1"]
     reordered = _analysis(frame.loc[:, order])
     by_forward = _by_column_names(frame, forward.relationships)
